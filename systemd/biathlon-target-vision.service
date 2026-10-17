@@ -1,0 +1,22 @@
+[Unit]
+Description=Biathlon Target Vision
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=btv
+Group=btv
+WorkingDirectory=/opt/biathlon-target-vision/current
+ExecStart=/opt/biathlon-target-vision/current/.venv/bin/python -m biathlon_target_vision --data-dir /var/lib/biathlon-target-vision
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/biathlon-target-vision
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

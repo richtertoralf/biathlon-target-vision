@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.2.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.3.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -113,8 +113,39 @@ oder Trefferklassifikation ist noch nicht vorhanden.
   denselben Beobachtungseingang nutzen. Zeitliche Stabilisierung und
   Quellenzuständigkeit gehören in diese Adapter.
 - Ein physisches Tastenfeld soll die vorhandene zentrale Bahnverwaltung bedienen.
-- Der KES-Adapter soll Daten im dokumentierten Format über TCP ausgeben;
-  eine direkte serielle Ausgabe kann folgen. Verbindliche Referenz und geplanter
-  Kompatibilitätsabgleich stehen in [API.md](API.md#geplante-kes-integration).
-- Eine systemd-Installation unter Debian/Ubuntu ist vorgesehen, aber nicht Teil
-  des implementierten lokalen Starts.
+- Externe Anwendungen lesen REST und WebSockets. BTV emuliert kein KES und
+  erzeugt keine Schuss-/Fehlschussmeldungen. Die zukünftige GFX-Quelle BTV wird
+  separat umgesetzt; siehe [gfx-engine #102](https://github.com/richtertoralf/gfx-engine/issues/102).
+
+## Installation und Upgrades
+
+`install.sh` installiert unter Debian/Ubuntu Git, Python-venv und native
+Voraussetzungen. `deployment.py` übernimmt ausschließlich Git-versionierte Dateien
+in `/opt/biathlon-target-vision/releases/`, erzeugt eine eigene venv und prüft
+Abhängigkeiten/Importe vor dem Dienststopp. `current` verweist auf den aktiven Stand.
+Der unprivilegierte Benutzer `btv` schreibt ausschließlich in
+`/var/lib/biathlon-target-vision/` (Verzeichnis 0750, neue Dateien über UMask 0077).
+Dort bleiben `config.json`, Kalibrierungen und Ereignisjournal bei Upgrades bestehen.
+Die Konfiguration enthält zunächst `host` und `port`; die Installation bindet an
+`0.0.0.0:8091`, der lokale Entwicklungsstart weiterhin an `127.0.0.1:8091`.
+
+Der Dienst startet über systemd, Logs liegen im Journal (`journalctl -u
+biathlon-target-vision`). Der Starter unter `/usr/local/bin/biathlon-target-vision`
+bietet `--version`, `--status` und `--upgrade`. Ohne Leserecht auf die geschützte
+Konfiguration prüft Status die Standardadresse; einen abweichenden Port explizit
+mit `--status --port PORT` angeben oder Status mit sudo aufrufen. Upgrade lädt den höchsten stabilen
+Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner unter
+`/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
+Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
+vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
+Upgrades müssen deshalb das Journalformat rückwärtskompatibel halten. Sicherungen
+und alte Programmstände werden bewusst nicht automatisch gelöscht.
+Ein Dateilock verhindert parallele Installationen/Upgrades.
+
+## Kontrollmonitor
+
+`/monitor` liest vollständige Zustände über `/ws`, zeigt ausschließlich bestätigte
+Daten und besitzt keine Bedienfunktionen. Der Kern führt je Einlage die eindeutig
+beobachteten gefallenen Zielpositionen als `fallen_target_ids`; Replay berechnet
+sie auch für alte Journale. Das ist keine Anzahl abgegebener Schüsse. Eine
+Verdeckung löscht diese Beobachtungen nicht, eine neue Einlage beginnt bei null.

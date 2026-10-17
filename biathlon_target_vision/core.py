@@ -139,6 +139,7 @@ class EventStore:
         bout = {"bout_id": bout_id, "lane_id": command.lane_id,
                 "started_sequence": state["sequence"] + 1,
                 "bib": None, "closed": False, "close_reason": None,
+                "fallen_target_ids": [],
                 "observations": []}
         state["bouts"][bout_id] = bout
         lane["current_bout_id"] = bout_id
@@ -243,7 +244,12 @@ class EventStore:
             if not bout_id:
                 bout_id = self._new_bout(state, lane, command)["bout_id"]
         if bout_id:
-            state["bouts"][bout_id]["observations"].append(command.event_id)
+            bout = state["bouts"][bout_id]
+            bout["observations"].append(command.event_id)
+            if not reset and new_state == "fallen":
+                for index in indexes:
+                    if lane["last_known_targets"][index] != "fallen" and index + 1 not in bout["fallen_target_ids"]:
+                        bout["fallen_target_ids"].append(index + 1)
         if reset:
             self._close_bout(state, lane, "reset")
         for index in indexes:

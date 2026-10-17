@@ -8,6 +8,7 @@ from itertools import count
 from pathlib import Path
 from time import monotonic
 
+import anyio
 import cv2
 from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -15,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 import numpy as np
 from starlette.concurrency import run_in_threadpool
 
+from . import __version__
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .core import Conflict, EventStore
 from .models import Assignment, Observation, Release
@@ -34,7 +36,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         finally:
             app.state.store.close()
 
-    app = FastAPI(title="Biathlon Target Vision", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Biathlon Target Vision", version=__version__, lifespan=lifespan)
     static = Path(__file__).with_name("static")
     app.mount("/static", StaticFiles(directory=static), name="static")
 
@@ -78,6 +80,14 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     @app.get("/", include_in_schema=False)
     async def index():
         return FileResponse(static / "tablet.html", headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok", "version": __version__}
+
+    @app.get("/monitor", include_in_schema=False)
+    async def monitor():
+        return FileResponse(static / "monitor.html", headers={"Cache-Control": "no-store"})
 
     @app.get("/calibration", include_in_schema=False)
     async def calibration_page():
@@ -182,7 +192,10 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             tasks = [task for task in (reader, pending) if task is not None]
             for task in tasks:
                 task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            # ASGI kann beim Trennen bereits den äußeren CancelScope abbrechen.
+            # Die eigenen Lesetasks trotzdem vollständig einsammeln.
+            with anyio.CancelScope(shield=True):
+                await asyncio.gather(*tasks, return_exceptions=True)
 
     def check_lane(lane_id):
         if str(lane_id) not in app.state.store.state["lanes"]:
