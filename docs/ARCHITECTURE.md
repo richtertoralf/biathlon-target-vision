@@ -90,15 +90,16 @@ oder bestätigter Rückstellung. Der vorhandene Tracker beginnt erneut mit
 Grundbeobachtungen. Auch REST-Beobachtungen werden nach Rückwechsel je Ziel bis
 zum ersten bekannten Zustand als Grundbeobachtung behandelt.
 
-Eine bestätigte automatische Rückstellung im automatischen/Mischbetrieb oder
+Eine bestätigte vollständige automatische Rückstellung im automatischen/Mischbetrieb oder
 eine ausdrücklich neue Einlage beendet alte Übersteuerungen. Die Erkennung
 vergleicht dafür ausschließlich die zugrunde liegenden automatischen Werte;
 ein manuell von gefallen auf aufgerichtet korrigiertes Ziel ist keine Rückstellung.
 Im rein manuellen Betrieb bestätigt der Kampfrichter die physische Rückstellung
 aller Ziele ausdrücklich. Keine Rückstellung und kein Sportlerwechsel werden aus
-Zeitabständen oder einzelnen Korrekturen erraten. Eine erstmals manuell erfasste
-gefallene Scheibe kann wie bisher eine noch unzugeordnete Einlage eröffnen,
-erzeugt aber kein automatisch beobachtetes Fallereignis.
+Zeitabständen oder einzelnen Korrekturen erraten. Ältere manuelle API-Clients können mit dem
+bisherigen Standardwert `start_bout: true` bei der ersten gefallenen Scheibe eine
+noch unzugeordnete Einlage eröffnen; das Tablet verwendet die ausdrückliche
+Belegung. Beides erzeugt kein automatisch beobachtetes Fallereignis.
 
 Ein eigener kleiner Bedienzähler schützt Ziel-/Modusbefehle gegen konkurrierende
 Bediener und Einlagenwechsel. Unabhängige Kamerabilder machen eine unmittelbare
@@ -121,6 +122,48 @@ Archivbereinigung oder Analyseplattform.
 Manuelle Erfassung und Kamera sind implementierte Quellen. Sensorhardware und
 Sensoradapter bleiben geplant. Ihre späteren Beobachtungen können denselben
 Eingang und dieselbe Priorität verwenden; kein zusätzlicher Dienst ist vorgesehen.
+
+## Einheitlicher Schießstandablauf
+
+Belegung kann mit einem zusätzlichen `occupy`-Befehl ohne bekannte Startnummer
+bestätigt werden. Er verwendet den vorhandenen Belegungszähler, beginnt oder
+übernimmt die aktive Einlage und setzt `occupied_bout_id`; `bib` bleibt zunächst
+`null`. Die bisherigen Zuordnungs-/Freigabebefehle und Regeln für verspätete BIBs
+bleiben erhalten. Kamera und spätere Sensoren entscheiden nicht über Belegung.
+
+Ein einfaches Vorbereitungsmerkmal je Bahn ergänzt die vorhandene Trennung von
+Belegung, Einlage und Scheibenstellungen. Es wird bei Betreten verbraucht und
+entsteht erst durch ausdrückliche Vorbereitung oder zuverlässig beobachtete
+vollständige Rückstellung. Die erste tatsächliche Rückkehr einer gefallenen
+Scheibe begrenzt die Einlage wie bisher. Eine noch unvollständige Rückstellung
+bestätigt aber weder Bereitschaft noch das Ende manueller Übersteuerungen.
+Grundbeobachtungen/Unterbrechungen erzeugen keine neue Rückstellung. Fünf
+unverändert aufgerichtete Scheiben nach Betreten und Verlassen reichen deshalb
+nicht für erneute Vorbereitung.
+
+Die drei Anzeigestände werden aus diesen vorhandenen Daten abgeleitet, ohne
+eigene Workflow-Plattform: belegt hat Vorrang; frei und bestätigt vorbereitet
+ist bereit; übrige freie Bahnen benötigen Rückstellung. Automatisch/Mischbetrieb
+verlangen zusätzlich zuverlässige automatische Stellungen. Der gemeinsame
+API-Snapshot berücksichtigt einen unmittelbaren Kameraausfall und eine beendete
+Erfassung, bevor die nächsten unbekannten Zielbeobachtungen eintreffen. Das
+Vorbereitungsmerkmal und eine begonnene automatische Rückstellung werden aus
+demselben Journal wiederhergestellt.
+
+Tablet-Korrekturen setzen den optionalen Befehlsschalter `start_bout: false`.
+Dadurch eröffnen weder ein Antippen noch dessen Rücknahme eine neue Einlage.
+Der Standardwert erhält das Verhalten alter API-Clients und Journale. Der neue
+Belegungsbefehl und dieses Befehlsfeld benötigen für Replay mindestens diesen
+Entwicklungsstand; ein Downgrade auf Tag `v0.7.0` mit neuen Befehlen ist nicht
+möglich. Es werden weder neue Datenbestände noch Schussereignisse angelegt.
+
+Die ganze Tablet-Kachel ist grün, gelb oder grau mit zusätzlicher Statusbeschriftung.
+Große schwarze/weiße Scheiben und die Hauptaktion behalten in allen Betriebsarten
+ihre Position. Kleine automatische Vergleichssymbole und ein `M` kennzeichnen
+Übersteuerungen; ihre Rückgabe an die Automatik passt an dieselbe Stelle.
+Betriebsart, Historie und Unbekannt-Sonderfunktion liegen unter Optionen.
+Reguläres Betreten, Verlassen, einzelne Korrekturen und die ausdrücklich beschriftete
+Vorbereitungsbestätigung benötigen keinen weiteren Bestätigungsdialog.
 
 ## Tablet-Bedienung und Mehrbenutzerbetrieb
 
@@ -154,8 +197,9 @@ Protokoll, Zeitgrenzen und Wiederverbindung beschreibt
 
 `--simulation` aktiviert die Zielbedienelemente und die reservierte Quelle
 `simulator` am Beobachtungseingang. Der Modus wird beim Serverstart festgelegt.
-Manuelle Zielbedienung prüft den gesehenen Zielzustand weiterhin über die volle
-Bahnrevision; Belegungsbefehle verwenden den getrennten Belegungszähler.
+Die Zielsimulation prüft den gesehenen Zustand über die volle Bahnrevision;
+reguläre manuelle Korrekturen verwenden den Bedienzähler, Belegungsbefehle den
+getrennten Belegungszähler.
 
 ## Standbild-Kalibrierung
 

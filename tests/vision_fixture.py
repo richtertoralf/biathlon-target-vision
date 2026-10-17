@@ -38,4 +38,4 @@ if __name__ == '__main__':
             reservation.bind(('127.0.0.1',0));port=reservation.getsockname()[1]
         with patch('biathlon_target_vision.app.CameraManager',SyntheticCameras):
             print(json.dumps({'url':f'http://127.0.0.1:{port}','control':str(control)}),flush=True)
-            uvicorn.run(create_app(directory,2),host='127.0.0.1',port=port,log_level='warning')
+            uvicorn.run(create_app(directory,3 if '--three-lanes' in sys.argv else 2),host='127.0.0.1',port=port,log_level='warning')

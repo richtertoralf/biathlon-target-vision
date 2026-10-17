@@ -14,7 +14,8 @@ implementiert. Sensoradapter folgen.
 | `GET /api/events?after=0&limit=1000` | Journal nach Sequenznummer, höchstens 1.000 Einträge pro Abruf |
 | `POST /api/observations` | Einheitlicher Eingang für Simulator, Kamera und Sensor |
 | `PUT /api/lanes/{lane_id}/bib` | Startnummer zuordnen oder ausdrücklich korrigieren |
-| `POST /api/lanes/{lane_id}/release` | Bestimmte Einlage freigeben |
+| `POST /api/lanes/{lane_id}/release` | Verlassen bestätigen, bestimmte Belegung freigeben |
+| `POST /api/lanes/{lane_id}/occupy` | Bahn ohne bekannte Startnummer belegen |
 | `PUT /api/lanes/{lane_id}/mode` | Betriebsart dieser Bahn wählen |
 | `POST /api/lanes/{lane_id}/manual-target` | Ziel manuell erfassen/korrigieren |
 | `POST /api/lanes/{lane_id}/override-release` | Ziel wieder automatisch steuern |
@@ -147,7 +148,7 @@ beim Wechsel wirksamen Zustände übernommen. Automatische Beobachtungen ändern
 dann nur die Vergleichsdaten. Rückwechsel aus Manuell behält alle manuellen Werte
 als Übersteuerungen, bis sie ausdrücklich freigegeben werden. Das gilt auch beim
 Wechsel nach Automatisch; neue Korrekturen benötigen Manuell oder Mischbetrieb.
-Eine einzelne Korrektur nach oben beendet keine Einlage. Eine bestätigte
+Eine einzelne Korrektur nach oben beendet keine Einlage. Eine bestätigte vollständige
 Rückstellung oder ausdrücklich neue Einlage entfernt alte Kameraübersteuerungen.
 Rein manuelle Stellungen benötigen eine ausdrücklich bestätigte physische
 Rückstellung; ein Moduswechsel behauptet keine solche Rückstellung.
@@ -215,6 +216,76 @@ des Diensts wie andere persistente Daten behandeln.
 Alte Journale werden ohne Migration gelesen. Neue 0.7-Bedienbefehle sind älteren
 Programmständen unbekannt; nach ihrer Nutzung kein Downgrade auf dem laufenden
 Journal. Die vor dem Upgrade erstellte Datensicherung bleibt separat erhalten.
+
+## Bahn belegen, verlassen und vorbereiten
+
+Alle Betriebsarten verwenden denselben Ablauf. `POST /api/lanes/1/occupy` nimmt
+beispielsweise:
+
+```json
+{"lane_id":1,"expected_revision":0,"expected_assignment_revision":0}
+```
+
+Optional ist die übliche `event_id`. Die tatsächlichen Revisionen aus dem
+letzten Zustand verwenden. Der getrennte Belegungszähler schützt gegen
+konkurrierende Belegung, ohne gewöhnliche Kamerabilder als Konflikt zu behandeln.
+Eine vorhandene aktive, noch unbelegte Einlage wird übernommen; andernfalls
+entsteht eine neue Einlage mit `bib: null`. `occupied_bout_id` wird sofort gesetzt.
+Eine belegte Bahn ergibt 409. Dieselbe Ereigniskennung bleibt idempotent.
+Auch bei noch ungeklärter Vorbereitung darf ein tatsächliches Betreten erfasst
+werden; die Oberfläche bietet dies unter Optionen an.
+
+Die Belegung ist allein an **`occupied_bout_id != null`** erkennbar, nicht daran,
+ob schon eine BIB vorhanden ist. Bestehende Startnummern-/Freigabeendpunkte bleiben
+unverändert. Eine spätere Startnummer wird derselben `bout_id` zugeordnet; dies
+gilt auch nach Rückstellung. Der bisherige Startnummernbefehl darf aus
+Kompatibilitätsgründen weiterhin direkt belegen.
+
+Zusätzliche Bahnfelder in REST-/WebSocket-Zuständen:
+
+| Feld | Bedeutung |
+|---|---|
+| `status` | `occupied` (gelb), sonst `ready` (grün) oder `reset_required` (grau) |
+| `reset_confirmed` | Vorbereitung durch ausdrückliche Bestätigung oder vollständig erkannte Rückstellung bestätigt |
+| `automatic_reset_pending` | Interne, noch nicht vollständig beobachtete Rückstellung; keine Schreiboption für Clients |
+
+`occupied` hat Vorrang, unabhängig von Scheibenstellungen und Rückstellung.
+`ready` benötigt bestätigte Vorbereitung und fünf wirksam aufgerichtete Scheiben.
+Im automatischen/Mischbetrieb müssen auch alle fünf automatischen Beobachtungen
+aufgerichtet sein. Eine zugeordnete, nicht verbundene Kamera oder beendete optische
+Auswertung verhindert dort die Bereitmeldung auch vor der nächsten
+`unknown`-Beobachtung. Kamerastatus kann `status` ohne neue Journalnummer ändern.
+Manuelle Bahnen benötigen keine Kamera.
+
+Belegung verbraucht die vorherige Vorbereitung. Einzelne Zustandskorrekturen
+bestätigen keine neue Rückstellung. Deshalb bleibt eine Bahn nach Verlassen
+zunächst grau, auch wenn alle fünf Scheiben während der Einlage unverändert
+aufgerichtet waren. `POST /api/lanes/1/reset` bleibt die ausdrückliche Bestätigung
+**nach** tatsächlichem Aufrichten; es beendet die Einlage, nicht die Belegung.
+Im manuellen Betrieb wird die Bahn sofort bereit, sofern niemand mehr auf ihr ist.
+Automatisch/Mischbetrieb wird die Bestätigung mit neuen Grundbeobachtungen
+abgeglichen; bei fehlender Kamera auf Manuell wechseln.
+
+Die bisherige Einlagengrenze bei einer tatsächlich beobachteten einzelnen Rückkehr
+nach oben bleibt erhalten. Zur vollständigen Vorbereitung und zum automatischen
+Beenden alter Übersteuerungen müssen anschließend alle fünf automatischen
+Scheibenstellungen zuverlässig aufgerichtet sein. Eine Grundbeobachtung allein
+bestätigt keine Rückstellung; eine Unterbrechung der Beobachtungskette verwirft
+eine noch unvollständige Rückstellung. Explizites `kind: reset` bezeichnet wie
+bisher eine bereits bestätigte vollständige automatische Rückstellung.
+
+`manual_target` erhält optional `start_bout` (Standard `true` für alte Clients und
+Journale). Das Tablet sendet **`start_bout: false`**: Zustandskorrekturen eröffnen
+keine Einlage, auch nicht nach Rückstellung oder Bahnverlassen. Die Einlage wird
+im regulären Ablauf über `occupy` begonnen. Bestehende automatische Beobachtungen
+und ältere manuelle Clients behalten ihren bisherigen impliziten Einlagenbeginn.
+Keine Korrektur wird als beobachteter Schuss oder zusätzlicher Fall gezählt.
+
+Neue `occupy`-Befehle sowie das Feld `start_bout` benötigen beim Journal-Replay
+diesen Entwicklungsstand; der ältere Tag `v0.7.0` kann sie nicht lesen. Alte
+Journale bleiben ohne Migration lesbar. Vor einem Downgrade Sicherungsstand und
+möglichen Verlust neuerer Ereignisse bewusst prüfen; kein automatisches
+Zurückspielen produktiver Daten.
 
 ## Startnummern und Freigabe
 

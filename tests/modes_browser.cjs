@@ -32,6 +32,7 @@ async function scenario(browser, manualOnly) {
     const card=(page,lane=1)=>page.locator(`#lane-${lane}`);
     const target=(page,n)=>card(page).locator('.target').nth(n-1);
     const choose=async mode=>{
+      if (!await card(first).locator('.lane-options').evaluate(node=>node.open)) await card(first).locator('summary').click();
       await card(first).locator('.lane-mode').selectOption(mode);
       for(const page of pages) await expect(card(page).locator('.lane-mode')).toHaveValue(mode);
       await expect(card(first).locator('.lane-mode')).toBeEnabled();
@@ -46,8 +47,9 @@ async function scenario(browser, manualOnly) {
       await expect(card(second).locator('.bib')).toHaveText(String(bib));
     };
     const reset=async()=>{
-      await card(first).locator('[data-action="manual-reset"]').click();
-      await first.locator('#confirm-action').click();
+      const button=card(first).locator('[data-action="manual-reset"]').first();
+      if (!await button.isVisible()) await card(first).locator('summary').click();
+      await button.click();
       await expect(first.locator('#editor')).not.toBeVisible();
       await expect(card(first).locator('.lane-mode')).toBeEnabled();
     };
@@ -66,12 +68,13 @@ async function scenario(browser, manualOnly) {
       fs.mkdirSync('.test-artifacts',{recursive:true});
       await first.screenshot({path:'.test-artifacts/v07-manual.png',fullPage:true});
       // Unbekannt bleibt ausdrücklich möglich, kein erfundener Fehlschuss.
-      await card(second).locator('[data-action="manual-unknown"][data-target="5"]').tap();
+      await card(second).locator('summary').click();
+      await card(second).locator('[data-action="unknown-menu"]').tap();
+      await second.locator('[data-unknown-target="5"]').tap();
       await expect(target(first,5)).toHaveAttribute('data-state','unknown');
       await reset();
       await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5);
       await card(first).locator('[data-action="release"]').click();
-      await first.locator('#confirm-action').click();
       await expect(first.locator('#editor')).not.toBeVisible();
       await assign(43); await target(second,2).tap();
       await expect(target(first,2)).toHaveAttribute('data-state','fallen');

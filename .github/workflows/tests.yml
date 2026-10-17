@@ -33,6 +33,7 @@ jobs:
           node tests/translation_browser.cjs
           node tests/tablet_browser.cjs
           node tests/modes_browser.cjs
+          node tests/workflow_browser.cjs
           node tests/monitor_browser.cjs
           node tests/browser_smoke.cjs
           node tests/vision_browser.cjs

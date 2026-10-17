@@ -29,8 +29,10 @@ Training und Gästeschießen.
 | **Automatisch** | Eine kalibrierte Kamera liefert die Scheibenzustände. |
 | **Mischbetrieb** | Automatische Erfassung mit sofortigen manuellen Korrekturen je Scheibe. Die nicht korrigierten Scheiben bleiben automatisch gesteuert. |
 
-Die Betriebsart lässt sich direkt in jeder Bahnkachel wählen. Unterschiedliche
-Betriebsarten können gleichzeitig an einem Schießstand verwendet werden.
+Die Betriebsart wird unter **„Optionen“** in jeder Bahnkachel gewählt. Für den
+Betrieb ohne Kamera zuerst **„Manuell“** auswählen, anschließend die tatsächliche
+Vorbereitung bestätigen. Unterschiedliche Betriebsarten können gleichzeitig an
+einem Schießstand verwendet werden.
 
 Versorgt beispielsweise eine Kamera die **Bahnen 4 bis 6** und fällt aus oder
 liefert wegen Schneefalls keine zuverlässigen Beobachtungen mehr, können diese
@@ -75,7 +77,7 @@ sichtbar unbekannt.
 
 ## Entwicklungsstand und geplanter Praxistest
 
-Version **0.7.0** umfasst manuelle Erfassung, automatischen und priorisierten
+Der aktuelle Entwicklungsstand auf `main` umfasst manuelle Erfassung, automatischen und priorisierten
 Mischbetrieb, synchronisierte Tablets, einen schreibgeschützten Kontrollmonitor,
 RTSP-Kameraverwaltung und browserbasierte Kalibrierung. Startnummern lassen sich
 zuordnen und korrigieren; erfasste Zustände und manuelle Übersteuerungen werden
@@ -92,38 +94,75 @@ und eine mögliche direkte Anbindung an ihre Zeitnahme beurteilen können. Das i
 eine geplante Prüfung einer möglichen Integration, kein bereits bestätigter
 Integrations- oder Kompatibilitätsnachweis.
 
-## Bedienung am Schießstand
+## Ablauf für Kampfrichter am Schießstand
 
-Pro Tablet die betreuten Bahnen auswählen, beispielsweise drei bis fünf. Die
-Auswahl darf sich zwischen Geräten überschneiden. Startnummer über das
-Zahlentastenfeld eingeben und bestätigen. Andere Tablets sehen unbestätigte
-Eingaben getrennt vom verbindlichen Stand. Bei einem Belegungskonflikt bleibt der
-eigene Text zur Prüfung erhalten.
+Der Ablauf ist in allen drei Betriebsarten gleich. Nur die Erfassung der
+Scheibenstellungen unterscheidet sich:
 
-Im manuellen oder gemischten Betrieb wechselt Antippen einer Scheibe zwischen
-aufgerichtet und gefallen; `?` setzt unbekannt. Im Mischbetrieb stehen der
-wirksame Zustand und der automatische Vergleichswert getrennt in der Kachel.
-Manuelle Werte sind markiert und lassen sich mit `Auto ↩` einzeln freigeben.
-Eine einfache Scheibenkorrektur benötigt keine zusätzliche Bestätigung.
+| Aufgabe | Manuell | Automatisch | Mischbetrieb |
+|---|---|---|---|
+| Bahn belegen/verlassen | Kampfrichter | Kampfrichter | Kampfrichter |
+| BIB erfassen | Kampfrichter | Kampfrichter | Kampfrichter |
+| Gefallene Scheiben erfassen | Kampfrichter | Kamera | Kamera + Korrektur durch Kampfrichter |
+| Rückstellung erkennen/bestätigen | Kampfrichter | Kamera, soweit zuverlässig erkennbar | Kamera, bei Bedarf Kampfrichter |
+| Überwachung | Kampfrichter | Kampfrichter | Kampfrichter |
 
-**Rückstellung bestätigen** nach tatsächlicher Rückstellung verwenden: Die
-Schießeinlage endet, die Belegung bleibt bestehen. Beim Verlassen die Bahn
-zusätzlich freigeben. Auch ohne bekannte Startnummer erfasste Zustände bleiben
-erhalten; eine Startnummer kann der betreffenden Einlage später zugeordnet werden.
+0. **Bahn frei und vorbereitet:** Kein Sportler auf der Bahn, alle fünf Scheiben
+   tatsächlich aufgerichtet und die Vorbereitung bestätigt. Die Kachel ist
+   **grün: „Frei – bereit“**. Ein unbekannter Ausgangszustand gilt noch nicht als bereit.
+1. **Sportler betritt die Bahn:** **„Bahn belegen“** antippen. Die Kachel wird sofort
+   **gelb: „Belegt“**, auch ohne bekannte Startnummer. Die Kamera entscheidet nicht
+   über Betreten oder Verlassen einer Bahn.
+2. **Startnummer erfassen:** Neben „Startnummer“ auf **„Eingeben“** tippen, die BIB
+   über das Zahlentastenfeld eingeben und bestätigen. Die Nummer erscheint groß
+   auf allen verbundenen Tablets. Verspätete Eingabe und Korrektur bleiben möglich.
+3. **Schießeinlage verfolgen:** **Schwarz bedeutet aufgerichtet, weiß bedeutet
+   gefallen.** Im manuellen Betrieb jede gefallene Scheibe einmal antippen;
+   erneutes Antippen korrigiert eine Fehleingabe, ohne eine neue Einlage anzulegen.
+   Automatisch liefert die Kamera die Stellungen. Im Mischbetrieb kann jede Scheibe
+   sofort korrigiert werden; manuelle Werte haben Vorrang, andere Scheiben bleiben
+   automatisch gesteuert. `M` markiert eine Übersteuerung, die kleine Auto-Anzeige
+   zeigt den Vergleichswert. Antippen von `Auto ↩` gibt nur diese Scheibe frei.
+4. **Sportler verlässt die Bahn:** **„Bahn verlassen“** antippen. Die Belegung endet;
+   Scheibenstellungen bleiben erhalten. Fehlt die bestätigte Rückstellung, ist die
+   Kachel **grau: „Frei – Rückstellung ausstehend“**.
+5. **Mechanisch zurückstellen:** Die Scheiben tatsächlich aufrichten, etwa durch
+   Ziehen am Seil. Im manuellen Betrieb anschließend **„Alle Scheiben aufgerichtet“**
+   antippen. Automatisch oder im Mischbetrieb kann eine zuverlässig erkannte
+   vollständige Rückstellung übernommen werden. Ist die Bahn nicht mehr belegt,
+   wechselt sie auf Grün und ist für den nächsten Sportler bereit.
 
-Der Kontrollmonitor unter `/monitor` zeigt alle Bahnen kompakt und schreibgeschützt.
-Aktuell wirksame gefallene Scheiben und während der Einlage automatisch beobachtete
-Fälle werden getrennt angezeigt; sie sind keine Schusszählung oder Ergebniswertung.
+Bahnverlassen und Rückstellung dürfen in umgekehrter Reihenfolge erfolgen:
+Eine Rückstellung gibt eine belegte Bahn nicht frei; sie bleibt gelb bis
+**„Bahn verlassen“** bestätigt wird. Fünf unverändert aufgerichtete Scheiben allein
+beweisen keine neue Rückstellung, beispielsweise nach einer Einlage ohne erkannte
+gefallene Scheibe. Dann nach tatsächlicher Vorbereitung ausdrücklich
+**„Alle Scheiben aufgerichtet“** bestätigen; die Aktion ist auch unter **„Optionen“**
+erreichbar. Bei Kameraausfall oder unklarer Sicht gibt es keine automatische
+Bereitmeldung. Betroffene Bahnen können manuell weitergeführt werden.
+
+Die Betriebsart ist in jeder Kachel sichtbar. Unter **„Optionen“** liegen die
+Betriebsartwahl, Einlagenhistorie und die Sonderfunktion für eine ausdrücklich
+unbekannte Scheibenstellung. Unbekannt ist kein Fehlschuss. Je Tablet die betreuten
+Bahnen auswählen; Auswahlen dürfen sich überschneiden. Andere Tablets zeigen
+unbestätigte Startnummerneingaben getrennt vom verbindlichen Stand. Bei einem
+Belegungskonflikt bleibt der eigene Text zur Prüfung erhalten. Eine zuvor ohne BIB
+erfasste Einlage kann später über ihre Historie zugeordnet werden.
+
+Der Kontrollmonitor unter `/monitor` zeigt alle Bahnen schreibgeschützt mit
+Belegung, Vorbereitung und wirksamen Scheibenstellungen. Automatisch beobachtete
+Fälle und aktuell wirksame gefallene Scheiben bleiben getrennt; dies ist keine
+Schusszählung oder Ergebniswertung. Sensorhardware und Sensoradapter sind weiter
+geplant und übernehmen in diesem Stand keine Erfassungsaufgabe.
 
 ## Unter Debian/Ubuntu installieren
 
 Voraussetzung: Debian/Ubuntu mit Python 3.11 oder neuer, systemd und Internet
-für die Installation. Installation des veröffentlichten Stands:
+für die Installation. Installation des aktuellen Stands auf `main`:
 
 ```bash
 git clone https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
-git checkout v0.7.0
 ./install.sh
 ```
 
@@ -137,7 +176,9 @@ sudo biathlon-target-vision --upgrade
 ```
 
 Upgrades verwenden den neuesten veröffentlichten Versionstag und erhalten
-Konfiguration, Kalibrierungen und Ereignisse. Betrieb und Speicherorte beschreibt
+Konfiguration, Kalibrierungen und Ereignisse. Änderungen auf `main` können dem
+letzten Versionstag voraus sein; `--upgrade` lädt ausschließlich veröffentlichte
+Versionstags. Betrieb und Speicherorte beschreibt
 [ARCHITECTURE.md](docs/ARCHITECTURE.md#installation-und-upgrades).
 
 ## Lokal installieren und starten

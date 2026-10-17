@@ -23,7 +23,7 @@ from .config import CameraSettings, Settings, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
 from .core import Conflict, EventStore
 from .models import (Assignment, Observation, Release, ModeChange, ManualTarget,
-                     OverrideRelease, ManualReset)
+                     OverrideRelease, ManualReset, Occupy)
 from .vision import VisionService
 
 
@@ -80,9 +80,23 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return "ok" if not app.state.store.failed and not app.state.vision_task.done() else "error"
 
     def snapshot():
-        return {**app.state.store.snapshot(), **api_identity(), "simulation": simulation,
+        state = app.state.store.snapshot()
+        cameras = camera_list()
+        if app.state.vision_task.done():
+            for lane in state["lanes"].values():
+                if lane["mode"] != "manual" and lane["status"] == "ready":
+                    lane["status"] = "reset_required"
+        # Kamerastatus kann sich ohne Journalereignis ändern. Auch im kurzen
+        # Abstand vor der nächsten unknown-Beobachtung niemals bereit anzeigen.
+        for camera in cameras["cameras"]:
+            if not camera["connected"]:
+                for lane_id in camera["lane_ids"]:
+                    lane = state["lanes"][str(lane_id)]
+                    if lane["mode"] != "manual" and lane["status"] == "ready":
+                        lane["status"] = "reset_required"
+        return {**state, **api_identity(), "simulation": simulation,
                 "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
-                    **camera_list(), "calibration_errors": dict(app.state.vision.errors)}}
+                    **cameras, "calibration_errors": dict(app.state.vision.errors)}}
 
     def wake_subscribers():
         for queue in subscribers:
@@ -262,6 +276,12 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.put("/api/lanes/{lane_id}/bib")
     async def assign(lane_id: int, command: Assignment):
+        if lane_id != command.lane_id:
+            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
+        return publish(command)
+
+    @app.post("/api/lanes/{lane_id}/occupy")
+    async def occupy(lane_id: int, command: Occupy):
         if lane_id != command.lane_id:
             raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
         return publish(command)

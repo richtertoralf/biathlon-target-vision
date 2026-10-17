@@ -1,6 +1,11 @@
 // Alle Texte des Tablet-Bedienplatzes; keine Sprachlogik im Ereigniskern.
 window.BTV_I18N = {
   en: {
+    enterNumber: 'Enter',
+    occupyLane: 'Occupy lane', leaveLane: 'Leave lane', allStanding: 'All targets are standing',
+    laneReady: 'Free – ready', laneResetRequired: 'Free – reset required', laneOptions: 'Options',
+    unknownTarget: 'Set a target to unknown…', unknownHelp: 'Select the target whose state cannot be confirmed.',
+    returnTargetAuto: 'Target {n}: return to automatic capture', closeBout: 'Close unassigned bout',
     mode: 'Mode', manual: 'Manual', automatic: 'Automatic', mixed: 'Mixed',
     manualValue: 'Manual', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Target {n}: set unknown',
     confirmReset: 'Confirm target reset', targetHelp: 'Tap: standing / fallen. ?: unknown. Auto ↩: release manual override.',
@@ -40,6 +45,11 @@ window.BTV_I18N = {
     inputOffline: 'Your input is preserved locally. Confirmation is unavailable until reconnection.',
   },
   de: {
+    enterNumber: 'Eingeben',
+    occupyLane: 'Bahn belegen', leaveLane: 'Bahn verlassen', allStanding: 'Alle Scheiben aufgerichtet',
+    laneReady: 'Frei – bereit', laneResetRequired: 'Frei – Rückstellung ausstehend', laneOptions: 'Optionen',
+    unknownTarget: 'Scheibe unbekannt setzen…', unknownHelp: 'Die Scheibe auswählen, deren Zustand nicht sicher bekannt ist.',
+    returnTargetAuto: 'Scheibe {n}: zurück zur Automatik', closeBout: 'Unzugeordnete Einlage abschließen',
     mode: 'Betriebsart', manual: 'Manuell', automatic: 'Automatisch', mixed: 'Mischbetrieb',
     manualValue: 'Manuell', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Scheibe {n}: unbekannt setzen',
     confirmReset: 'Rückstellung bestätigen', targetHelp: 'Antippen: aufgerichtet / gefallen. ?: unbekannt. Auto ↩: Übersteuerung aufheben.',
@@ -79,6 +89,11 @@ window.BTV_I18N = {
     inputOffline: 'Deine Eingabe bleibt lokal erhalten. Bestätigen ist erst nach Wiederverbindung möglich.',
   },
   cs: {
+    enterNumber: 'Zadat',
+    occupyLane: 'Obsadit stav', leaveLane: 'Opustit stav', allStanding: 'Všechny terče jsou vztyčené',
+    laneReady: 'Volný – připravený', laneResetRequired: 'Volný – čeká na vztyčení terčů', laneOptions: 'Možnosti',
+    unknownTarget: 'Nastavit terč jako neznámý…', unknownHelp: 'Vyberte terč, jehož stav nelze spolehlivě potvrdit.',
+    returnTargetAuto: 'Terč {n}: vrátit automatické snímání', closeBout: 'Ukončit položku bez startovního čísla',
     mode: 'Režim', manual: 'Ruční', automatic: 'Automatický', mixed: 'Smíšený',
     manualValue: 'Ručně', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Terč {n}: nastavit neznámý',
     confirmReset: 'Potvrdit vztyčení terčů', targetHelp: 'Klepnutí: vztyčený / sklopený. ?: neznámý. Auto ↩: zrušit ruční přepsání.',

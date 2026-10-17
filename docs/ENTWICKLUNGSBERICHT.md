@@ -560,3 +560,73 @@ Dopplungen und das ältere Tablet-Konzeptbild wurden entfernt. Begriffe folgen
 dem Terminologieverzeichnis. Geprüft wurden lokale Links/Anker, Bildverweis,
 identische Shell-Beispiele und die Beschränkung auf Dokumentationsdateien.
 Keine Anwendungscodeänderung und keine neue Aussage über reale Validierung.
+
+## 2026-10-18 – Ergonomie und einheitlicher Schießstandablauf
+
+Vor der Änderung wurden Belegung, Startnummer, Einlage und Scheiben im Kern,
+in Tablet und API geprüft. Bisher konnte nur eine Startnummernzuordnung belegen;
+eine bloße manuelle Scheibeneingabe konnte unbeabsichtigt eine Einlage eröffnen.
+Ein neuer `occupy`-Befehl nutzt den vorhandenen Belegungszähler und erlaubt sofortige
+Belegung ohne BIB. Verspätete Zuordnung, historische Korrektur, Freigabe und
+WebSocket-Veröffentlichung bleiben auf den bisherigen Wegen. Der neue
+Tablet-Ablauf sendet `start_bout: false` bei Einzelkorrekturen. Der bisherige
+Standardwert erhält ältere API-Clients und Journale, ohne eine neue Schnittstelle
+für dieselbe Zielkorrektur einzuführen.
+
+Ein boolesches Vorbereitungsmerkmal und ein Marker für noch unvollständige
+automatische Rückstellung genügen für den GRÜN-GELB-GRAU-Ablauf. Belegung verbraucht
+die vorherige Vorbereitung. Einlagenende bei tatsächlich beobachteter einzelner
+Rückkehr nach oben bleibt erhalten; erst vollständige Rückstellung bestätigt
+Bereitschaft und beendet alte Übersteuerungen. Unveränderte Fünferbilder und
+Grundbeobachtungen bestätigen keine neue Rückstellung. Kameraausfall oder
+beendete Auswertung verhindern im gemeinsamen Snapshot eine Bereitmeldung.
+Manuelle Bahnen bleiben unabhängig. Neue Befehle benötigen diesen Stand für
+Replay; der ältere Tag `v0.7.0` kann neue `occupy`-/`start_bout`-Befehle nicht lesen.
+Alte Journale bleiben lesbar. Kein automatisches Zurückspielen von Laufzeitdaten.
+
+Alle drei Betriebsarten verwenden dieselbe Kachelstruktur, denselben farbigen
+Hintergrund samt Statuswort und dieselben Hauptaktionen. Scheiben sind schwarz
+oder weiß, mit ausreichend großen Touchflächen in einer Reihe. Einzelkorrekturen,
+Betreten, Verlassen und ausdrücklich beschriftete Vorbereitung sind unmittelbar.
+Moduswahl, Historie und Unbekannt-Sonderfunktion stehen unter Optionen. Manuelle
+Übersteuerungen tragen `M`; darunter bleibt der kleine automatische Vergleichswert
+mit direkter Rückgabe sichtbar. Diese Bedienvorgänge sind im Terminologieverzeichnis
+als technische UI-Beschreibungen gekennzeichnet, nicht als erfundene IBU-Begriffe.
+
+Die erste visuelle Prüfung zeigte auf kleinen Tablets zu viel Platzbedarf in der
+Kopfzeile und durch Erfolgsmeldungen verschobene Touch-Ziele. Kopfzeile und
+Beschriftungen wurden gekürzt; Erfolgsmeldungen erscheinen kurz außerhalb des
+Layouts. Feste Höhen von Statuszeile, Scheiben und Hauptaktion verhindern
+Verschiebungen bei Status-/Moduswechseln. Lange Statuswörter dürfen umbrechen,
+die Bahnnummer bleibt zusammen. Geprüfte Abbildungen liegen unversioniert in
+`.test-artifacts/workflow-*.png`.
+
+README beschreibt jetzt den vollständigen Ablauf, die Aufgabenverteilung und
+die Auswahl von Manuell vor der ersten Vorbereitung ohne Kamera. Die Kamera erfasst Scheiben und zuverlässig erkannte Rückstellung, niemals
+Betreten, BIB oder Verlassen. Der Installationspfad beschreibt bewusst den
+aktuellen `main`, weil der neue Ablauf noch nicht in Tag `v0.7.0` enthalten ist.
+`--upgrade` bleibt auf veröffentlichte Tags beschränkt. Sensorik bleibt geplant;
+keine GFX-Änderung, keine Ergebnisverwaltung oder künstliche Schussmeldung.
+
+Abnahme lokal: **107 Python-Tests erfolgreich**, darunter 13 neue Ablauf-/API-Tests
+für Belegen ohne BIB, beide Reihenfolgen von Verlassen/Rückstellung, unveränderte
+Fünferbilder, Korrekturen ohne Einlagenbeginn, automatische Teil-/Vollrückstellung,
+Mischpriorität, unterbrochene Rückstellung, Replay, zwei Tablets und sofortige
+Sperre veralteter Bereitmeldungen bei Kamera-/Erfassungsausfall. Der bestehende
+Misch-Rückstelltest beginnt nun mit fünf bekannten automatischen Stellungen;
+eine Teilrückstellung bei ansonsten unbekannten Scheiben bestätigt keine
+vollständige Vorbereitung.
+
+Sieben Browserprüfungen erfolgreich: bestehende Tablet-, Betriebsarten-,
+Übersetzungs-, Monitor-, Kalibrierungs- und Optikprüfungen sowie der neue
+Ablauftest. Dieser benutzt echte lokale Server und zwei unabhängige Touch-Profile
+mit 600×960 und 960×600 Pixeln, prüft EN/DE/CS, tatsächliche Hintergrund-/Scheibenfarben,
+Touchflächen ab 48 Pixeln und unveränderte Aktionspositionen. Die Darstellungen
+wurden zusätzlich als Bilder visuell geprüft. CI führt den neuen Ablauftest mit
+aus. `pip check`, Shell-/JavaScript-Syntax, lokale README-Links/Anker und
+`git diff --check` erfolgreich. Keine neue Laufzeitabhängigkeit.
+
+Praxistestgrenzen bleiben: synthetische Kamerabilder und Chromium, keine realen
+Schießstandaufnahmen, keine physischen Tablets bei Sonne/Schnee/Handschuhen und
+keine Sensorhardware. Der geplante Arberstadion-Test wird nicht als bereits
+durchgeführte Validierung dargestellt.

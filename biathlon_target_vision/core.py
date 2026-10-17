@@ -11,7 +11,7 @@ import threading
 from pydantic import TypeAdapter
 
 from .models import (EventCommand, Observation, LaneControl, ModeChange, ManualTarget,
-                     OverrideRelease, ManualReset)
+                     OverrideRelease, ManualReset, Occupy)
 
 
 class Conflict(ValueError):
@@ -49,6 +49,7 @@ class EventStore:
                     "lane_id": i, "revision": 0, "assignment_revision": 0,
                     "mode": "automatic", "control_revision": 0,
                     "automatic_generation": 0,
+                    "reset_confirmed": False, "automatic_reset_pending": False,
                     "automatic_targets": ["unknown"] * 5,
                     "automatic_last_known": ["unknown"] * 5,
                     "automatic_baseline_pending": [False] * 5,
@@ -96,7 +97,12 @@ class EventStore:
 
     def snapshot(self):
         with self.lock:
-            return deepcopy(self.state)
+            result = deepcopy(self.state)
+            for lane in result["lanes"].values():
+                prepared = (lane["reset_confirmed"] and lane["targets"] == ["standing"] * 5
+                            and (lane["mode"] == "manual" or lane["automatic_targets"] == ["standing"] * 5))
+                lane["status"] = "occupied" if lane["occupied_bout_id"] else "ready" if prepared else "reset_required"
+            return result
 
     def history(self, after=0, limit=1000):
         with self.lock:
@@ -203,6 +209,17 @@ class EventStore:
                 raise Conflict("Bahn wurde zwischenzeitlich geändert. Zustand neu laden.")
             if command.kind == "assign":
                 self._assign(state, lane, command)
+            elif isinstance(command, Occupy):
+                if lane["occupied_bout_id"]:
+                    raise Conflict("Bahn ist bereits belegt.")
+                bout = state["bouts"].get(lane["current_bout_id"])
+                if bout is None:
+                    self._clear_manual(lane)
+                    bout = self._new_bout(state, lane, command)
+                lane["occupied_bout_id"] = bout["bout_id"]
+                lane["reset_confirmed"] = False
+                lane["automatic_reset_pending"] = False
+                lane["control_revision"] += 1
             else:
                 bout = state["bouts"].get(command.bout_id)
                 if not bout or bout["lane_id"] != command.lane_id:
@@ -256,6 +273,9 @@ class EventStore:
             bout = self._new_bout(state, lane, command)
         bout["bib"] = command.bib
         if active:
+            if lane["occupied_bout_id"] != bout["bout_id"]:
+                lane["reset_confirmed"] = False
+                lane["automatic_reset_pending"] = False
             lane["occupied_bout_id"] = bout["bout_id"]
 
     def _observe(self, state, lane, command):
@@ -282,6 +302,9 @@ class EventStore:
         reset = not baseline and (command.kind == "reset" or any(
             lane["automatic_last_known"][i] == "fallen" and new_state == "standing" for i in indexes))
         previous = list(lane["automatic_last_known"])
+        if baseline:
+            # Eine unterbrochene Beobachtungskette bestätigt keine Rückstellung.
+            lane["automatic_reset_pending"] = False
         for index in indexes:
             lane["automatic_targets"][index] = new_state
             if new_state != "unknown":
@@ -292,8 +315,17 @@ class EventStore:
         # Im manuellen Betrieb bleibt die Kamera lediglich eine Vergleichsquelle.
         if lane["mode"] == "manual":
             return
+        if new_state != "standing":
+            lane["reset_confirmed"] = False
         if reset:
             self._close_bout(state, lane, "reset")
+            lane["automatic_reset_pending"] = True
+            lane["control_revision"] += 1
+        # Einlagenende bei Teilrückstellung bleibt erhalten. Erst die vollständig
+        # beobachtete Rückstellung gibt die Vorbereitung und Übersteuerungen frei.
+        if lane["automatic_reset_pending"] and lane["automatic_targets"] == ["standing"] * 5:
+            lane["reset_confirmed"] = True
+            lane["automatic_reset_pending"] = False
             self._clear_manual(lane)
             lane["control_revision"] += 1
         self._effective(lane)
@@ -317,6 +349,8 @@ class EventStore:
     def _effective(lane):
         lane["targets"] = [manual if manual is not None else automatic
                            for manual, automatic in zip(lane["manual_targets"], lane["automatic_targets"])]
+        if "fallen" in lane["targets"]:
+            lane["reset_confirmed"] = False
         for index, value in enumerate(lane["targets"]):
             if value != "unknown":
                 lane["last_known_targets"][index] = value
@@ -339,9 +373,12 @@ class EventStore:
                 # liefern; unbekannte Bilder verbrauchen diese Markierung nicht.
                 lane["automatic_baseline_pending"] = [True] * 5
                 lane["automatic_generation"] += 1
+                lane["automatic_reset_pending"] = False
             lane["mode"] = command.mode
         elif isinstance(command, ManualReset):
             self._close_bout(state, lane, "reset")
+            lane["reset_confirmed"] = True
+            lane["automatic_reset_pending"] = False
             lane["automatic_targets"] = ["unknown"] * 5
             lane["automatic_last_known"] = ["unknown"] * 5
             lane["automatic_baseline_pending"] = [True] * 5
@@ -359,10 +396,12 @@ class EventStore:
         elif isinstance(command, ManualTarget):
             if lane["mode"] == "automatic":
                 raise Conflict("Manuelle Eingabe benötigt manuellen Betrieb oder Mischbetrieb.")
-            if command.state == "fallen" and not lane["current_bout_id"]:
+            if command.start_bout and command.state == "fallen" and not lane["current_bout_id"]:
                 self._clear_manual(lane)
                 self._new_bout(state, lane, command)
             lane["manual_targets"][command.target_id - 1] = command.state
+            if command.state != "standing":
+                lane["reset_confirmed"] = False
             # Eine menschliche Zustandseingabe ist kein beobachteter Schuss und
             # verändert die Liste automatisch beobachteter Fälle nicht.
         self._effective(lane)

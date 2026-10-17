@@ -6,8 +6,8 @@
     lanes.replaceChildren();
     for (const lane of Object.values(state.lanes)) {
       const current = state.bouts[lane.current_bout_id], occupied = state.bouts[lane.occupied_bout_id];
-      const card = document.createElement('section'); card.className = 'lane'; card.id = `lane-${lane.lane_id}`;
-      const title = document.createElement('h2'); title.textContent = `Bahn ${lane.lane_id} · ${occupied ? 'belegt' : 'frei'}`;
+      const card = document.createElement('section'); card.className = 'lane'; card.dataset.status = lane.status; card.id = `lane-${lane.lane_id}`;
+      const title = document.createElement('h2'); title.textContent = `Bahn ${lane.lane_id} · ${{occupied:'belegt',ready:'frei – bereit',reset_required:'frei – Rückstellung ausstehend'}[lane.status]}`;
       const bib = document.createElement('p');
       bib.textContent = `Startnummer: ${current?.bib ?? (occupied && !current ? occupied.bib : null) ?? '–'}`;
       if (occupied && current && occupied.bout_id !== current.bout_id) bib.textContent += ` · vorherige Belegung: ${occupied.bib ?? '–'}`;
