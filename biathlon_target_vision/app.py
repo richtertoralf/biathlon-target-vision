@@ -1,0 +1,232 @@
+"""FastAPI-Zugang für Tablet-Bedienplätze, Ereignisquellen und Kalibrierung."""
+
+import asyncio
+from contextlib import asynccontextmanager
+import json
+import logging
+from itertools import count
+from pathlib import Path
+from time import monotonic
+
+import cv2
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+import numpy as np
+from starlette.concurrency import run_in_threadpool
+
+from .calibration import CalibrationError, CalibrationStore, align, calibrate
+from .core import Conflict, EventStore
+from .models import Assignment, Observation, Release
+
+
+def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, simulation: bool = False):
+    subscribers = set()
+    drafts = {}
+    editor_numbers = count(1)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        app.state.store = EventStore(Path(data_dir), lane_count)
+        try:
+            app.state.calibrations = CalibrationStore(Path(data_dir))
+            yield
+        finally:
+            app.state.store.close()
+
+    app = FastAPI(title="Biathlon Target Vision", version="0.2.0", lifespan=lifespan)
+    static = Path(__file__).with_name("static")
+    app.mount("/static", StaticFiles(directory=static), name="static")
+
+    @app.exception_handler(Conflict)
+    async def conflict_handler(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @app.exception_handler(CalibrationError)
+    async def calibration_handler(request, exc):
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    @app.exception_handler(OSError)
+    async def storage_handler(request, exc):
+        logging.exception("Lokaler Speicherzugriff fehlgeschlagen", exc_info=exc)
+        return JSONResponse(status_code=503, content={"detail": "Speicherfehler. Serverprotokoll und Datenträger prüfen."})
+
+    def snapshot():
+        return {**app.state.store.snapshot(), "simulation": simulation}
+
+    def wake_subscribers():
+        for queue in subscribers:
+            if not queue.full():
+                queue.put_nowait(None)
+
+    def socket_snapshot(editor_id):
+        # Entwürfe gehören nur zur lebenden Verbindung. Ausbleibende Erneuerung
+        # entfernt auch bei stillen WLAN-Ausfällen veraltete Eingabeanzeigen.
+        now = monotonic()
+        for owner, (_, updated_at) in list(drafts.items()):
+            if now - updated_at > 15:
+                del drafts[owner]
+        return {"type": "state", **snapshot(), "editor_id": editor_id,
+                "drafts": [draft for draft, _ in drafts.values()]}
+
+    def publish(command):
+        event = app.state.store.apply(command)
+        message = {"type": "state", **snapshot()}
+        wake_subscribers()
+        return {"event": event, "state": message}
+
+    @app.get("/", include_in_schema=False)
+    async def index():
+        return FileResponse(static / "tablet.html", headers={"Cache-Control": "no-store"})
+
+    @app.get("/calibration", include_in_schema=False)
+    async def calibration_page():
+        return FileResponse(static / "calibration.html")
+
+    @app.get("/api/state")
+    async def state():
+        return JSONResponse(snapshot(), headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/events")
+    async def events(after: int = Query(0, ge=0), limit: int = Query(1000, ge=1, le=1000)):
+        return {"events": app.state.store.history(after, limit), "sequence": app.state.store.snapshot()["sequence"]}
+
+    @app.post("/api/observations")
+    async def observations(command: Observation, x_lane_revision: int | None = Header(default=None, ge=0)):
+        if command.source == "simulator" and not simulation:
+            raise HTTPException(403, "Simulationsbetrieb ist deaktiviert.")
+        # Optionaler Revisionsschutz für manuelle Simulation; Kameras behalten
+        # ihre bisherige Schnittstelle. Prüfung und Verarbeitung ohne await.
+        if x_lane_revision is not None and command.event_id not in app.state.store.by_id:
+            lane = app.state.store.state["lanes"].get(str(command.lane_id))
+            if lane is None or lane["revision"] != x_lane_revision:
+                raise Conflict("Bahn wurde zwischenzeitlich geändert. Zustand neu laden.")
+        return publish(command)
+
+    @app.put("/api/lanes/{lane_id}/bib")
+    async def assign(lane_id: int, command: Assignment):
+        if lane_id != command.lane_id:
+            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
+        return publish(command)
+
+    @app.post("/api/lanes/{lane_id}/release")
+    async def release(lane_id: int, command: Release):
+        if lane_id != command.lane_id:
+            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
+        return publish(command)
+
+    @app.websocket("/ws")
+    async def websocket(socket: WebSocket):
+        await socket.accept()
+        queue = asyncio.Queue(maxsize=1)
+        subscribers.add(queue)
+        editor_id = next(editor_numbers)
+        reader = None
+        pending = None
+        try:
+            await socket.send_json(socket_snapshot(editor_id))
+
+            async def receive_until_disconnect():
+                while True:
+                    message = await socket.receive()
+                    if message["type"] == "websocket.disconnect":
+                        return
+                    try:
+                        raw = message.get("text", "")
+                        if len(raw) > 1024:
+                            raise ValueError("Entwurf zu groß")
+                        data = json.loads(raw)
+                        if data["type"] == "draft_clear":
+                            if socket in drafts:
+                                del drafts[socket]
+                                wake_subscribers()
+                            continue
+                        lane_id, value, bout_id = data["lane_id"], data["value"], data.get("bout_id")
+                        if data["type"] != "draft" or type(lane_id) is not int or str(lane_id) not in app.state.store.state["lanes"]:
+                            raise ValueError("Ungültige Bahn")
+                        if not isinstance(value, str) or len(value) > 15 or (value and not (value.isascii() and value.isdigit())):
+                            raise ValueError("Ungültige Startnummer")
+                        if bout_id is not None:
+                            bout = app.state.store.state["bouts"].get(bout_id) if isinstance(bout_id, str) else None
+                            if not bout or bout["lane_id"] != lane_id:
+                                raise ValueError("Ungültige Einlage")
+                    except (ValueError, KeyError, TypeError):
+                        await socket.close(code=1008, reason="Ungültiger Eingabeentwurf")
+                        return
+                    draft = {"editor_id": editor_id, "lane_id": lane_id, "bout_id": bout_id, "value": value}
+                    previous = drafts.get(socket)
+                    drafts[socket] = (draft, monotonic())
+                    if previous is None or previous[0] != draft:
+                        wake_subscribers()
+
+            reader = asyncio.create_task(receive_until_disconnect())
+            while True:
+                pending = asyncio.create_task(queue.get())
+                done, _ = await asyncio.wait([reader, pending], timeout=5, return_when=asyncio.FIRST_COMPLETED)
+                if reader in done:
+                    await reader
+                    break
+                if pending not in done:
+                    pending.cancel()
+                    await asyncio.gather(pending, return_exceptions=True)
+                # Ein zusammenhängender Stand verhindert, dass zusammengefasste
+                # Entwurfsnachrichten eine offizielle Zustandsänderung verdrängen.
+                await socket.send_json(socket_snapshot(editor_id))
+        except WebSocketDisconnect:
+            pass
+        finally:
+            subscribers.discard(queue)
+            if socket in drafts:
+                del drafts[socket]
+                wake_subscribers()
+            tasks = [task for task in (reader, pending) if task is not None]
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    def check_lane(lane_id):
+        if str(lane_id) not in app.state.store.state["lanes"]:
+            raise HTTPException(404, "Schießbahn existiert nicht.")
+
+    async def read_image(upload):
+        data = await upload.read(10 * 1024 * 1024 + 1)
+        if len(data) > 10 * 1024 * 1024:
+            raise CalibrationError("Bilddatei ist größer als 10 MiB.")
+        try:
+            image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR) if data else None
+        except cv2.error as exc:
+            raise CalibrationError("Bilddatei konnte nicht dekodiert werden.") from exc
+        if image is None or image.shape[0] * image.shape[1] > 20_000_000:
+            raise CalibrationError("Kein lesbares Bild oder mehr als 20 Megapixel.")
+        return image
+
+    @app.get("/api/lanes/{lane_id}/calibration")
+    async def get_calibration(lane_id: int):
+        check_lane(lane_id)
+        return {"calibration": app.state.calibrations.load(lane_id)}
+
+    @app.post("/api/lanes/{lane_id}/calibration")
+    async def set_calibration(lane_id: int, image: UploadFile = File(), quad: str = Form()):
+        check_lane(lane_id)
+        try:
+            points = json.loads(quad)
+        except ValueError as exc:
+            raise CalibrationError("ROI muss eine JSON-Liste mit vier Bildpunkten sein.") from exc
+        frame = await read_image(image)
+        try:
+            result = await run_in_threadpool(calibrate, frame, points)
+        except (TypeError, ValueError) as exc:
+            raise CalibrationError(str(exc)) from exc
+        await run_in_threadpool(app.state.calibrations.save, lane_id, result)
+        return {"calibration": result}
+
+    @app.post("/api/lanes/{lane_id}/calibration/align")
+    async def align_calibration(lane_id: int, image: UploadFile = File()):
+        check_lane(lane_id)
+        saved = app.state.calibrations.load(lane_id)
+        if saved is None:
+            raise CalibrationError("Für diese Bahn wurde noch keine Kalibrierung gespeichert.")
+        result = await run_in_threadpool(align, await read_image(image), saved)
+        return {"calibration": result}
+
+    return app

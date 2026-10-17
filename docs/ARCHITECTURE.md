@@ -1,70 +1,120 @@
 # Architektur – Biathlon Target Vision
 
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.2.
+Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
+Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
+Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
+
 ## Grundkonzept
 
-Die Anwendung orientiert sich technisch an [LiveScore](https://github.com/richtertoralf/LiveScore), übernimmt jedoch nur die benötigten Komponenten.
+Ein zentraler Python-Prozess mit FastAPI und Uvicorn hält den gemeinsamen Zustand
+aller Schießbahnen. Die Anwendung läuft lokal unter Linux ohne Cloud und benötigt
+im Betrieb keinen Internetzugang. HTML, CSS und JavaScript werden ohne
+Frontend-Buildsystem ausgeliefert. Es gibt keine zusätzliche Datenbank, verteilten
+Dienste oder Sitzungsverwaltung. Die technische Orientierung an
+[LiveScore](https://github.com/richtertoralf/LiveScore) beschränkt sich auf benötigte
+Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 
-- Python 3 mit FastAPI und Uvicorn
-- Ein zentraler Linux-Serverprozess
-- HTML, CSS und JavaScript ohne Frontend-Buildsystem
-- REST-API und WebSockets für die Bedienoberflächen
-- Gemeinsamer Serverzustand für alle Bedienplätze
-- Lokale Speicherung von Konfiguration und Ereignissen
-- Betrieb als systemd-Dienst unter Debian/Ubuntu
-- Kein Internetzugang für den Wettkampfbetrieb erforderlich
+## Komponenten und Datenfluss
 
-## Funktionsbereiche
+| Komponente | Aktuelle Aufgabe |
+|---|---|
+| `__main__.py` | Serverstart, Bahnanzahl, Datenordner und Simulationsmodus |
+| `app.py` | REST-API, WebSockets, statische Browserseiten und flüchtige Eingabeentwürfe |
+| `models.py` | Validierung der Beobachtungs-, Zuordnungs- und Freigabebefehle |
+| `core.py` | Gemeinsamer Bahnzustand, Einlagen, Konfliktprüfung, Ereignisjournal und Wiederherstellung |
+| `simulator.py` | Zielbeobachtungen über denselben öffentlichen Eingang wie künftige Erfassungsadapter |
+| `static/tablet.*`, `static/translations.js` | Tablet-Bedienung und zentrale Übersetzungen |
+| `calibration.py`, `static/calibration.*` | Separate Standbild-Kalibrierung und deren Browseransicht |
 
-### Bahnbelegung
+Bestätigte Bedienbefehle und simulierte Zielbeobachtungen gelangen über REST und
+die Befehlsvalidierung in den Ereigniskern. Dieser prüft sie am gemeinsamen
+Zustand, speichert akzeptierte Ereignisse dauerhaft und veröffentlicht erst danach
+den neuen Zustand. REST-Antworten und vollständige WebSocket-Zustände versorgen
+die Bedienplätze. Langsame Empfänger erhalten den neuesten Stand; das Journal
+bewahrt auch die in der Anzeige übersprungenen Zwischenereignisse.
 
-- Browserbasierte Tablet-Oberfläche
-- Alternativ physisches Tastenfeld
-- Beliebig konfigurierbare Anzeige der Schießbahnen je Bedienplatz
-- Mehrere gleichzeitig arbeitende Kampfrichter
-- Automatische Synchronisierung aller Bedienplätze
+Unbestätigte Texte nehmen einen getrennten Weg: Browser → WebSocket → flüchtige
+Entwürfe in `app.py` → andere Browser. Sie erreichen weder Ereigniskern noch
+Journal. Die Kalibrierung verarbeitet einzelne Bilder und speichert Ergebnisse
+separat; sie erzeugt keine Zielbeobachtungen.
 
-### Treffererfassung
+## Ereigniskern und Speicherung
 
-Zwei austauschbare Erfassungsarten:
+Eine Bahn besitzt fünf unabhängige Zielzustände. Beobachtung, aktuelle
+Schießeinlage und noch bestehende Belegung sind getrennt: Eine Rückstellung
+beendet die Einlage, eine Freigabe beendet die Belegung. Damit können Treffer vor
+der Startnummerneingabe sowie verspätete Zuordnungen und Freigaben verarbeitet
+werden. Unbekannte Zielzustände löschen die letzte bekannte mechanische Stellung
+nicht. Es entstehen keine erfundenen Schuss- oder Fehlschussereignisse.
 
-- **Optisch:** IP-Kameras mit RTSP und Bildauswertung
-- **Sensorbasiert:** Sensoren an den Klappscheiben, beispielsweise mit ESP32 und WLAN
+Belegungsänderungen werden getrennt von Zielbeobachtungen auf Konkurrenz geprüft.
+Die Prüfung und Übernahme eines Befehls erfolgen gemeinsam im Kern. Eine Eingabe
+behält ihren Einlagenbezug auch über Rückstellungen hinweg; sie darf nicht
+unbemerkt auf den nächsten Sportler wechseln. Die konkreten Zähler, Kennungen
+und Auswahlregeln sind in [API.md](API.md#startnummern-und-freigabe) definiert.
 
-Beide liefern ein gemeinsames internes Ereignisformat.
+`data/events.jsonl` enthält einen Versions-/Konfigurationskopf mit der Bahnanzahl
+und danach die akzeptierten Befehle in ihrer Reihenfolge. Vor der Veröffentlichung
+wird mit `fsync` dauerhaft geschrieben. Ein Dateilock verhindert zwei schreibende
+Serverprozesse im selben Datenordner; er ist keine Bahnsperre für Bediener.
+Beim Start stellt dieselbe Zustandslogik den Zustand aus dem Journal wieder her.
+Journal und Einlagen werden zusätzlich vollständig im Arbeitsspeicher gehalten.
 
-### Ereignisverarbeitung
+Schreibfehler verhindern weitere Ereignisse bis zum Neustart. Ein beschädigtes
+Journal wird beim Start mit Fehler abgewiesen, nicht automatisch gekürzt.
+Betriebshinweise stehen in [API.md](API.md#speicherung-und-fehlerbehandlung).
 
-- Treffererfassung unabhängig von der Startnummerneingabe
-- Zuordnung der Sportler zu Schießeinlagen
-- Behandlung verspäteter Eingaben und Bahnfreigaben
-- Nachvollziehbare Speicherung der Ereignisse
-- Keine automatische Zuordnung bei widersprüchlichen Daten
+## Tablet-Bedienung und Mehrbenutzerbetrieb
 
-### KES-Schnittstelle
+`/` liefert die Tablet-Oberfläche. Alle Bedienplätze arbeiten mit demselben
+Serverzustand; Sprache und Bahnauswahl liegen je Browser/Origin in `localStorage`.
+Die Auswahl ist ein Anzeigefilter und darf sich überschneiden. Große
+Bedienelemente und flexible Spalten unterstützen Hoch- und Querformat.
+`translations.js` enthält English als Standard sowie Deutsch und Čeština.
 
-Ausgabe über TCP im dokumentierten Kurvinen-KES-Nachrichtenformat.
+Pro WebSocket-Verbindung gibt es höchstens einen getrennt sichtbaren Entwurf.
+Die Tablet-Nummer unterscheidet Verbindungen, ist aber keine Anmeldung oder
+permanente Gerätekennung. Es gibt keine exklusiven Bahnsperren oder Reservierungen.
+Verlassen des Eingabebereichs, Trennung oder ausbleibende Erneuerung entfernen die fremde Anzeige,
+ohne den Text als offizielle Startnummer zu übernehmen.
 
-Die Originaldokumentation im Repository ist die verbindliche Protokollreferenz.
+Treffer und Rückstellungen unterbrechen keine laufende Startnummerneingabe.
+Bei einem Belegungskonflikt bleibt der Text bearbeitbar; der Bediener prüft den
+aktuellen Stand und bestätigt danach ausdrücklich. Offline sind Bestätigungen
+deaktiviert. Nach Wiederverbindung wird der aktuelle Serverzustand übernommen
+und mit der offenen Eingabe abgeglichen. Es gibt keine automatische Wiederholung
+von Befehlen und keine dauerhaft gespeicherten Offline-Eingaben.
+Protokoll, Zeitgrenzen und Wiederverbindung beschreibt
+[API.md](API.md#synchronisierung).
 
-## Bedienoberfläche
+`--simulation` aktiviert die Zielbedienelemente und die reservierte Quelle
+`simulator` am Beobachtungseingang. Der Modus wird beim Serverstart festgelegt.
+Manuelle Zielbedienung prüft den gesehenen Zielzustand weiterhin über die volle
+Bahnrevision; Belegungsbefehle verwenden den getrennten Belegungszähler.
 
-Die Oberfläche unterstützt drei Sprachen:
+## Standbild-Kalibrierung
 
-- English (EN) – Standardsprache
-- Deutsch (DE)
-- Čeština (CS)
+Die deutsche Browserseite `/calibration` verwendet OpenCV und NumPy ohne
+trainiertes KI-Modell. Der Bediener markiert die vier Ecken der Gesamt-ROI.
+Nach perspektivischer Entzerrung werden fünf sichtbare Zielkonturen anhand ihrer
+Geometrie und regelmäßiger Abstände geprüft und von links nach rechts zugeordnet.
+Die Ansicht zeigt die erkannten Zielbereiche zur Kontrolle und meldet unsichere
+Erkennung als Fehler. Unsichtbare Ziele werden nicht aus dem Raster ergänzt.
 
-Die Sprache wird je Browser gewählt und lokal gespeichert.
+Die Grundkalibrierung wird separat und atomar gespeichert. Die Nachführung erkennt
+die Reihe im neuen Standbild erneut und vergleicht mit dieser festen Basis, damit
+sie nicht schrittweise auf Nachbarziele wandert. Eine laufende Kameraanbindung
+oder Trefferklassifikation ist noch nicht vorhanden.
 
-Übersetzungen werden zentral in JavaScript verwaltet, ohne zusätzliches Internationalisierungsframework.
+## Vorgesehene, noch nicht implementierte Anbindungen
 
-Die Bedienung ist für den Wettkampfbetrieb mit großen Schaltflächen, möglichst wenigen Eingaben und klaren Statusanzeigen ausgelegt.
-
-## Architekturprinzipien
-
-- Eine Anwendung statt verteilter Dienste.
-- Klare Trennung von Bedienung, Treffererfassung und Protokollausgabe.
-- Keine unnötigen Abstraktionen oder zusätzlichen Abhängigkeiten.
-- Vorhandene Standardkomponenten bevorzugen.
-- Erweiterungen nur bei konkretem Bedarf.
-- Einfache Installation, Wartung und Fehlerdiagnose.
+- Kameraadapter für RTSP und Sensoradapter, beispielsweise mit ESP32, sollen
+  denselben Beobachtungseingang nutzen. Zeitliche Stabilisierung und
+  Quellenzuständigkeit gehören in diese Adapter.
+- Ein physisches Tastenfeld soll die vorhandene zentrale Bahnverwaltung bedienen.
+- Der KES-Adapter soll Daten im dokumentierten Format über TCP ausgeben;
+  eine direkte serielle Ausgabe kann folgen. Verbindliche Referenz und geplanter
+  Kompatibilitätsabgleich stehen in [API.md](API.md#geplante-kes-integration).
+- Eine systemd-Installation unter Debian/Ubuntu ist vorgesehen, aber nicht Teil
+  des implementierten lokalen Starts.

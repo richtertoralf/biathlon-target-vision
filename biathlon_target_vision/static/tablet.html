@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Tablet-Bedienplatz: gemeinsamer Serverzustand, lokale Anzeigeeinstellungen. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Biathlon Target Vision</title>
+  <link rel="stylesheet" href="/static/tablet.css">
+  <script defer src="/static/translations.js"></script>
+  <script defer src="/static/tablet.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">● ● ● ● ●</span><strong>BIATHLON<br>TARGET VISION</strong></div>
+    <div class="toolbar">
+      <span id="connection" role="status" data-status="offline"></span>
+      <span id="editor-label"></span>
+      <label><span class="sr-only" data-i18n="language"></span>
+        <select id="language"><option value="en">English</option><option value="de">Deutsch</option><option value="cs">Čeština</option></select>
+      </label>
+      <button id="choose-lanes" data-i18n="chooseLanes"></button>
+    </div>
+  </header>
+  <main>
+    <div id="simulation-banner" class="simulation-banner" hidden data-i18n="simulationBanner"></div>
+    <div class="heading"><div><p class="eyebrow" data-i18n="range"></p><h1 data-i18n="overview"></h1></div><p id="summary"></p></div>
+    <div class="legend" aria-label="Target states"><span><i class="disc standing">●</i><span data-i18n="standing"></span></span><span><i class="disc fallen">✓</i><span data-i18n="fallen"></span></span><span><i class="disc unknown">?</i><span data-i18n="unknown"></span></span></div>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <p id="offline-banner" class="warning" data-i18n="offlineHelp"></p>
+    <section id="lanes" class="lane-grid" aria-label="Shooting lanes"></section>
+    <p id="empty" hidden data-i18n="noLanes"></p>
+    <footer><a href="/calibration" data-i18n="calibration"></a><span data-i18n="localSettings"></span></footer>
+  </main>
+  <dialog id="editor" aria-labelledby="dialog-title">
+    <div class="dialog-heading"><h2 id="dialog-title"></h2><button id="close-dialog" type="button" data-i18n="close"></button></div>
+    <p id="dialog-context"></p>
+    <p id="dialog-error" class="warning" role="alert" hidden></p>
+    <button id="review-edit" type="button" hidden data-i18n="reviewAssignment"></button>
+    <div id="dialog-drafts" aria-live="polite"></div>
+    <div id="dialog-body"></div>
+  </dialog>
+</body>
+</html>

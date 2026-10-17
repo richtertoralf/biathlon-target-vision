@@ -1,0 +1,21 @@
+/* Kontrastreiche, kleine Kalibrierungsansicht ohne Frontend-Abhängigkeiten. */
+:root { font-family: system-ui, sans-serif; color: #eaf1f7; background: #142330; }
+body { margin: 0; }
+main { max-width: 1100px; margin: auto; padding: 28px; }
+header { display: flex; justify-content: space-between; color: #85cdbb; font-size: .9rem; letter-spacing: .1em; }
+a { color: #85cdbb; }
+h1 { margin-top: 34px; }
+p { line-height: 1.6; }
+.controls { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
+label { display: flex; align-items: center; gap: 12px; }
+button, select, input { font: inherit; }
+button, select { padding: 12px 16px; border: 1px solid #6b8b9f; border-radius: 5px; background: #233b4e; color: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .45; cursor: default; }
+#detect { background: #17624f; }
+.image-area { border: 1px solid #587286; background: #0c1821; min-height: 160px; padding: 8px; }
+#placeholder { text-align: center; color: #b3c5d3; }
+canvas { display: none; width: 100%; touch-action: none; cursor: crosshair; }
+#status { padding: 14px; background: #233b4e; border-left: 4px solid #85cdbb; }
+#status.error { border-color: #ff9a8e; color: #ffc7bf; }
+.note, #saved { color: #b3c5d3; font-size: .9rem; }

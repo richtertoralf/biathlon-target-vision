@@ -1,217 +1,158 @@
 # Biathlon Target Vision
 
-**Herstellerunabhängige Schießerfassung für mechanische Biathlon-Klappscheiben mit optischer oder sensorbasierter Treffererkennung und Kurvinen-KES-kompatibler Datenausgabe.**
+**Herstellerunabhängige Live-Erfassung von Bahnbelegung, Startnummern und
+Klappscheibenzuständen für mechanische Biathlon-Schießstände.**
 
-## Projektübersicht
+Biathlon Target Vision ist ein lokal betreibbares Open-Source-System für Vereine,
+Veranstalter, Kampfrichter und Systemintegratoren. Der Schwerpunkt liegt auf
+temporären 10-Meter-Luftgewehr-Schießständen bei Schülercups,
+Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
 
-Biathlon Target Vision ist ein kostengünstiges, eigenständig betreibbares Open-Source-System zur Digitalisierung mechanischer Biathlon-Klappscheibenanlagen.
+Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
+mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
+Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
+weiterzugeben. Version 0.2 bietet die Tablet-Bedienung und einen Simulator;
+die automatische Erfassung und KES-Ausgabe sind noch geplant.
 
-Der Schwerpunkt liegt auf temporären 10-Meter-Luftgewehr-Schießständen, wie sie bei Schülercups, Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen eingesetzt werden.
+## Projektumfang und Abgrenzung
 
-Das System verbindet zwei Aufgaben:
+Biathlon Target Vision erfasst Schießstanddaten live und stellt sie über
+dokumentierte Schnittstellen bereit. Es ist **kein Wettkampf-, Zeitnahme- oder
+Ergebnisverwaltungssystem**.
 
-1. **Manuelle Bahnbelegung:** Kampfrichter ordnen Sportler über Tablets oder alternative Tastenfelder den Schießbahnen zu.
-2. **Automatische Treffererfassung:** Kameras oder Sensoren erkennen die Zustandsänderungen der fünf Klappscheiben.
+Wesentliche Grundsätze:
 
-Die erfassten Daten werden über eine Schnittstelle im vorhandenen seriellen Kurvinen-KES-Protokoll ausgegeben.
+- Zuverlässige Erfassung von Bahnbelegung, Startnummer und Klappscheibenzuständen.
+- Einfache Bedienung durch eingewiesene Kampfrichter.
+- Klare Zuordnung einer begrenzten Anzahl von Bahnen je Tablet; die Auswahl darf
+  sich zwischen Tablets überschneiden und kann auch alle Bahnen umfassen.
+- Unkomplizierte Korrektur falscher Startnummerneingaben und Ereignisspeicherung.
+- Mehrere Bedienplätze mit synchronisierten Daten, ohne exklusive Bahnsperren.
+- Live-Datenausgabe für externe Zeitnahme- und Anzeigesysteme.
+- Keine unnötige Absicherung gegen jede theoretisch denkbare Fehlbedienung.
 
-Damit lassen sich mechanische Schießstände an bestehende Zeitnahme-, Auswertungs- und Anzeigesysteme anbinden, ohne deren Software verändern zu müssen, sofern diese das unterstützte KES-Protokoll verarbeiten.
+Ergebnisberechnung, Strafzeiten- oder Strafrundenverwaltung, offizielle
+Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
+angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
+Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
-## 1. Manuelle Bahnbelegung
+## Aktueller Stand: Version 0.2
 
-Die Zuordnung der Sportler zu den Schießbahnen bleibt Aufgabe der Kampfrichter.
+### Implementiert
 
-### Variante A: Tablet
+- Standardmäßig 20 Schießbahnen, Anzahl konfigurierbar.
+- Browserbasierte Tablet-Bedienung im Hoch- und Querformat mit großen,
+  kontrastreichen Bedienelementen und numerischem Tastenfeld.
+- Startnummern zuordnen und korrigieren, Bahnen freigeben, Einlagen einsehen.
+  Auch eine verspätete Zuordnung zu einer Schießeinlage ist möglich.
+- Fünf unabhängige Zielzustände je Bahn: aufgerichtet, gefallen oder unbekannt.
+- Mehrere synchronisierte Bedienplätze mit lokaler Bahn- und Sprachauswahl:
+  English als Standard, Deutsch und Čeština auswählbar.
+- Getrennte, live sichtbare unbestätigte Eingaben je Bedienplatz. Treffer und
+  Rückstellungen unterbrechen die Startnummerneingabe nicht. Bei Verbindungsverlust
+  bleibt der offene Text erhalten; bestätigt werden kann erst wieder online.
+- Simulationsbetrieb ohne Kameras, lokale Ereignisspeicherung und
+  Wiederherstellung nach Neustart sowie REST-API und WebSockets.
+- Standbild-Kalibrierung: gesamten Scheibenbereich markieren, fünf Zielbereiche
+  automatisch erkennen, kontrollieren und speichern; kleine Bildverschiebungen
+  nachführen. Die Zuverlässigkeit an echten mechanischen Anlagen ist noch offen.
 
-<table>
-<tr>
-<td valign="top">
+### Geplante Erweiterungen
 
-Eine browserbasierte Bedienoberfläche ermöglicht die Verwaltung von bis zu 20 oder mehr Schießbahnen.
+- **Kameraerfassung:** Handelsübliche IP-Kameras mit RTSP, mehrere Bahnen pro
+  Kamera, Erkennung von Zielzuständen und Rückstellungen sowie Kennzeichnung
+  unklarer oder verdeckter Ziele. Der Bediener markiert nur den gesamten
+  Scheibenbereich, keine einzelnen Ziele. Für 20 Bahnen sind etwa sieben Kameras
+  vorgesehen, sofern drei Bahnen pro Kamera im Praxistest bestätigt werden.
+- **Sensorerfassung:** Fünf Sensoren je Bahn mit ESP32 und WLAN. Bevorzugt werden
+  Hall-Sensoren mit Magneten untersucht; Reedkontakte oder mechanische Schalter
+  sind Alternativen. Befestigung und Wetterschutz richten sich nach der Anlage.
+  Kamera- und Sensorerfassung sollen gemeinsam einsetzbar sein.
+- **Physisches Tastenfeld:** Bahn auswählen, Startnummer eingeben, bestätigen
+  und korrigieren sowie freigeben; als Alternative bei Kälte oder Handschuhen.
+  Es soll dieselbe zentrale Bahnverwaltung wie die Tablets nutzen.
+- **KES-Ausgabe:** Anbindung kompatibler Zeitnahme- und Anzeigesysteme über TCP
+  gemäß der [Original-KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf).
+  Eine direkte serielle Ausgabe kann später folgen.
+- **Betrieb und Validierung:** systemd-Installation unter Debian/Ubuntu und
+  Praxistests mit realen mechanischen Anlagen und Tablets.
 
-Jedes Tablet kann individuell konfiguriert werden:
+Der weitere Ausbau konzentriert sich auf optische Erfassung, deren Integration
+mit dem Ereigniskern, KES und Praxistests. Physische Tastenfelder und
+ESP32-Sensoradapter sind anschließende Erweiterungen.
 
-- Anzeige sämtlicher Schießbahnen
-- Anzeige nur ausgewählter Bahnen, beispielsweise drei bis fünf
-- Gleichzeitiger Betrieb mehrerer Tablets
+## Bedienung am Schießstand
 
-Die Bedienung ist bewusst einfach gehalten:
+Je Tablet beispielsweise drei bis fünf Bahnen auswählen. Eine Bahn öffnen,
+die Startnummer über das Zahlentastenfeld eingeben und ausdrücklich bestätigen.
+Eine falsche Startnummer kann korrigiert werden; beim Verlassen des Schießstandes
+die Belegung freigeben. Bei widersprüchlichen bestätigten Eingaben zeigt der
+Dialog den Konflikt an und erhält den eigenen Text zur Prüfung.
 
-1. Schießbahn auswählen.
-2. Startnummer über ein großes numerisches Tastenfeld eingeben.
-3. Startnummer bestätigen.
-4. Beim Verlassen des Schießstandes die Bahn per Schaltfläche freigeben.
-
-Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen Schaltflächen ausgelegt.
-
-</td>
-<td valign="top">
+Zielbeobachtungen bleiben auch ohne Startnummer erhalten. Eine Rückstellung
+beendet die Einlage, ersetzt aber nicht die Bahnfreigabe. Eine verspätete
+Freigabe darf die nächste Einlage nicht dem vorherigen Sportler zuordnen.
+Aus Klappscheibenzuständen werden keine Schuss- oder Fehlschusszeitpunkte erfunden.
 
 <img src="Schießstand-Erfassung_auf_Tablet_UI.png" alt="Bahnbelegung erfassen" width="300">
 
-</td>
-</tr>
-</table>
-
-### Variante B: Physisches Tastenfeld
-
-Alternativ kann die Bahnbelegung über ein robustes Bediengerät mit fühlbaren Tasten erfolgen.
-
-Vorgesehen sind:
-
-- Auswahl der zugeordneten Schießbahn
-- Numerische Eingabe der Startnummer
-- Bestätigung und Korrektur der Eingabe
-- Freigabe der Schießbahn
-
-Die physische Tastatur soll insbesondere bei niedrigen Temperaturen, Schneefall und der Bedienung mit Handschuhen Vorteile bieten.
-
-Beide Bedienvarianten verwenden dieselbe zentrale Bahnverwaltung.
-
-## 2. Automatische Treffererfassung
+Mechanische Luftgewehranlage und Kalibrierungskonzept:
 
 <img src="./biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" width="400">
 
-Die Erkennung der Treffer erfolgt unabhängig von der manuellen Startnummerneingabe.
-
-### Variante A: Optische Erfassung
-
 <img src="./kalibrierung.svg" alt="automatische Kalibrierung" width="400">
 
+## Lokal installieren und starten
 
-Handelsübliche IP-Kameras beobachten die mechanischen Klappscheiben.
+Voraussetzung: Linux, Python 3.11 oder neuer und `python3-venv`.
+Im Repository-Verzeichnis:
 
-Die Bildverarbeitung erkennt, welche Ziele aufgerichtet beziehungsweise gefallen sind.
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m biathlon_target_vision
+```
 
-Eigenschaften:
+Tablet-Bedienung: <http://127.0.0.1:8091/> ·
+Kalibrierung: <http://127.0.0.1:8091/calibration> ·
+Interaktive API: <http://127.0.0.1:8091/docs>
 
-- Nutzung vorhandener mechanischer Klappscheiben ohne Umbau
-- RTSP-basierte Videoquellen
-- Mehrere Schießbahnen pro Kamera
-- Konfigurierbare Zielpositionen
-- Automatische Erkennung von Treffer- und Rückstellvorgängen
-- Erkennung unklarer oder verdeckter Zielzustände
+Für den Zugriff im lokalen Netz `--host 0.0.0.0` ergänzen und auf den Tablets
+`http://SERVER-IP:8091/` öffnen. Sprache und Bahnauswahl bleiben je Browser und
+Serveradresse gespeichert. Die Anwendung benötigt im Betrieb keine Cloud und
+keinen Internetzugang; sie ist ohne Anmeldung für ein vertrauenswürdiges lokales
+Netz ausgelegt.
 
-Für eine Anlage mit 20 Bahnen werden zunächst ungefähr sieben Kameras vorgesehen, sofern die Erfassung von drei Bahnen pro Kamera im Praxistest bestätigt wird.
+Beispiel mit anderer Bahnanzahl, Port und eigenem Datenordner:
 
-### Variante B: Sensorbasierte Erfassung
+```bash
+.venv/bin/python -m biathlon_target_vision --lanes 8 --port 8092 --data-dir data-test
+```
 
-Alternativ werden die einzelnen Klappscheiben mit einfachen Sensoren ausgestattet.
+Die Bahnanzahl wird beim ersten Start gespeichert. Für eine andere Anzahl einen
+neuen Datenordner verwenden. Genau einen Serverprozess je Datenordner betreiben.
 
-Als bevorzugte Lösung werden berührungslose Hall-Sensoren mit Magneten untersucht. Auch Reedkontakte oder geeignete mechanische Schalter kommen infrage.
+## Simulationsbetrieb
 
-Ein ESP32-Mikrocontroller erfasst die Zustände der fünf Ziele einer Schießbahn und übermittelt diese z.B. über WLAN an den zentralen Server.
+Für Übungen mit einem separaten Datenordner starten:
 
-Eigenschaften:
+```bash
+.venv/bin/python -m biathlon_target_vision --simulation --data-dir data-simulation --host 0.0.0.0
+```
 
-- Fünf Sensoren pro Schießbahn
-- Automatische Erkennung gefallener und zurückgestellter Ziele
-- Drahtlose Datenübertragung
-- Wettergeschützte Elektronik
-- Keine Kameras oder Bildverarbeitung erforderlich
+Im gekennzeichneten Simulationsmodus ein Ziel antippen und seinen Zustand ändern.
+„Simulation: alle aufrichten“ stellt alle fünf Ziele zurück. Zum Durchspielen:
+Treffer vor der Startnummerneingabe auslösen, die Nummer zuordnen, Ziele
+zurückstellen, die Belegung freigeben und die nächste Einlage beginnen.
+Abgeschlossene Einlagen können unter „Einlagen“ nachträglich zugeordnet werden.
 
-Die endgültige Sensorbefestigung wird anhand der tatsächlichen Mechanik der verwendeten Klappscheiben entwickelt.
+Ohne `--simulation` sind die Simulationsfunktionen deaktiviert. Übungen werden
+regulär gespeichert; Training und Wettkampf deshalb in getrennten Datenordnern
+betreiben. Den Simulator für die Kommandozeile beschreibt die
+[API-Dokumentation](docs/API.md#simulator-für-die-kommandozeile).
 
-Beide Erfassungsarten können innerhalb derselben Veranstaltung eingesetzt werden.
+## Weiterführende Dokumentation
 
-## 3. Unabhängige Erfassung und Zuordnung
-
-Ein wesentliches Merkmal ist die Trennung zwischen Treffererkennung und Bahnbelegung.
-
-Die automatische Erfassung arbeitet auch dann, wenn noch keine Startnummer für eine Bahn eingetragen wurde.
-
-Dadurch werden typische Bedienverzögerungen berücksichtigt:
-
-- Der erste Treffer erfolgt vor der Startnummerneingabe.
-- Die Startnummer wird erst während der Schießeinlage eingetragen.
-- Der Kampfrichter gibt die Bahn verspätet frei.
-- Eine falsche Startnummer muss korrigiert werden.
-
-Trefferereignisse bleiben erhalten und können einer Schießeinlage nachträglich zugeordnet werden.
-
-Widersprüchliche Zuordnungen müssen erkannt werden. Die Software darf keine Sportlerzuordnung erraten.
-
-## 4. Kurvinen-KES-kompatible Schnittstelle
-
-Biathlon Target Vision soll das bereits dokumentierte serielle Kurvinen-KES-PC-Nachrichtenprotokoll bereitstellen.
-
-Referenz ist die [Original-KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf), die bereits für die Kurvinen-Integration verwendet wurde.
-
-Zu den dokumentierten Ereignistypen gehören:
-
-| Typ | Ereignis |
-|---|---|
-| 1 | BEGIN – Beginn |
-| 2 | SHOOTER – Startnummer |
-| 3 | SHOT – Schussmeldung |
-| 4 | HIT – Treffer |
-| 5 | LEAVE – Bahn verlassen |
-| 6 | CLEAR – Zurücksetzen |
-| 7 | STOP – Stopp |
-| 8 | HEARTBEAT – Verbindungstest |
-| 9 | MISS – Fehlschuss |
-
-Der Adapter erzeugt ausschließlich durch vorhandene Daten und das dokumentierte Protokoll gedeckte Ereignisse.
-
-Insbesondere darf ein Fehlschusszeitpunkt nicht erfunden werden, wenn die Zielerfassung nur den Zustand der Klappscheiben kennt.
-
-Die Ausgabe erfolgt zunächst über einen TCP-Server, der die vorhandene serielle KES-Übertragung über Ethernet nachbildet.
-
-Eine direkte serielle Ausgabe kann später ergänzt werden.
-
-Die Kompatibilität wird anhand vorhandener Originaldaten aus Oberwiesenthal, des KES-Simulators und des bestehenden KES-Parsers geprüft.
-
-## 5. Technische Architektur
-
-Das System besteht aus vier funktionalen Komponenten:
-
-**Lane Management**
-- Verwaltung aller Schießbahnen
-- Startnummernzuordnung
-- Tablet- und Tastenfeldbedienung
-- Mehrbenutzerbetrieb
-
-**Target Detection**
-- Optische Treffererkennung über Kameras
-- Alternativ Sensorerfassung über ESP32
-- Einheitliche Übermittlung der Zielzustände
-
-**Event Processing**
-- Zusammenführung von Bahnbelegung und Trefferereignissen
-- Behandlung verspäteter Eingaben
-- Speicherung und Wiederherstellung relevanter Ereignisse
-
-**KES Protocol Adapter**
-- Umsetzung in das vorhandene KES-Nachrichtenformat
-- TCP-basierte Bereitstellung
-- Anschluss kompatibler externer Systeme
-
-## 6. Betrieb und Einsatz
-
-Biathlon Target Vision soll auf einem handelsüblichen Linux-Rechner ohne Cloud-Anbindung betrieben werden können.
-
-Die Software wird auf einfache Installation, geringen Ressourcenbedarf und zuverlässigen lokalen Betrieb ausgelegt.
-
-Es werden möglichst vorhandene Open-Source-Komponenten und Standardprotokolle genutzt. Zusätzliche Frameworks, Datenbanken und Verwaltungsdienste sollen nur eingesetzt werden, wenn sie technisch notwendig sind.
-
-Eine eigene Wettkampfverwaltung, Zeitnahme oder Ergebnisgrafik ist nicht Bestandteil des Projekts.
-
-## 7. Entwicklungsstrategie
-
-Die erste Entwicklungsphase konzentriert sich auf:
-
-1. Funktionsfähige Tablet-Bedienung für die Bahnbelegung.
-2. Optische Erkennung der fünf Klappscheiben.
-3. Zusammenführung der Ereignisse.
-4. Ausgabe über den vorhandenen KES-Protokollstandard.
-5. Praxistests mit realen mechanischen Biathlonanlagen.
-
-Anschließend werden die physische Tastaturbedienung und die ESP32-Sensorerfassung als alternative Eingabe- beziehungsweise Erfassungsmethoden integriert.
-
-## Projektziel
-
-Biathlon Target Vision soll bestehenden mechanischen Biathlon-Schießständen eine kostengünstige digitale Treffererfassung ermöglichen.
-
-Der Einsatz handelsüblicher Kameras oder preiswerter Sensorik reduziert die Abhängigkeit von proprietären elektronischen Zielanlagen.
-
-Durch die Trennung von Sportlerzuordnung, Treffererfassung und standardisierter Datenausgabe entsteht eine flexible Lösung für Sportvereine, Veranstalter, Zeitnehmer und Systemintegratoren.
+- [Architektur](docs/ARCHITECTURE.md): aktuelle Komponenten, Datenfluss und technische Entscheidungen.
+- [API und Integration](docs/API.md): Schnittstellen, Zuordnungsregeln und Integrationshinweise.
+- [Entwicklungsbericht](docs/ENTWICKLUNGSBERICHT.md): Entscheidungen, bisherige Testergebnisse, Prüfaufrufe und bekannte Einschränkungen.
