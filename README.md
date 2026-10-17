@@ -11,7 +11,7 @@ Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
 Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
 mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
 Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
-weiterzugeben. Version 0.5 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras,
+weiterzugeben. Version 0.6 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras,
 optische Zielzustände und Simulator. Die Erkennung ist bislang synthetisch geprüft;
 reale Schießstandaufnahmen fehlen.
 
@@ -37,9 +37,13 @@ Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
 angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
 Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
-## Aktueller Stand: Version 0.5
+## Aktueller Stand: Version 0.6
 
 ### Implementiert
+
+- Dokumentierter REST-/WebSocket-Vertrag für externe Anwendungen, einschließlich
+  Serverneustart-Erkennung und Erfassungsstatus. BTV liefert Zielzustände und
+  erzeugt keine KES-, Schuss- oder Fehlschussmeldungen.
 
 - Laufende optische Auswertung kalibrierter dunkler Öffnungen und heller Klappen,
   zeitlich bestätigte Zielzustände, Rückstellungen und unbekannte Zustände bei
@@ -78,10 +82,8 @@ Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 - **Physisches Tastenfeld:** Bahn auswählen, Startnummer eingeben, bestätigen
   und korrigieren sowie freigeben; als Alternative bei Kälte oder Handschuhen.
   Es soll dieselbe zentrale Bahnverwaltung wie die Tablets nutzen.
-- **Externe Integration:** BTV liefert tatsächliche Zielzustände über REST und
-  WebSockets. BTV ist keine KES-Quelle und erzeugt keine KES-, Schuss- oder
-  Fehlschussmeldungen. Die separate GFX-Integration wird in
-  [gfx-engine #102](https://github.com/richtertoralf/gfx-engine/issues/102) verfolgt.
+- **GFX-Anbindung:** Ein eigenständiger BTV-Adapter in gfx-engine wird separat in
+  [Issue #102](https://github.com/richtertoralf/gfx-engine/issues/102) verfolgt.
 - **Betrieb und Validierung:** Praxistests mit realen mechanischen Anlagen und Tablets.
 
 Der weitere Ausbau konzentriert sich auf optische Erfassung, deren Integration
@@ -117,7 +119,7 @@ für die Installation. Installation des veröffentlichten Stands:
 ```bash
 git clone https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
-git checkout v0.5.0
+git checkout v0.6.0
 ./install.sh
 ```
 
@@ -181,6 +183,15 @@ beobachteter Fälle während einer Einlage können deshalb voneinander abweichen
 Bei fehlenden Endkonturen oder zu großer Bewegung werden alle Ziele unbekannt.
 Beim Bearbeiten bleibt eine leer gelassene RTSP-Adresse
 erhalten; gespeicherte Zugangsdaten werden nicht an den Browser zurückgegeben.
+
+## Externe Anwendungen
+
+Aktueller Zustand: `http://SERVER-IP:8091/api/state`, laufende vollständige Zustände:
+`ws://SERVER-IP:8091/ws`. Beide verwenden denselben Web-Port wie die Tablets.
+Der [Integrationsvertrag](docs/API.md#externe-integration-eigenständige-quelle-btv)
+beschreibt Zielzustände, Einlagen, Belegung, Unterbrechungen und ein lesendes Beispiel.
+BTV bildet eine eigenständige Quelle; bestehende KES-/HORA-Empfänger werden dadurch
+nicht ersetzt oder verändert.
 
 ## Simulationsbetrieb
 

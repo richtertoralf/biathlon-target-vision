@@ -86,14 +86,18 @@ def activate(root, directory, release, version):
 
 def prepare(source, root):
     """Nur Git-versionierte Dateien übernehmen, niemals lokale Laufzeitdaten."""
-    version_text = (source / "biathlon_target_vision/__init__.py").read_text()
+    revision = run("git", "-C", str(source), "rev-parse", "HEAD", capture_output=True, text=True).stdout.strip()
+    version_text = run("git", "-C", str(source), "show",
+                       f"{revision}:biathlon_target_vision/__init__.py", capture_output=True, text=True).stdout
     version = re.search(r'__version__ = "([0-9]+\.[0-9]+\.[0-9]+)"', version_text)
     if not version:
         raise ValueError("Versionsnummer fehlt")
     root.joinpath("releases").mkdir(parents=True, exist_ok=True)
+    root.chmod(0o755)
+    root.joinpath("releases").chmod(0o755)
     release = Path(tempfile.mkdtemp(prefix=version[1] + "-", dir=root / "releases"))
     release.chmod(0o755)
-    archive = run("git", "-C", str(source), "archive", "HEAD", capture_output=True).stdout
+    archive = run("git", "-C", str(source), "archive", revision, capture_output=True).stdout
     run("tar", "-x", "-C", str(release), input=archive)
     run("python3", "-m", "venv", str(release / ".venv"))
     run(str(release / ".venv/bin/python"), "-m", "pip", "install", "-r", str(release / "requirements.txt"))
@@ -107,6 +111,7 @@ def upgrade():
     if os.geteuid() != 0:
         print("Upgrade benötigt root: sudo biathlon-target-vision --upgrade", file=sys.stderr)
         return 1
+    os.umask(0o022)
     # Genau ein Upgrade/Installer gleichzeitig, ohne zusätzlichen Verwaltungsdienst.
     import fcntl
     ROOT.mkdir(parents=True, exist_ok=True)
@@ -134,12 +139,13 @@ def upgrade():
 def install(source):
     if os.geteuid() != 0:
         raise RuntimeError("Installation benötigt root")
+    os.umask(0o022)
     import fcntl
     ROOT.mkdir(parents=True, exist_ok=True)
     with (ROOT / "install.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if subprocess.run(["id", "-u", "btv"], capture_output=True).returncode:
-            run("useradd", "--system", "--home-dir", str(DATA), "--shell", "/usr/sbin/nologin", "btv")
+            run("useradd", "--system", "--user-group", "--home-dir", str(DATA), "--shell", "/usr/sbin/nologin", "btv")
         DATA.mkdir(parents=True, exist_ok=True)
         DATA.chmod(0o750)
         config = DATA / "config.json"

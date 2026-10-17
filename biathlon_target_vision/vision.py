@@ -132,7 +132,7 @@ class VisionService:
             for lane_id in camera.lane_ids:
                 configured.add(lane_id)
                 calibration = self.calibration(lane_id)
-                key = (camera.id, camera.url, calibration["created_at"] if calibration else None)
+                key = (camera.id, camera.url, calibration["created_at"] if calibration else None, capture.get("stream_epoch", 0))
                 if lane_id not in self.trackers or self.trackers[lane_id][0] != key:
                     initial = self.store.state["lanes"][str(lane_id)]["targets"]
                     self.trackers[lane_id] = (key, LaneTracker(lane_id, f"camera:{camera.id}", initial))
@@ -155,7 +155,10 @@ class VisionService:
                 saved = self.calibration(lane_id)
                 if current != camera or saved != calibration:
                     continue
-                if not self.cameras.snapshot(camera.id)["connected"]:
+                latest = self.cameras.snapshot(camera.id)
+                # Auch eine zwischen zwei Auswertungen erfolgte Wiederverbindung
+                # unterbricht die Beobachtungskette; der Ausfall muss nicht sichtbar gewesen sein.
+                if not latest["connected"] or latest.get("stream_epoch", 0) != capture.get("stream_epoch", 0):
                     self.emit(tracker.disconnected(datetime.now(timezone.utc)))
                     continue
                 self.emit(tracker.update(states, capture["captured_at"], monotonic()))

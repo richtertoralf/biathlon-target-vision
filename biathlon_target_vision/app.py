@@ -7,6 +7,7 @@ import logging
 from itertools import count
 from pathlib import Path
 from time import monotonic
+from uuid import uuid4
 
 import anyio
 import cv2
@@ -16,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 import numpy as np
 from starlette.concurrency import run_in_threadpool
 
-from . import __version__
+from . import API_VERSION, __version__
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .config import CameraSettings, Settings, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
@@ -33,6 +34,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @asynccontextmanager
     async def lifespan(app):
+        app.state.instance_id = str(uuid4())
         app.state.store = EventStore(Path(data_dir), lane_count)
         try:
             app.state.calibrations = CalibrationStore(Path(data_dir))
@@ -70,8 +72,16 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         logging.exception("Lokaler Speicherzugriff fehlgeschlagen", exc_info=exc)
         return JSONResponse(status_code=503, content={"detail": "Speicherfehler. Serverprotokoll und Datenträger prüfen."})
 
+    def api_identity():
+        return {"api_version": API_VERSION, "instance_id": app.state.instance_id}
+
+    def health_status():
+        return "ok" if not app.state.store.failed and not app.state.vision_task.done() else "error"
+
     def snapshot():
-        return {**app.state.store.snapshot(), "simulation": simulation}
+        return {**app.state.store.snapshot(), **api_identity(), "simulation": simulation,
+                "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
+                    **camera_list(), "calibration_errors": dict(app.state.vision.errors)}}
 
     def wake_subscribers():
         for queue in subscribers:
@@ -177,9 +187,9 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.get("/api/health")
     async def health():
-        healthy = not app.state.store.failed and not app.state.vision_task.done()
-        return JSONResponse({"status": "ok" if healthy else "error", "version": __version__},
-                            status_code=200 if healthy else 503)
+        status = health_status()
+        return JSONResponse({"status": status, "version": __version__, **api_identity()},
+                            status_code=200 if status == "ok" else 503)
 
     @app.get("/monitor", include_in_schema=False)
     async def monitor():
@@ -195,7 +205,9 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.get("/api/events")
     async def events(after: int = Query(0, ge=0), limit: int = Query(1000, ge=1, le=1000)):
-        return {"events": app.state.store.history(after, limit), "sequence": app.state.store.snapshot()["sequence"]}
+        return JSONResponse({"events": app.state.store.history(after, limit),
+                             "sequence": app.state.store.state["sequence"], **api_identity()},
+                            headers={"Cache-Control": "no-store"})
 
     @app.post("/api/observations")
     async def observations(command: Observation, x_lane_revision: int | None = Header(default=None, ge=0)):

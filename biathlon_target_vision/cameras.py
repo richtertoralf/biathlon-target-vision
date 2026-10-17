@@ -23,6 +23,7 @@ class CameraReader:
         self.stop = threading.Event()
         self.frame = None
         self.frame_number = 0
+        self.stream_epoch = 0
         self.captured_at = None
         self.updated = 0.0
         self.connected = False
@@ -36,11 +37,15 @@ class CameraReader:
                 capture = cv2.VideoCapture(self.camera.url, cv2.CAP_FFMPEG, [
                     cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 2000,
                     cv2.CAP_PROP_READ_TIMEOUT_MSEC, 2000])
+                first_frame = True
                 while not self.stop.is_set() and capture.isOpened():
                     ok, frame = capture.read()
                     if not ok or frame is None:
                         break
                     with self.lock:
+                        if first_frame:
+                            self.stream_epoch += 1
+                            first_frame = False
                         self.frame = frame
                         self.frame_number += 1
                         self.captured_at = datetime.now(timezone.utc)
@@ -60,7 +65,7 @@ class CameraReader:
     def snapshot(self):
         with self.lock:
             fresh = self.connected and monotonic() - self.updated < 3
-            return {"connected": fresh, "frame_number": self.frame_number,
+            return {"connected": fresh, "frame_number": self.frame_number, "stream_epoch": self.stream_epoch,
                     "captured_at": self.captured_at, "frame": self.frame if fresh else None}
 
     def close(self):
@@ -91,4 +96,4 @@ class CameraManager:
 
     def snapshot(self, camera_id):
         reader = self.readers.get(camera_id)
-        return reader.snapshot() if reader else {"connected": False, "frame": None, "frame_number": 0, "captured_at": None}
+        return reader.snapshot() if reader else {"connected": False, "frame": None, "frame_number": 0, "captured_at": None, "stream_epoch": 0}

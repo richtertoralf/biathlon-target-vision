@@ -1,7 +1,7 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.5 sind
+Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.6 sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md).
 Die folgende redaktionelle Konsolidierung übernimmt vorhandene Testergebnisse;
 sie ist kein erneuter Testlauf.
@@ -388,3 +388,51 @@ strikten Befehl. Ältere Programme öffnen das Journal mit ihren damaligen
 Einlagenregeln; erneutes Replay unter 0.5 berücksichtigt die Grundbeobachtungen.
 Der Optik-Browsertest und die Kamera-/Kalibrierungs-Browserregression sind auch
 nach dieser Speicheranpassung erfolgreich.
+
+
+## 2026-10-17 – Version 0.6: Stabile externe Datenausgabe
+
+Die ursprünglich beauftragte KES-TCP-Emulation entfällt gemäß verbindlicher
+Architekturkorrektur. Vor der Implementierung wurden die tatsächlich benötigten
+Daten des zukünftigen GFX-Adapters geprüft: fünf Zielstellungen, bestätigte
+Startnummer, aktuelle Einlage und getrennte Belegung sind bereits vorhanden.
+Für die sichere Wiederverbindung fehlten eine Vertragsversion und Serverinstanz;
+für die Unterscheidung „unverändert“/„Erfassung gestört“ fehlte der technische
+Status im laufenden Kanal. Deshalb ergänzen bestehende Zustände `api_version`,
+`instance_id`, `health` und `capture`; keine zusätzlichen Integrationsendpunkte.
+Journalantworten und Health enthalten dieselbe API-Identität.
+
+Die Dokumentation beschreibt einen vollständigen lesenden Adapter einschließlich
+unbekannter Werte, Grundbeobachtungen, übersprungener Zwischenzustände und
+Instanzwechsel. Kein künstlicher Schuss-/Fehlschusszähler; alle fünf Ziele werden
+unabhängig von beobachteten Fällen angezeigt. Die bekannte GFX-Anzeigeabweichung
+ist dort im separaten Issue #102 festgehalten. Keine Änderungen am GFX-Arbeitsbaum,
+an dessen KES-/HORA-Komponenten oder an laufenden Diensten.
+
+
+Die abschließende Installationsprüfung ergänzt echte lokale Serverprozesse für
+Upgrade, Startfehler und Rückschalten bei bytegleich erhaltenen Daten. Dabei fiel
+ein konkreter Installerfehler auf: Die vorbereitete Versionsnummer wurde aus dem
+Arbeitsbaum statt aus demselben Git-Commit wie das Archiv gelesen. Beide werden
+nun aus einer festen Revision ermittelt; ein Test prüft abweichende uncommittete
+Dateien. Programmverzeichnisrechte und umask werden unabhängig von der
+aufrufenden Root-Shell gesetzt; der Dienstbenutzer erhält explizit seine eigene
+Gruppe. Keine Systempakete oder Dienste des Hosts wurden dafür verändert.
+
+
+Die Integrationsprüfung berücksichtigt zudem eine kurze RTSP-Unterbrechung
+vollständig zwischen zwei Auswertungsschritten. Eine interne Verbindungsnummer
+im vorhandenen Decoder unterbricht auch dann die Beobachtungskette und erzwingt
+Grundbeobachtungen. Ohne diesen Marker könnte eine neue Verbindung unbemerkt als
+kontinuierliche Bildfolge gelten. Synthetische Parallelfolgen und der tatsächliche
+lokale RTSP-Wiederverbindungstest prüfen dies; kein zusätzlicher öffentlicher Kanal.
+
+Abnahme: 77 Python-Tests erfolgreich, einschließlich REST-/WebSocket-Vertrag,
+Neustartkennung, Journalpagination, langsamer Empfänger, Speicher-/Erfassungsfehler,
+Geheimnisschutz, tatsächlichem lokalem RTSP-Ausfall/Wiederaufbau, optischen Folgen
+und echten isolierten Server-Upgrades mit Rollback und bytegleichem Datenerhalt.
+Alle fünf Browserprüfungen (Tablet, Monitor, Standbild, Kameraadministration/RTSP
+und Optik bis Tablet/Monitor) sowie `pip check`, Shell-/JS-Syntax und Diff-Prüfung
+sind erfolgreich. GFX-Arbeitsbaum unverändert. Frische Betriebssysteminstallation
+mit echtem systemd sowie reale Kameras/Schießstandaufnahmen bleiben Praxistests;
+synthetische Tests werden ausdrücklich nicht als Praxistauglichkeitsnachweis gewertet.

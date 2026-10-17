@@ -1,7 +1,7 @@
-# Ereigniskern und Schnittstellen, Version 0.5
+# Ereigniskern und Schnittstellen, Version 0.6
 
-Die vollständigen JSON-Schemata stehen bei laufendem Server unter `/docs` und
-`/openapi.json`. Technische Zustandsbezeichner bleiben englisch. Installation und
+Die validierten Befehlsmodelle stehen bei laufendem Server unter `/docs` und
+`/openapi.json`; Zustandsvertrag und Kamerafelder sind hier dokumentiert. Technische Zustandsbezeichner bleiben englisch. Installation und
 Start: [README](../README.md). Komponenten und Datenfluss:
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -270,25 +270,137 @@ Fehler liefern 422 mit Erklärung und überschreiben keine gültige Kalibrierung
 Grundkalibrierung. Es verändert diese nicht. Zulässig sind höchstens 24 Pixel
 beziehungsweise 20 % des Zielabstands, je nachdem, was kleiner ist. Größere oder
 uneinheitliche Bewegungen, andere Auflösung und unklare Zielreihen benötigen eine
-neue Kalibrierung. Das ist eine Standbildprüfung; ein laufender Kameratreiber
-kann dieselbe Funktion später pro geeigneter Beobachtung verwenden.
+neue Kalibrierung. Der Standbild-Endpunkt prüft alle fünf Ziele; die laufende Auswertung verwendet
+dieselbe feste Basis und eine konservative Teilverdeckungsprüfung.
 
 ## Externe Integration: eigenständige Quelle BTV
 
-BTV liefert ausschließlich tatsächliche Zielbeobachtungen und bestätigte
-Zuordnungen. Es ist keine KES-Quelle. KES-Telegramme, Schuss-/Fehlschussereignisse,
-Schusszähler, Anschlag und Ergebnisse werden nicht erzeugt. Die geplante
+BTV liefert tatsächliche Zielbeobachtungen und bestätigte Zuordnungen. Es ist
+keine KES-Quelle. KES-Telegramme, Einzel-Schuss-/Fehlschussereignisse, Schusszähler,
+Anschlag und Ergebnisse werden nicht erzeugt. Die ursprünglich geplante
 KES-TCP-Ausgabe ist verworfen. Die Original-KES-Dokumentation bleibt als Referenz
-für die Abgrenzung erhalten. GFX integriert BTV später als eigene Quelle neben
+für diese Abgrenzung erhalten. GFX integriert BTV später als eigene Quelle neben
 KES und HORA; [Integrationsauftrag #102](https://github.com/richtertoralf/gfx-engine/issues/102).
+In diesem Auftrag wurde dort ausschließlich das Issue angelegt, kein Code geändert.
 
-`GET /api/health` liefert `status: "ok"` und `version` für Start-/Upgradeprüfung.
-Einlagen enthalten zusätzlich `fallen_target_ids`: eindeutige Zielpositionen,
-deren Fall während dieser Einlage beobachtet wurde, unabhängig von späterer
-Unsicherheit. Alte Journale erhalten das Feld durch Replay. Der Monitor zeigt
-die Anzahl für `current_bout_id`; ohne aktuelle Einlage null. Es ist kein
-Schusszähler und keine Ergebnisberechnung.
+### Stabiler lesender Vertrag (API-Version 1)
 
+Die Anwendungsversion 0.6 und `api_version: 1` sind unterschiedliche Angaben.
+Additive Felder sind zulässig; Clients ignorieren unbekannte Felder. Ein künftig
+inkompatibler Vertrag erhält eine andere API-Version. Bestehende Befehle und
+Endpunkte bleiben erhalten; für externe Live-Anzeigen ist kein Schreibzugriff nötig.
+
+| Eingang | Verwendung |
+|---|---|
+| `GET /api/state` | Vollständige Momentaufnahme, ohne Eingabeentwürfe |
+| `WS /ws` | Vollständiger Anfangszustand, danach Aktualisierungen und spätestens alle fünf Sekunden ein Zustand |
+| `GET /api/events?after=N&limit=1000` | Optionales Journal, zum Nachvollziehen akzeptierter Beobachtungen/Befehle |
+| `GET /api/health` | HTTP 200 bei betriebsfähigem Kern/Auswertung, sonst 503; `status`, Anwendungsversion und API-Identität |
+
+REST-Zustand, WebSocket-Zustände und Journalantworten enthalten `api_version` und
+`instance_id`. Die Instanzkennung wechselt bei jedem Serverstart, auch wenn das
+Journal und seine `sequence` erhalten bleiben. Auf einer neuen Verbindung immer
+den vollständigen Anfangszustand übernehmen. Nach Instanzwechsel alte
+Sequenzvergleiche und flüchtige Daten verwerfen. Innerhalb derselben Instanz dürfen
+ältere Befehlsantworten keinen neueren Zustand ersetzen. Gleiche Sequenznummern
+nicht pauschal verwerfen: Kamerastatus, Lebenszeichen und Eingabeentwürfe können
+sich ohne neues Journalereignis ändern.
+
+Zusätzlich enthalten vollständige Zustände:
+
+| Feld | Bedeutung |
+|---|---|
+| `sequence` | Letztes dauerhaft akzeptiertes Ereignis, keine Bild- oder Schussnummer |
+| `health` | `ok` oder `error`; bei Fehler sind sichtbare Werte nur der letzte gespeicherte Stand |
+| `capture.running` | Optische Auswertungsaufgabe läuft; bedeutet nicht, dass jede Kamera verbunden/kalibriert ist |
+| `capture.cameras` | Dieselbe bereinigte Liste wie `/api/cameras`, einschließlich `connected` und letzter Bildempfangszeit |
+| `capture.calibration_errors` | Aktuell vom Erfassungskern gemeldete beschädigte Kalibrierungen je Bahn |
+| `simulation` | Beim Start gewählter Simulationsmodus |
+
+RTSP-Adressen und Zugangsdaten fehlen in diesen Antworten. `captured_at` ist die
+Serverzeit beim Bildempfang, keine garantierte Belichtungs- oder Schusszeit. Bei
+unveränderten Zielstellungen bleibt deren `observed_at` unverändert; Bildempfang
+und technische Verfügbarkeit stehen getrennt im Kamerastatus.
+
+### Daten für einen externen BTV-Adapter
+
+- `lanes["N"].targets`: genau fünf Werte `standing`, `fallen`, `unknown`, von
+  links nach rechts im Kamerabild. Alle fünf direkt anzeigen, unabhängig von
+  irgendeinem Zähler. `standing` bedeutet aufgerichtet, niemals Fehlschuss.
+- `last_known_targets` ist nur die letzte bekannte mechanische Stellung. Damit
+  darf eine aktuell unbekannte Stellung nicht als sichere Anzeige ersetzt werden.
+- `current_bout_id` verweist auf die aktuelle Einlage in `bouts`; deren `bib` ist
+  die bestätigte Startnummer oder `null`. Ohne Einlage keine Zuordnung erfinden.
+- `occupied_bout_id` bezeichnet die noch bestehende Belegung. Eine alte Belegung
+  kann nach Rückstellung neben einer neuen, unzugeordneten Einlage bestehen.
+  Deren Startnummer darf nicht auf die neue Einlage übertragen werden.
+- `bouts[id].fallen_target_ids` enthält eindeutige Positionen, deren Fall in dieser
+  Einlage beobachtet wurde. Der Monitor zählt sie für `current_bout_id`; ohne
+  aktuelle Einlage null. Das ist keine Zahl abgegebener Schüsse und kein Ergebnis.
+  Erste Bilder nach einem Ausfall können mehr gefallene Ziele zeigen als diese Liste.
+- WebSocket-`drafts` sind unbestätigt und für externe fachliche Anzeigen zu ignorieren.
+  `editor_id` ist eine flüchtige Bedienplatznummer, keine Sportler-/Quellenkennung.
+
+Beispiel: Ein erster beobachteter Fall an Ziel 5 wird an Position 5 angezeigt,
+auch wenn alle anderen Ziele noch unbekannt sind. Es wird kein Fehlschuss an
+Position 1 und kein künstlicher Schusszähler daraus erzeugt. Für die spätere
+GFX-Erweiterung muss die interne Verarbeitung deshalb Zielzustandsquellen von
+Einzel-Schussquellen unterscheiden; KES-/HORA-Parser und Runner bleiben unverändert.
+
+### Unterbrechungen, Journal und Grenzen
+
+Nach zwölf Sekunden ohne WebSocket-Zustand Verbindung erneuern und die Anzeige
+als unterbrochen kennzeichnen. Dafür lokale Empfangszeit verwenden, keine
+Synchronität zwischen Client- und Serveruhr voraussetzen. Bei `health: error`
+Werte als letzten Stand behandeln. Kameraausfälle erscheinen zusätzlich als
+unbekannte Ziele und getrennte Kamerastatus. Eine Wiederverbindung liefert die
+aktuelle Wahrheit; physische Übergänge während der Unterbrechung sind nicht
+rekonstruierbar und werden nicht erfunden.
+
+Langsame WebSocket-Empfänger dürfen Zwischenzustände überspringen; jede Nachricht
+ist vollständig. Das Journal bewahrt die akzeptierten Beobachtungen, jedoch keine
+unbeobachteten physischen Vorgänge. Optional seitenweise über die letzte empfangene
+Ereignis-`sequence` weiterlesen, bis diese die Antwort-`sequence` erreicht; bei
+Instanzwechsel erneut synchronisieren. Keine Schüsse aus nachgeladenen Zuständen
+rekonstruieren. `event.baseline: true` bezeichnet eine Grundbeobachtung, keinen
+beobachteten Fall oder Einlagenwechsel. Die Journalfolge beschreibt die Annahme-
+reihenfolge des Servers. Mehrere Zieländerungen aus demselben Bild können dieselbe
+`observed_at` besitzen; ihre physische Reihenfolge ist daraus nicht ableitbar.
+Auch Rückstellung und Freigabe sind unterschiedliche Vorgänge.
+
+Ein minimaler lesender Python-Client verwendet die bereits eingesetzte Bibliothek
+`websockets` (Version 14–16):
+
+```python
+import asyncio
+import json
+from websockets.asyncio.client import connect
+from websockets.exceptions import ConnectionClosed
+
+async def watch():
+    while True:
+        try:
+            async with connect("ws://SERVER-IP:8091/ws", open_timeout=5) as socket:
+                while True:
+                    state = json.loads(await asyncio.wait_for(socket.recv(), timeout=12))
+                    if state.get("type") != "state":
+                        continue
+                    if state.get("api_version") != 1:
+                        raise RuntimeError("Nicht unterstützte BTV-API-Version")
+                    for lane in state["lanes"].values():
+                        bout = state["bouts"].get(lane["current_bout_id"])
+                        targets = lane["targets"] if state["health"] == "ok" else ["unknown"] * 5
+                        print(lane["lane_id"], bout["bib"] if bout else None, targets)
+        except (OSError, TimeoutError, ConnectionClosed):
+            print("BTV-Verbindung unterbrochen; aktuellen Zustand neu laden")
+            await asyncio.sleep(1)
+
+asyncio.run(watch())
+```
+
+BTV stellt diese Schnittstellen ohne Anmeldung im vertrauenswürdigen lokalen
+Netz bereit. Namens-, Wettkampf- und Ergebnisdaten sind Aufgabe der externen
+Anwendung. Der Vertrag verlangt keine zusätzliche Schnittstelle oder Datenbank.
 
 ## Kameraverwaltung
 

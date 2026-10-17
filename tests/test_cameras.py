@@ -103,6 +103,7 @@ class CameraRuntimeTests(unittest.TestCase):
                 while time.monotonic()<deadline and not manager.snapshot('live')['connected']: time.sleep(.1)
                 snapshot=manager.snapshot('live'); self.assertTrue(snapshot['connected'])
                 self.assertEqual(snapshot['frame'].shape[:2],(440,960));self.assertFalse(manager.snapshot('absent')['connected'])
+                epoch=snapshot['stream_epoch']
                 before=snapshot['frame_number'];time.sleep(.4)
                 self.assertGreater(manager.snapshot('live')['frame_number'],before)
                 publisher.terminate();publisher.wait(timeout=5)
@@ -114,6 +115,7 @@ class CameraRuntimeTests(unittest.TestCase):
                     deadline=time.monotonic()+10
                     while time.monotonic()<deadline and not manager.snapshot('live')['connected']:time.sleep(.1)
                     self.assertTrue(manager.snapshot('live')['connected'])
+                    self.assertGreater(manager.snapshot('live')['stream_epoch'],epoch)
                 finally:
                     replacement.terminate(); replacement.wait(timeout=5)
             finally: manager.close()

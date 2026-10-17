@@ -32,7 +32,9 @@
     current.onmessage = event => {
       if (socket !== current) return;
       const state = JSON.parse(event.data); if (state.type !== 'state') return;
-      lastMessage = Date.now(); render(state); connection.textContent = 'Live'; connection.className = '';
+      lastMessage = Date.now(); render(state);
+      connection.textContent = state.health === 'error' ? 'Erfassung gestört – letzter Stand' : 'Live';
+      connection.className = state.health === 'error' ? 'offline' : '';
     };
     current.onclose = () => {
       clearInterval(timer); connection.textContent = 'Verbindung unterbrochen – letzter Stand'; connection.className = 'offline';
