@@ -43,6 +43,12 @@ class Assignment(Command):
     bout_after_sequence: int | None = Field(default=None, ge=0, strict=True)
 
 
+class Occupy(Command):
+    kind: Literal["occupy"] = "occupy"
+    expected_revision: int = Field(ge=0, strict=True)
+    expected_assignment_revision: int | None = Field(default=None, ge=0, strict=True)
+
+
 class Release(Command):
     kind: Literal["release"] = "release"
     bout_id: str = Field(min_length=1, max_length=128)
@@ -61,6 +67,9 @@ class ModeChange(LaneControl):
 
 
 class ManualTarget(LaneControl):
+    # Alte Clients/Journale begannen eine Einlage beim ersten manuellen Fall.
+    # Die neue Tablet-Bedienung belegt ausdrücklich und korrigiert nur Zustände.
+    start_bout: bool = Field(default=True, strict=True)
     kind: Literal["manual_target"] = "manual_target"
     target_id: int = Field(ge=1, le=5, strict=True)
     state: Literal["standing", "fallen", "unknown"]
@@ -75,5 +84,5 @@ class ManualReset(LaneControl):
     kind: Literal["manual_reset"] = "manual_reset"
 
 
-EventCommand = Annotated[Observation | Assignment | Release | ModeChange | ManualTarget |
+EventCommand = Annotated[Observation | Assignment | Occupy | Release | ModeChange | ManualTarget |
                          OverrideRelease | ManualReset, Field(discriminator="kind")]

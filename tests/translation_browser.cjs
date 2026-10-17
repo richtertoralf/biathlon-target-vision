@@ -44,6 +44,7 @@ const assert=require('node:assert/strict');
      &&JSON.stringify(all[language][key].match(/\{\w+\}/g)?.sort())===JSON.stringify(all.en[key].match(/\{\w+\}/g)?.sort())));
   });assert.equal(valid,true);
   // Sichtbare Belegung ohne Kamera; die folgenden Sprachwechsel dürfen nichts buchen.
+  await page.locator('#lane-1 summary').click();
   await page.locator('#lane-1 .lane-mode').selectOption('manual');
   await expect(page.locator('#lane-1 .lane-mode')).toBeEnabled();
   await page.locator('#lane-1 [data-action="bib"]').click();
@@ -57,22 +58,22 @@ const assert=require('node:assert/strict');
    await expect(page.locator('.eyebrow')).toHaveText(text.range);
    await expect(page.locator('#lane-1 h2')).toHaveText(text.lane);
    await expect(page.locator('#lane-1 .bib-line > span')).toHaveText(text.bib);
+   if (!await page.locator('#lane-1 .lane-options').evaluate(node=>node.open)) await page.locator('#lane-1 summary').click();
    await expect(page.locator('#lane-1 .bout-line')).toContainText(text.bout);
    await expect(page.locator('#lane-1 .target').first()).toHaveAttribute('aria-label',text.target+': '+text.states[2]);
    await expect(page.locator('.legend [data-i18n]')).toHaveText(text.states);
-   for(const action of ['bib','history','release','manual-reset']){
+   for(const action of ['bib','history','unknown-menu']){
     await page.locator(`#lane-1 [data-action="${action}"]`).click();
     await expect(page.locator('#editor')).toBeVisible();
     const body=await page.locator('#editor').innerText();
     assert.doesNotMatch(body,/Fahrspuren|Strecke\s+\d+|Errichtet|Bevorzugt/i);
     const dictionary=await page.evaluate(language=>window.BTV_I18N[language],language);
-    if(action==='release'){
-     const complete=dictionary.releaseHelp.replace('{bout}',text.bout).replace('{bib}','42');
-     await expect(page.locator('#dialog-context')).toHaveText(complete);
-    }
-    if(action==='manual-reset')await expect(page.locator('#dialog-context')).toHaveText(dictionary.resetHelp);
+    if(action==='unknown-menu')await expect(page.locator('#dialog-context')).toHaveText(dictionary.unknownHelp);
     await page.locator('#close-dialog').click();await expect(page.locator('#editor')).not.toBeVisible();
    }
+   const dictionary=await page.evaluate(language=>window.BTV_I18N[language],language);
+   await expect(page.locator('#lane-1 [data-action=release]')).toHaveText(dictionary.leaveLane);
+   await expect(page.locator('#lane-1 [data-action=manual-reset]')).toHaveText(dictionary.allStanding);
    await page.reload();await expect(page.locator('#connection')).toHaveAttribute('data-status','online');
    await protectedDocument(language);await expect(page.locator('h1')).toHaveText(text.overview);
   }

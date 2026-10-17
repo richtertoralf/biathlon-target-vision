@@ -70,8 +70,10 @@ async function stop(server) {
       await expect(page.locator('#editor')).not.toBeVisible();
     };
     const action = async (page, lane, name) => {
-      await card(page, lane).locator(`[data-action="${name}"]`).click();
-      await page.locator('#confirm-action').click();
+      const button=card(page,lane).locator(`[data-action="${name}"]`);
+      if (!await button.isVisible()) await card(page,lane).locator('summary').click();
+      await button.click();
+      if (name !== 'release') await page.locator('#confirm-action').click();
       await expect(page.locator('#editor')).not.toBeVisible();
     };
 
@@ -179,6 +181,7 @@ async function stop(server) {
     await expect(card(second).locator('.bib')).toHaveText('46');
 
     // Historische Korrektur verändert die aktuelle Belegung nicht.
+    if (!await card(first).locator('.lane-options').evaluate(node=>node.open)) await card(first).locator('summary').click();
     await card(first).locator('[data-action="history"]').click();
     await first.locator(`[data-bout="${oldBout}"]`).click();
     await typeBib(first, 47);
@@ -247,7 +250,7 @@ async function stop(server) {
     await expect(first.locator('#editor')).not.toBeVisible();
     await expect(card(second, 3).locator('.bib')).toHaveText('78');
     await action(first, 3, 'release');
-    await expect(card(second, 3).locator('.bib')).toHaveText('—');
+    await expect(card(second, 3).locator('.bib')).toHaveText('Enter');
 
     // Eine schon offene Eingabe überlebt mehrere Treffer, auch während HTTP unterwegs ist.
     await action(second, 3, 'reset');
@@ -292,11 +295,13 @@ async function stop(server) {
     await first.locator('#confirm-bib').click();
     await expect(first.locator('#editor')).not.toBeVisible();
     await expect(card(second, 3).locator('.bib')).toHaveText('82');
-    await card(second, 3).locator('[data-action="release"]').click();
-    await target(first, 3, 1, 'unknown');
-    await expect(second.locator('#confirm-action')).toBeEnabled();
-    await second.locator('#confirm-action').click();
-    await expect(second.locator('#editor')).not.toBeVisible();
+    // Zieländerung während des HTTP-Transports der direkten Abreisebestätigung.
+    await second.route('**/api/lanes/3/release', async route => {
+      await target(first,3,1,'unknown');
+      await route.continue();
+    }, {times:1});
+    await card(second,3).locator('[data-action="release"]').click();
+    await expect(card(second,3)).toHaveAttribute('data-status','reset_required');
 
     // Rückstellung und nächste Einlage dürfen eine offene Eingabe nicht umleiten.
     await action(second, 3, 'reset');

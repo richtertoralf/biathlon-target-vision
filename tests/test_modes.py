@@ -130,6 +130,7 @@ class ModeTests(unittest.TestCase):
 
     def test_reset_and_explicit_new_bout_end_old_overrides(self):
         self.control(ModeChange,mode='mixed');self.assign()
+        for target in range(1,6):self.observe(target,'standing')
         self.observe(1,'fallen');self.control(ManualTarget,target_id=3,state='fallen')
         self.observe(1,'standing')
         self.assertEqual(self.lane()['manual_targets'],[None]*5)
