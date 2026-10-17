@@ -57,6 +57,13 @@ class ApiTests(unittest.TestCase):
         self.assertEqual([e["sequence"] for e in page["events"]], [2, 3])
         self.assertEqual(page["sequence"], 4)
 
+    def test_repeated_parallel_socket_disconnect_cleans_up(self):
+        for _ in range(30):
+            with self.client.websocket_connect("/ws") as first, self.client.websocket_connect("/ws") as second:
+                self.assertEqual(first.receive_json()["sequence"], 0)
+                self.assertEqual(second.receive_json()["sequence"], 0)
+        self.assertEqual(self.client.get("/api/state").json()["sequence"], 0)
+
     def test_repeated_observation_and_validation(self):
         command = self.observation()
         first = self.client.post("/api/observations", json=command)

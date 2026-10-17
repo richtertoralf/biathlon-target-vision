@@ -8,6 +8,7 @@ from itertools import count
 from pathlib import Path
 from time import monotonic
 
+import anyio
 import cv2
 from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -191,7 +192,10 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             tasks = [task for task in (reader, pending) if task is not None]
             for task in tasks:
                 task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            # ASGI kann beim Trennen bereits den äußeren CancelScope abbrechen.
+            # Die eigenen Lesetasks trotzdem vollständig einsammeln.
+            with anyio.CancelScope(shield=True):
+                await asyncio.gather(*tasks, return_exceptions=True)
 
     def check_lane(lane_id):
         if str(lane_id) not in app.state.store.state["lanes"]:

@@ -313,3 +313,9 @@ bestehender Tablet-Browsertest erfolgreich. Shell-/JavaScript-Syntax und
 systemd-Aufrufe sind in den Installationstests isoliert ersetzt. Die Unit wurde
 mit systemd-analyze gelesen; die erwartete Meldung zum noch nicht installierten
 ExecStart-Pfad ersetzt keinen realen Debian-/Ubuntu-Installationstest.
+
+Die CI auf Python 3.11 zeigte anschließend ein Abbruchrennen beim parallelen
+WebSocket-Verbindungsabbau. Die Bereinigung sammelt eigene Tasks nun in einem
+abgeschirmten AnyIO-CancelScope ein (AnyIO ist bereits FastAPI-Abhängigkeit).
+Ein zusätzlicher Test wiederholt 30 parallele Verbindungszyklen. Alle 14 API-Tests
+sind lokal erfolgreich; die CI wird vor dem Merge erneut vollständig ausgeführt.
