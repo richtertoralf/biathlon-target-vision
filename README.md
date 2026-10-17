@@ -41,7 +41,7 @@ Die Bedienung ist bewusst einfach gehalten:
 
 Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen Schaltflächen ausgelegt.
 
-![Bahnbelegung erfassen]('Schießstand-Erfassung auf Tablet UI.png')
+![Bahnbelegung erfassen](Schießstand-Erfassung_auf_Tablet_UI.png)
 
 ### Variante B: Physisches Tastenfeld
 
