@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.3.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.4.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -104,14 +104,13 @@ Erkennung als Fehler. Unsichtbare Ziele werden nicht aus dem Raster ergänzt.
 
 Die Grundkalibrierung wird separat und atomar gespeichert. Die Nachführung erkennt
 die Reihe im neuen Standbild erneut und vergleicht mit dieser festen Basis, damit
-sie nicht schrittweise auf Nachbarziele wandert. Eine laufende Kameraanbindung
-oder Trefferklassifikation ist noch nicht vorhanden.
+sie nicht schrittweise auf Nachbarziele wandert. Die Kameraanbindung verwendet dieselben Funktionen; eine laufende
+Zustandsklassifikation ist in Version 0.4 noch nicht vorhanden.
 
 ## Vorgesehene, noch nicht implementierte Anbindungen
 
-- Kameraadapter für RTSP und Sensoradapter, beispielsweise mit ESP32, sollen
-  denselben Beobachtungseingang nutzen. Zeitliche Stabilisierung und
-  Quellenzuständigkeit gehören in diese Adapter.
+- Laufende optische Auswertung und spätere Sensoradapter sollen denselben
+  Beobachtungseingang nutzen. Zeitliche Stabilisierung gehört in den Adapter.
 - Ein physisches Tastenfeld soll die vorhandene zentrale Bahnverwaltung bedienen.
 - Externe Anwendungen lesen REST und WebSockets. BTV emuliert kein KES und
   erzeugt keine Schuss-/Fehlschussmeldungen. Die zukünftige GFX-Quelle BTV wird
@@ -149,3 +148,27 @@ Daten und besitzt keine Bedienfunktionen. Der Kern führt je Einlage die eindeut
 beobachteten gefallenen Zielpositionen als `fallen_target_ids`; Replay berechnet
 sie auch für alte Journale. Das ist keine Anzahl abgegebener Schüsse. Eine
 Verdeckung löscht diese Beobachtungen nicht, eine neue Einlage beginnt bei null.
+
+
+## RTSP-Kameras und Administration
+
+`config.json` enthält neben Serveradresse/Port eine Liste `cameras` mit `id`,
+`name`, vollständiger `url` und `lane_ids`. Die validierte Konfiguration erlaubt
+jede Bahn höchstens einmal und wird atomar mit Modus 0600 gespeichert. Ungültige
+Konfigurationen werden mit einer allgemeinen Fehlermeldung abgewiesen, damit keine
+RTSP-Zugangsdaten im Fehlertext erscheinen.
+
+`cameras.py` betreibt je Kamera einen OpenCV-/FFmpeg-Decoder in einem Thread des
+zentralen Prozesses, RTSP über TCP, Öffnungs-/Lesezeitlimit jeweils zwei Sekunden.
+Nur das letzte Bild samt Empfangszeit/Nummer bleibt erhalten; Vorschau und später
+Auswertung teilen es. Kein Frame-Journal und kein Streamingdienst. Fehler führen
+zu getrenntem Status und Wiederverbindung nach einer Sekunde; nach spätestens
+drei Sekunden gilt ein Bild als veraltet. Native Decoderlogs sind wegen möglicher
+Zugangsdaten deaktiviert. API/Tablet bleiben bei Verbindungsausfällen unabhängig.
+
+`/admin` verwaltet Kameras, Bahnzuordnung und JPEG-Vorschau. Die vorhandene Seite
+`/calibration?lane=N` übernimmt ein aktuelles Kamerabild als eingefrorenes Standbild.
+Kalibrierungen enthalten Kamerakennung und URL-Hash; eine andere Quelle verlangt
+Neukalibrierung. Bildgröße und begrenzte Nachführung prüfen die Bildgeometrie.
+Beim Bearbeiten kann eine leere URL die vorhandene übernehmen; öffentliche
+Kameraantworten enthalten ausschließlich Namen, Kennung, Bahnen und Status.

@@ -11,8 +11,8 @@ Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
 Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
 mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
 Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
-weiterzugeben. Version 0.3 bietet Tablet-Bedienung, Kontrollmonitor, Installation und Simulator;
-die automatische Kameraerfassung folgt im nächsten Ausbau.
+weiterzugeben. Version 0.4 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras und Simulator;
+die laufende optische Zustandsauswertung folgt im nächsten Ausbau.
 
 ## Projektumfang und Abgrenzung
 
@@ -36,9 +36,12 @@ Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
 angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
 Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
-## Aktueller Stand: Version 0.3
+## Aktueller Stand: Version 0.4
 
 ### Implementiert
+
+- Mehrere RTSP-Kameras unter `/admin` verwalten, Livebild prüfen, mehrere Bahnen
+  je Kamera zuordnen und die Gesamt-ROI je Bahn automatisch kalibrieren.
 
 - Schreibgeschützter Kontrollmonitor unter `/monitor`, einschließlich erkannter
   gefallener Ziele je aktueller Einlage.
@@ -63,11 +66,9 @@ Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
 ### Geplante Erweiterungen
 
-- **Kameraerfassung:** Handelsübliche IP-Kameras mit RTSP, mehrere Bahnen pro
-  Kamera, Erkennung von Zielzuständen und Rückstellungen sowie Kennzeichnung
-  unklarer oder verdeckter Ziele. Der Bediener markiert nur den gesamten
-  Scheibenbereich, keine einzelnen Ziele. Für 20 Bahnen sind etwa sieben Kameras
-  vorgesehen, sofern drei Bahnen pro Kamera im Praxistest bestätigt werden.
+- **Optische Auswertung:** Die laufende Erkennung von Zielzuständen und
+  Rückstellungen folgt in Version 0.5. Drei Bahnen je Kamera müssen sich anhand
+  der tatsächlichen Bildauflösung und Sichtverhältnisse im Praxistest bewähren.
 - **Sensorerfassung:** Fünf Sensoren je Bahn mit ESP32 und WLAN. Bevorzugt werden
   Hall-Sensoren mit Magneten untersucht; Reedkontakte oder mechanische Schalter
   sind Alternativen. Befestigung und Wetterschutz richten sich nach der Anlage.
@@ -114,7 +115,7 @@ für die Installation. Installation des veröffentlichten Stands:
 ```bash
 git clone https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
-git checkout v0.3.0
+git checkout v0.4.0
 ./install.sh
 ```
 
@@ -160,6 +161,19 @@ Beispiel mit anderer Bahnanzahl, Port und eigenem Datenordner:
 
 Die Bahnanzahl wird beim ersten Start gespeichert. Für eine andere Anzahl einen
 neuen Datenordner verwenden. Genau einen Serverprozess je Datenordner betreiben.
+
+## Kameras einrichten
+
+`http://SERVER-IP:8091/admin` öffnen. Kennung, Name, vollständige RTSP-Adresse
+(zum Beispiel `rtsp://192.168.95.43/1/h264major`) und Bahnnummern eintragen.
+Jede Bahn besitzt zunächst genau eine Kamera. Die Vorschau zeigt aktuelle Bilder;
+bei Verbindungsproblemen wird automatisch erneut verbunden.
+
+Über „Bahn … kalibrieren“ das aktuelle Kamerabild übernehmen und vier Ecken um den
+gesamten Scheibenbereich markieren. Die fünf automatisch gefundenen Umrisse
+kontrollieren. Bei Kamera-/Adresswechsel, anderer Auflösung oder geänderter
+Ausrichtung neu kalibrieren. Beim Bearbeiten bleibt eine leer gelassene RTSP-Adresse
+erhalten; gespeicherte Zugangsdaten werden nicht an den Browser zurückgegeben.
 
 ## Simulationsbetrieb
 

@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- Kameraverwaltung; die vorhandene Kalibrierungsseite markiert die Gesamt-ROI. -->
+<html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BTV – Kameras</title><link rel="stylesheet" href="/static/calibration.css">
+<main><header><h1>Kameras</h1><a href="/monitor">Kontrollmonitor</a></header>
+<label>Kamera <select id="camera"><option value="">Neue Kamera</option></select></label>
+<form id="camera-form"><div class="controls">
+<label>Kennung <input id="camera-id" required pattern="[a-zA-Z0-9_-]{1,64}"></label>
+<label>Name <input id="camera-name" required maxlength="128"></label>
+<label>RTSP-Adresse <input id="camera-url" type="password" autocomplete="new-password" placeholder="rtsp://192.168.95.43/1/h264major"></label>
+<label>Bahnen (Komma getrennt) <input id="camera-lanes" placeholder="1,2,3"></label>
+</div><p>Beim Bearbeiten die RTSP-Adresse leer lassen, um die gespeicherte Adresse zu behalten.</p>
+<button type="submit">Speichern</button> <button id="remove" type="button" disabled>Entfernen</button></form>
+<p id="status" role="status"></p><p id="connection"></p>
+<img id="preview" alt="Aktuelles Kamerabild" style="max-width:100%;max-height:55vh" hidden>
+<div id="calibrations" class="controls"></div></main><script src="/static/admin.js"></script></html>

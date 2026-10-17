@@ -10,14 +10,16 @@ from time import monotonic
 
 import anyio
 import cv2
-from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 import numpy as np
 from starlette.concurrency import run_in_threadpool
 
 from . import __version__
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
+from .config import CameraSettings, Settings, load_settings, save_settings
+from .cameras import CameraManager, camera_binding
 from .core import Conflict, EventStore
 from .models import Assignment, Observation, Release
 
@@ -26,13 +28,21 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     subscribers = set()
     drafts = {}
     editor_numbers = count(1)
+    camera_changes = asyncio.Lock()
 
     @asynccontextmanager
     async def lifespan(app):
         app.state.store = EventStore(Path(data_dir), lane_count)
         try:
             app.state.calibrations = CalibrationStore(Path(data_dir))
-            yield
+            app.state.settings = load_settings(data_dir)
+            if any(lane > len(app.state.store.state["lanes"]) for camera in app.state.settings.cameras for lane in camera.lane_ids):
+                raise ValueError("Kamerakonfiguration enthält unbekannte Bahn")
+            app.state.cameras = CameraManager(app.state.settings.cameras)
+            try:
+                yield
+            finally:
+                await run_in_threadpool(app.state.cameras.close)
         finally:
             app.state.store.close()
 
@@ -80,6 +90,83 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     @app.get("/", include_in_schema=False)
     async def index():
         return FileResponse(static / "tablet.html", headers={"Cache-Control": "no-store"})
+
+    @app.get("/admin", include_in_schema=False)
+    async def admin():
+        return FileResponse(static / "admin.html", headers={"Cache-Control": "no-store"})
+
+    def lane_camera(lane_id):
+        return next((camera for camera in app.state.settings.cameras if lane_id in camera.lane_ids), None)
+
+    def camera_list():
+        result = []
+        for camera in app.state.settings.cameras:
+            capture = app.state.cameras.snapshot(camera.id)
+            result.append({"id": camera.id, "name": camera.name, "lane_ids": camera.lane_ids,
+                           "url_configured": True, "connected": capture["connected"],
+                           "captured_at": capture["captured_at"].isoformat() if capture["captured_at"] else None})
+        return {"cameras": result}
+
+    @app.get("/api/cameras")
+    async def cameras():
+        return camera_list()
+
+    async def change_camera(request, camera_id=None):
+        async with camera_changes:
+            try:
+                raw = await request.json()
+                previous = next((c for c in app.state.settings.cameras if c.id == camera_id), None)
+                if camera_id is not None and previous is None:
+                    raise HTTPException(404, "Kamera existiert nicht")
+                if previous and not raw.get("url"):
+                    raw["url"] = previous.url
+                camera = CameraSettings.model_validate(raw)
+                if camera_id is not None and camera.id != camera_id:
+                    raise ValueError("Kennung kann nicht geändert werden")
+                if camera_id is None and any(c.id == camera.id for c in app.state.settings.cameras):
+                    raise ValueError("Kennung bereits vorhanden")
+                if any(str(n) not in app.state.store.state["lanes"] for n in camera.lane_ids):
+                    raise ValueError("Unbekannte Bahn")
+                settings = Settings.model_validate({**app.state.settings.model_dump(), "cameras":
+                    [c.model_dump() for c in app.state.settings.cameras if c.id != camera.id] + [camera.model_dump()]})
+            except (ValueError, TypeError, AttributeError):
+                # Validierungsdetails enthalten sonst eventuell die vollständige RTSP-URL.
+                raise HTTPException(422, "Ungültige Kamera: Kennung, RTSP-Adresse und eindeutige Bahnzuordnung prüfen.") from None
+            save_settings(data_dir, settings)
+            await run_in_threadpool(app.state.cameras.configure, settings.cameras)
+            app.state.settings = settings
+            return camera_list()
+
+    @app.post("/api/cameras")
+    async def add_camera(request: Request):
+        return await change_camera(request)
+
+    @app.put("/api/cameras/{camera_id}")
+    async def edit_camera(camera_id: str, request: Request):
+        return await change_camera(request, camera_id)
+
+    @app.delete("/api/cameras/{camera_id}")
+    async def remove_camera(camera_id: str):
+        async with camera_changes:
+            if not any(c.id == camera_id for c in app.state.settings.cameras):
+                raise HTTPException(404, "Kamera existiert nicht")
+            settings = app.state.settings.model_copy(update={"cameras": [c for c in app.state.settings.cameras if c.id != camera_id]})
+            save_settings(data_dir, settings)
+            await run_in_threadpool(app.state.cameras.configure, settings.cameras)
+            app.state.settings = settings
+            return camera_list()
+
+    @app.get("/api/cameras/{camera_id}/frame")
+    async def camera_frame(camera_id: str):
+        if not any(c.id == camera_id for c in app.state.settings.cameras):
+            raise HTTPException(404, "Kamera existiert nicht")
+        capture = app.state.cameras.snapshot(camera_id)
+        if capture["frame"] is None:
+            raise HTTPException(503, "Kein aktuelles Kamerabild verfügbar")
+        ok, encoded = await run_in_threadpool(cv2.imencode, ".jpg", capture["frame"])
+        if not ok:
+            raise HTTPException(503, "Kamerabild konnte nicht kodiert werden")
+        return Response(encoded.tobytes(), media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/health")
     async def health():
@@ -216,7 +303,12 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     @app.get("/api/lanes/{lane_id}/calibration")
     async def get_calibration(lane_id: int):
         check_lane(lane_id)
-        return {"calibration": app.state.calibrations.load(lane_id)}
+        saved = app.state.calibrations.load(lane_id)
+        camera = lane_camera(lane_id)
+        if camera is None:
+            return {"calibration": saved}
+        valid = bool(saved and camera and all(saved.get(key) == value for key, value in camera_binding(camera).items()))
+        return {"calibration": saved, "camera_id": camera.id if camera else None, "valid_for_camera": valid}
 
     @app.post("/api/lanes/{lane_id}/calibration")
     async def set_calibration(lane_id: int, image: UploadFile = File(), quad: str = Form()):
@@ -225,11 +317,16 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             points = json.loads(quad)
         except ValueError as exc:
             raise CalibrationError("ROI muss eine JSON-Liste mit vier Bildpunkten sein.") from exc
+        camera = lane_camera(lane_id)
         frame = await read_image(image)
         try:
             result = await run_in_threadpool(calibrate, frame, points)
         except (TypeError, ValueError) as exc:
             raise CalibrationError(str(exc)) from exc
+        if camera != lane_camera(lane_id):
+            raise HTTPException(409, "Kamerazuordnung wurde geändert. Bild neu übernehmen.")
+        if camera:
+            result.update(camera_binding(camera))
         await run_in_threadpool(app.state.calibrations.save, lane_id, result)
         return {"calibration": result}
 

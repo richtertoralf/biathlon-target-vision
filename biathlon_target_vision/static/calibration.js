@@ -1,7 +1,7 @@
 // Gesamt-ROI erfassen; erkannte Zielpolygone im Originalbild kontrollieren.
 const byId = id => document.getElementById(id);
 const canvas = byId("image"), context = canvas.getContext("2d");
-let bitmap = null, quad = [], result = null, saved = null, busy = true;
+let bitmap = null, quad = [], result = null, saved = null, busy = true, cameraId = null;
 
 function status(text, error = false) {
   byId("status").textContent = text;
@@ -13,6 +13,7 @@ function controls() {
   byId("clear").disabled = busy || !bitmap;
   byId("align").disabled = busy || !bitmap || !saved;
   byId("file").disabled = busy;
+  byId("capture").disabled = busy || !cameraId;
   byId("lane").disabled = busy;
 }
 
@@ -57,7 +58,12 @@ async function request(url, options) {
 async function loadSaved() {
   saved = null;
   byId("saved").textContent = "";
-  saved = (await request(`/api/lanes/${byId("lane").value}/calibration`)).calibration;
+  const response = await request(`/api/lanes/${byId("lane").value}/calibration`);
+  saved = response.calibration; cameraId = response.camera_id;
+  if (cameraId && saved && !response.valid_for_camera) {
+    status("Kamerazuordnung geändert. Neu kalibrieren.", true);
+    saved = null;
+  }
   byId("saved").textContent = saved
     ? `Grundkalibrierung gespeichert: ${new Date(saved.created_at).toLocaleString("de-DE")}.`
     : "Für diese Bahn ist noch keine Kalibrierung gespeichert.";
@@ -85,8 +91,7 @@ byId("lane").onchange = async () => {
   try { await loadSaved(); } catch (error) { status(error.message, true); }
   finally { busy = false; controls(); }
 };
-byId("file").onchange = async event => {
-  const file = event.target.files[0] || null;
+async function loadImage(file) {
   quad = []; result = null;
   if (bitmap) bitmap.close();
   bitmap = null;
@@ -103,6 +108,16 @@ byId("file").onchange = async event => {
     await loadSaved();
   } catch (error) { status(`Bild konnte nicht geladen werden: ${error.message}`, true); }
   finally { busy = false; controls(); draw(); }
+}
+byId("file").onchange = event => loadImage(event.target.files[0] || null);
+byId("capture").onclick = async () => {
+  busy = true; controls();
+  try {
+    const response = await fetch(`/api/cameras/${cameraId}/frame`, {cache: "no-store"});
+    if (!response.ok) throw new Error("Kein aktuelles Kamerabild verfügbar.");
+    await loadImage(await response.blob());
+  } catch (error) { status(error.message, true); }
+  finally { busy = false; controls(); }
 };
 
 async function detect(alignment) {
@@ -140,6 +155,8 @@ byId("align").onclick = () => detect(true);
       option.value = lane.lane_id; option.textContent = `Bahn ${lane.lane_id}`;
       byId("lane").append(option);
     });
+    const requestedLane = new URLSearchParams(location.search).get("lane");
+    if ([...byId("lane").options].some(option => option.value === requestedLane)) byId("lane").value = requestedLane;
     await loadSaved();
   } catch (error) { status(error.message, true); }
   finally { busy = false; controls(); }
