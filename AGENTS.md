@@ -2,7 +2,8 @@
 
 ## Orientierung
 
-Projektziel und Funktionsumfang stehen in [README.md](README.md).
+Projekt und Funktionsumfang: [README.md](README.md).
+Technische Architektur: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 Die KES-Protokolldokumentation im Repository ist die verbindliche Schnittstellenreferenz.
 
 ## Programmierung
