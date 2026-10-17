@@ -71,7 +71,10 @@ Beide Bedienvarianten verwenden dieselbe zentrale Bahnverwaltung.
 
 ## 2. Automatische Treffererfassung
 
-<img src="biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" style="width: 300px; height: 200px; object-fit: cover;">
+<div style="height: 200px; overflow: hidden;">
+    <img src="biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" width="300">
+</div>
+
 
 Die Erkennung der Treffer erfolgt unabhängig von der manuellen Startnummerneingabe.
 
