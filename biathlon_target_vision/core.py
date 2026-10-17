@@ -69,7 +69,7 @@ class EventStore:
                     if not line.endswith(b"\n"):
                         raise ValueError("Unvollständige letzte Zeile")
                     event = json.loads(line)
-                    command = adapter.validate_python(event["command"])
+                    command = adapter.validate_python(self._command_data(event))
                     if event["sequence"] != self.state["sequence"] + 1:
                         raise ValueError("Lücke in der Ereignisfolge")
                     if command.event_id in self.by_id:
@@ -114,7 +114,7 @@ class EventStore:
             previous = self.by_id.get(command.event_id)
             if previous:
                 # Alte Journale enthalten neue optionale Befehlsfelder noch nicht.
-                previous_payload = TypeAdapter(EventCommand).validate_python(previous["command"]).model_dump(mode="json")
+                previous_payload = TypeAdapter(EventCommand).validate_python(self._command_data(previous)).model_dump(mode="json")
                 if previous_payload != payload:
                     raise Conflict("Ereigniskennung wurde bereits mit anderem Inhalt verwendet.")
                 return deepcopy(previous)
@@ -122,15 +122,27 @@ class EventStore:
             candidate = deepcopy(self.state)
             self._reduce(candidate, command)
             sequence = self.state["sequence"] + 1
+            # Zusatzmetadaten bleiben außerhalb des für ältere Leser strikten
+            # Befehlsmodells. Auch ein Programm-Rollback kann das Journal öffnen.
+            baseline = payload.pop("baseline", False)
             event = {"sequence": sequence,
                      "accepted_at": datetime.now(timezone.utc).isoformat(),
                      "command": payload}
+            if baseline:
+                event["baseline"] = True
             self._append(event)
             candidate["sequence"] = sequence
             self.state = candidate
             self.events.append(event)
             self.by_id[command.event_id] = event
             return deepcopy(event)
+
+    @staticmethod
+    def _command_data(event):
+        payload = dict(event["command"])
+        if "baseline" in event:
+            payload["baseline"] = event["baseline"]
+        return payload
 
     @staticmethod
     def _new_bout(state, lane, command):
@@ -228,6 +240,8 @@ class EventStore:
                 raise Conflict("Rückstellung gilt für alle Ziele; keine einzelnen Zielwerte angeben.")
             indexes = list(range(5))
             new_state = "standing"
+        if command.baseline and command.kind != "target":
+            raise Conflict("Eine Grundbeobachtung beschreibt genau ein Ziel")
         timestamp = command.observed_at.isoformat()
         if lane["last_observed_at"] and command.observed_at < datetime.fromisoformat(lane["last_observed_at"]):
             raise Conflict("Beobachtung liegt vor dem zuletzt erfassten Bahnzustand.")
@@ -237,16 +251,16 @@ class EventStore:
                 raise Conflict("Veraltete oder zeitlich widersprüchliche Zielbeobachtung.")
         # Jede erkannte Rückkehr eines gefallenen Ziels begrenzt die Einlage.
         # Eine noch bestehende Belegung wird niemals auf die nächste übertragen.
-        reset = command.kind == "reset" or any(
-            lane["last_known_targets"][i] == "fallen" and new_state == "standing" for i in indexes)
+        reset = not command.baseline and (command.kind == "reset" or any(
+            lane["last_known_targets"][i] == "fallen" and new_state == "standing" for i in indexes))
         bout_id = lane["current_bout_id"]
-        if not reset and new_state == "fallen" and any(lane["last_known_targets"][i] != "fallen" for i in indexes):
+        if not command.baseline and not reset and new_state == "fallen" and any(lane["last_known_targets"][i] != "fallen" for i in indexes):
             if not bout_id:
                 bout_id = self._new_bout(state, lane, command)["bout_id"]
         if bout_id:
             bout = state["bouts"][bout_id]
             bout["observations"].append(command.event_id)
-            if not reset and new_state == "fallen":
+            if not command.baseline and not reset and new_state == "fallen":
                 for index in indexes:
                     if lane["last_known_targets"][index] != "fallen" and index + 1 not in bout["fallen_target_ids"]:
                         bout["fallen_target_ids"].append(index + 1)

@@ -17,6 +17,7 @@ class Command(Model):
 
 
 class Observation(Command):
+    baseline: bool = Field(default=False, strict=True)
     kind: Literal["target", "reset"]
     source: str = Field(min_length=1, max_length=128)
     observed_at: datetime

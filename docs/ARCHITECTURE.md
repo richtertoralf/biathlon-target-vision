@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.4.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.5.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -104,13 +104,11 @@ Erkennung als Fehler. Unsichtbare Ziele werden nicht aus dem Raster ergänzt.
 
 Die Grundkalibrierung wird separat und atomar gespeichert. Die Nachführung erkennt
 die Reihe im neuen Standbild erneut und vergleicht mit dieser festen Basis, damit
-sie nicht schrittweise auf Nachbarziele wandert. Die Kameraanbindung verwendet dieselben Funktionen; eine laufende
-Zustandsklassifikation ist in Version 0.4 noch nicht vorhanden.
+sie nicht schrittweise auf Nachbarziele wandert. Kameraanbindung und laufende Auswertung verwenden dieselben Funktionen.
 
-## Vorgesehene, noch nicht implementierte Anbindungen
+## Weitere Anbindungen
 
-- Laufende optische Auswertung und spätere Sensoradapter sollen denselben
-  Beobachtungseingang nutzen. Zeitliche Stabilisierung gehört in den Adapter.
+- Spätere Sensoradapter sollen denselben Beobachtungseingang nutzen.
 - Ein physisches Tastenfeld soll die vorhandene zentrale Bahnverwaltung bedienen.
 - Externe Anwendungen lesen REST und WebSockets. BTV emuliert kein KES und
   erzeugt keine Schuss-/Fehlschussmeldungen. Die zukünftige GFX-Quelle BTV wird
@@ -137,7 +135,11 @@ Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner un
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
 Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
 vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
-Upgrades müssen deshalb das Journalformat rückwärtskompatibel halten. Sicherungen
+Upgrades müssen deshalb das Journalformat rückwärtskompatibel halten. Neue
+Grundbeobachtungen speichern ihren Marker als zusätzliche Ereignismetadaten;
+Version 0.4 kann das Journal weiterhin öffnen. Ältere Programme kennen diese
+Kennzeichnung nicht und verwenden bei einem Rollback ihre damaligen
+Einlagenregeln. Version 0.5 stellt beim erneuten Replay die neuere Bedeutung wieder her. Sicherungen
 und alte Programmstände werden bewusst nicht automatisch gelöscht.
 Ein Dateilock verhindert parallele Installationen/Upgrades.
 
@@ -172,3 +174,40 @@ Kalibrierungen enthalten Kamerakennung und URL-Hash; eine andere Quelle verlangt
 Neukalibrierung. Bildgröße und begrenzte Nachführung prüfen die Bildgeometrie.
 Beim Bearbeiten kann eine leere URL die vorhandene übernehmen; öffentliche
 Kameraantworten enthalten ausschließlich Namen, Kennung, Bahnen und Status.
+
+
+## Laufende optische Erfassung
+
+`vision.py` verarbeitet aktuelle Kamerabilder in einer Async-Aufgabe; CPU-Arbeit
+läuft im vorhandenen Threadpool. Bilder werden nicht aufgestaut, jedes Bild je
+Bahn höchstens einmal betrachtet. Alle bestätigten Befehle gehen im zentralen
+Eventloop durch dieselbe Veröffentlichung und persistente Kernlogik wie REST.
+
+Vorhandene `align`-Nachführung prüft zunächst alle fünf Konturen gegen die feste
+Grundkalibrierung. Bei Teilverdeckung dürfen mindestens drei konsistente Anker,
+darunter beide Endziele, eine kleine Translation bestätigen. Fehlende Innenziele
+werden unbekannt. Ohne beide Endanker bleibt die ganze Reihe unbekannt: Eine
+Verschiebung um einen Zielabstand darf keine Nachbarposition vortäuschen.
+Große Bewegung, andere Auflösung oder fehlende Kalibrierung ergeben unbekannte
+Zustände. Die feste Basis verhindert schrittweise Drift; die Grenzen wiederholter
+identischer Zielgeometrie bleiben im realen Aufbau zu prüfen.
+
+Die Klassifikation vergleicht Zielinneres und lokalen Hintergrund: dunkle Öffnung
+= `standing`, helle Klappe mit erkennbarer Kontur = `fallen`; Zwischenwerte,
+uneinheitliches Inneres oder fehlende Kontur = `unknown`. Drei verschiedene
+Bilder und mindestens 250 ms bestätigen eine Änderung. Das sind einfache
+OpenCV-Verfahren für die bislang synthetisch modellierte dunkle Öffnung/helle
+Klappe, kein trainiertes Modell und kein Nachweis an beliebigen Anlagen.
+
+`baseline` kennzeichnet Grundbeobachtungen nach Start, Quellen-/Kalibrierwechsel
+oder Verbindungsunterbrechung. Sie aktualisieren sichtbare und zuletzt bekannte
+Stellungen, erzeugen aber keinen neuen Fall, keine neue Einlage und keine
+rückwirkende Rückstellung. Ausfälle setzen Ziele unmittelbar auf unbekannt und
+unterbrechen die zeitliche Kontinuität. Normale kurzzeitige Bildunsicherheit
+bewahrt die letzte Stellung; eine anschließend bestätigte Rückkehr nach oben
+beendet über den vorhandenen Kern die Einlage. Ein Sportlerwechsel während eines
+Ausfalls bleibt unbestimmt und benötigt die vorhandene ausdrückliche Bedienung.
+`observed_at` ist die serverseitige Bildempfangszeit des bestätigenden Bildes,
+kein Schusszeitpunkt. Defekte Kalibrierungen betreffen nur ihre Bahn, werden
+protokolliert und in der Kalibrierungs-API sichtbar. Ein unerwartet beendeter
+Auswertungstask oder gesperrter Ereignisspeicher macht `/api/health` fehlerhaft.

@@ -1,12 +1,12 @@
-# Ereigniskern und Schnittstellen, Version 0.4
+# Ereigniskern und Schnittstellen, Version 0.5
 
 Die vollständigen JSON-Schemata stehen bei laufendem Server unter `/docs` und
 `/openapi.json`. Technische Zustandsbezeichner bleiben englisch. Installation und
 Start: [README](../README.md). Komponenten und Datenfluss:
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-REST, WebSockets und RTSP-Kameraeingang sind implementiert. Laufende optische
-Zustandsauswertung und Sensoradapter folgen.
+REST, WebSockets, RTSP-Kameraeingang und optische Zielzustandsauswertung sind
+implementiert. Sensoradapter folgen.
 
 | Schnittstelle | Aufgabe |
 |---|---|
@@ -79,6 +79,28 @@ und derselben Kennung liefern das ursprüngliche Ereignis, ohne nochmals zu buch
 Anderer Inhalt bei gleicher Kennung ergibt 409. Für zuverlässige Wiederholungen
 muss der Client die Kennung und den gesamten ursprünglichen Befehl aufbewahren;
 ohne Kennung erzeugt der Server eine UUID.
+
+### Grundbeobachtungen und optische Auswertung
+
+`baseline` ist ein optionales boolesches Feld (Standard `false`) für `kind: target`.
+Eine Grundbeobachtung aktualisiert `targets`/`last_known_targets`, beginnt/schließt
+aber keine Einlage und erhöht nicht `fallen_target_ids`. Damit können erste
+Bilder nach Start oder Kameraausfall tatsächliche Stellungen zeigen, ohne einen
+neu beobachteten Fall zu behaupten. `baseline: true` mit `kind: reset` ist unzulässig.
+Alte Journale bleiben mit dem Standardwert unverändert lesbar. Bei gespeicherten
+Ereignissen steht die Kennzeichnung als optionales `event.baseline: true` neben
+`command`, damit ältere Programme das weiterhin unveränderte Befehlsformat lesen
+können. Externe Journalverbraucher müssen diesen Marker für die Interpretation
+von Übergängen berücksichtigen; vollständige Zustände sind davon unabhängig.
+
+Der Kameraadapter verwendet `source: "camera:KENNUNG"` und serverseitige
+Bildempfangszeiten. Ein beobachteter Übergang nach unten bleibt eine
+Zielbeobachtung `kind: target, state: fallen`, kein `shot`/`miss`-Ereignis.
+Rückstellungen werden als bestätigte Rückkehr nach oben über dieselbe Logik
+verarbeitet. Verbindungsabbrüche liefern unbekannte Stellungen; nach Wiederkehr
+folgen neue Grundbeobachtungen. Während der Unterbrechung liegende Übergänge oder
+Einlagengrenzen werden nicht rekonstruiert. Der Monitor zählt ausschließlich
+eindeutige beobachtete Fälle innerhalb seiner aktuellen Einlage.
 
 ### Simulator für die Kommandozeile
 
@@ -289,5 +311,5 @@ Bei einer kameragebundenen Bahn ergänzt `GET /api/lanes/{id}/calibration`
 `camera_id` und `valid_for_camera`. Das gespeicherte Kalibrierungsobjekt enthält
 `camera_id` und `camera_url_hash`; weder Hash noch Kennung ersetzen eine Prüfung
 der realen Bildgeometrie. Die bisherigen Multipart-Endpunkte und das Standbild-
-Werkzeug bleiben erhalten. Die Kamera selbst liefert in Version 0.4 noch keine
-Zielbeobachtungen.
+Werkzeug bleiben erhalten. Die laufende optische Auswertung liefert bestätigte
+Zielbeobachtungen über dieselbe Kernverarbeitung.

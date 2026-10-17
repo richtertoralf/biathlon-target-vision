@@ -207,3 +207,47 @@ class CalibrationStore:
         finally:
             if temporary and temporary.exists():
                 temporary.unlink()
+
+
+def align_visible(image, calibration):
+    """Vorhandene Nachführung nutzen, bei Verdeckung mindestens drei Anker prüfen."""
+    try:
+        return align(image, calibration), set(range(1, 6))
+    except CalibrationError:
+        pass
+    if calibration["image_size"] != [image.shape[1], image.shape[0]]:
+        raise CalibrationError("Bildgröße geändert")
+    rectified, matrix = _rectify(image, calibration["quad"])
+    candidates = _candidates(cv2.cvtColor(rectified, cv2.COLOR_BGR2GRAY))
+    original = np.array([target["center"] for target in calibration["targets"]])
+    spacing = np.linalg.norm(np.diff(original, axis=0), axis=1).mean()
+    limit = min(24, spacing * .2)
+    inverse = np.linalg.inv(matrix)
+    matched = {}
+    for candidate in candidates:
+        center = cv2.perspectiveTransform(np.float32([[[candidate[0], candidate[1]]]]), inverse)[0, 0]
+        distances = np.linalg.norm(original - center, axis=1)
+        index = int(np.argmin(distances))
+        if distances[index] <= limit:
+            if index in matched:
+                raise CalibrationError("Mehrdeutige Zielkonturen")
+            matched[index] = center - original[index]
+    if len(matched) < 3:
+        raise CalibrationError("Weniger als drei sichtbare Geometrieanker")
+    shift = np.median(list(matched.values()), axis=0)
+    visible = {index + 1 for index, value in matched.items()
+               if np.linalg.norm(value - shift) <= max(2, spacing * .04)}
+    if len(visible) < 3:
+        raise CalibrationError("Uneinheitliche Bildbewegung")
+    if not {1, 5}.issubset(visible):
+        # Ohne beide Endanker könnte eine Verschiebung um einen Zielabstand
+        # dieselben Innenpositionen als vermeintlich gültige Nachbarn liefern.
+        raise CalibrationError("Bei Teilverdeckung müssen beide Endziele sichtbar sein")
+    # Nur eine begrenzte Translation von der festen Basis, keine fortgesetzte Drift.
+    from copy import deepcopy
+    result = deepcopy(calibration)
+    result["offset"] = shift.tolist()
+    for target in result["targets"]:
+        target["center"] = (np.array(target["center"]) + shift).tolist()
+        target["polygon"] = (np.array(target["polygon"]) + shift).tolist()
+    return result, visible
