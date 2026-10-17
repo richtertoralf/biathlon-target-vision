@@ -128,7 +128,14 @@ Eingang und dieselbe Priorität verwenden; kein zusätzlicher Dienst ist vorgese
 Serverzustand; Sprache und Bahnauswahl liegen je Browser/Origin in `localStorage`.
 Die Auswahl ist ein Anzeigefilter und darf sich überschneiden. Große
 Bedienelemente und flexible Spalten unterstützen Hoch- und Querformat.
-`translations.js` enthält English als Standard sowie Deutsch und Čeština.
+`translations.js` enthält English als Standard sowie Deutsch und Čeština für den
+Tablet-Bedienplatz. Sprachwechsel setzen `html.lang` auf `en`, `de` oder `cs`.
+Die vier eigenen HTML-Seiten unterbinden zusätzliche automatische
+Browserübersetzung mit `translate="no"`, `notranslate` und Google-Metatag.
+Monitor, Administration und Kalibrierung sind derzeit deutsch und verwenden
+`lang="de"`. Verbindliche Sportbegriffe und ihre offiziellen Fundstellen stehen
+im [Terminologieverzeichnis](TERMINOLOGIE.md); technische Zustands- und
+Softwarebezeichnungen werden dort von IBU-Terminologie getrennt.
 
 Pro WebSocket-Verbindung gibt es höchstens einen getrennt sichtbaren Entwurf.
 Die Tablet-Nummer unterscheidet Verbindungen, ist aber keine Anmeldung oder

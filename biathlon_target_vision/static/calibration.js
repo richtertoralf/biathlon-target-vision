@@ -122,7 +122,7 @@ byId("capture").onclick = async () => {
 
 async function detect(alignment) {
   busy = true; result = null; controls(); draw();
-  status(alignment ? "Bildverschiebung wird geprüft …" : "Ziele werden gesucht …");
+  status(alignment ? "Bildverschiebung wird geprüft …" : "Scheiben werden gesucht …");
   try {
     const form = new FormData();
     // Das Arbeitsbild darf keine eingezeichneten Kontrollbereiche enthalten.
@@ -138,8 +138,8 @@ async function detect(alignment) {
       saved = result;
       byId("saved").textContent = `Grundkalibrierung gespeichert: ${new Date(result.created_at).toLocaleString("de-DE")}.`;
     }
-    status(alignment ? `Fünf Ziele bestätigt. Versatz: ${result.offset.map(x => x.toFixed(1)).join(" / ")} Pixel.`
-      : "Fünf Ziele erkannt und gespeichert. Grüne Zielbereiche 1–5 bitte visuell kontrollieren.");
+    status(alignment ? `Fünf Scheiben bestätigt. Versatz: ${result.offset.map(x => x.toFixed(1)).join(" / ")} Pixel.`
+      : "Fünf Scheiben erkannt und gespeichert. Grüne Scheibenbereiche 1–5 bitte visuell kontrollieren.");
   } catch (error) { status(error.message, true); }
   finally { busy = false; controls(); draw(); }
 }

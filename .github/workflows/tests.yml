@@ -30,6 +30,7 @@ jobs:
       - name: Tablet, Betriebsarten, Monitor und synthetische Kamerabilder
         run: |
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/btv-playwright/node_modules/@playwright/test"
+          node tests/translation_browser.cjs
           node tests/tablet_browser.cjs
           node tests/modes_browser.cjs
           node tests/monitor_browser.cjs
