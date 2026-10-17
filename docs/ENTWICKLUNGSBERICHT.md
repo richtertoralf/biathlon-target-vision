@@ -1,7 +1,7 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.4 sind
+Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.5 sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md).
 Die folgende redaktionelle Konsolidierung übernimmt vorhandene Testergebnisse;
 sie ist kein erneuter Testlauf.
@@ -231,7 +231,7 @@ Integrationsregeln sind zentral in [API.md](API.md) dokumentiert.
   Reale Aufnahmen bei Sonne, Schatten, Schrägsicht, Verdeckung und Kameravibration
   müssen unabhängig annotiert und geprüft werden. Besonders relevant sind weiße
   Klappen ohne Rand und Rückstellungen über mehrere Bilder. Unklare Bilder sollen
-  sichtbar fehlschlagen. Laufende Videoauswertung ist noch nicht implementiert.
+  sichtbar fehlschlagen. Laufende Videoauswertung wurde mit Version 0.5 ergänzt; reale Aufnahmen fehlen weiterhin.
 - Ohne Freigabe oder erkennbare Rückstellung kann aus Zielzuständen kein
   Sportlerwechsel abgeleitet werden. Zeitliche Stabilisierung und
   Quellenzuständigkeit gehören später in die Kamera-/Sensoradapter.
@@ -345,3 +345,46 @@ Lesezeitlimits möglich ist. Bestehender Kalibrierungs-Browsertest und neuer
 Kamera-Browsertest mit realem RTSP-Transport erfolgreich. Syntax-/Diff-Prüfung
 fehlerfrei. In CI wird der optionale RTSP-Test ohne externe Testwerkzeuge explizit
 übersprungen; keine realen Kameras oder Schießstandaufnahmen getestet.
+
+
+## 2026-10-17 – Version 0.5: Optische Zielzustände
+
+Die automatische Auswertung verwendet vorhandene Konturen, feste Grundkalibrierung
+und lokale Helligkeitsverhältnisse. Drei Bilder über mindestens 250 ms bestätigen
+Änderungen. Ein Zusatz zur Nachführung erlaubt Teilverdeckung im Inneren einer
+Reihe; beide Endkonturen müssen sichtbar bleiben, damit eine große Verschiebung
+nicht als Nachbarzielreihe akzeptiert wird. Fehlende Endanker ergeben konservativ
+eine vollständig unbekannte Reihe.
+
+Ein konkretes fehlendes API-Merkmal war die Unterscheidung zwischen neu
+beobachtetem Fall und erstem sichtbaren Zustand nach einem Ausfall. Optionales
+`baseline` ergänzt dafür die bestehenden Beobachtungen, ohne neues Protokoll oder
+zusätzlichen Ereigniseingang. Grundbeobachtungen ändern weder Einlagengrenzen noch
+die Zahl beobachteter Fälle. Alte Journale bleiben replayfähig. Kameraausfälle
+setzen unbekannt; Schuss-/Fehlschusszeitpunkte werden nicht abgeleitet.
+
+Die gesamte Validierung bleibt synthetisch. Die Helligkeitsklassifikation setzt
+dunkle Öffnungen und helle, sichtbar begrenzte Klappen voraus. Gleich aussehende
+Verdeckungen, starkes Sonnenlicht, Reflexionen, abweichende Mechanik und periodisch
+identische Nachbargeometrien benötigen reale Aufnahmen und unabhängige Prüfung.
+Keine Aussage zur Praxistauglichkeit vor dem ersten Schießstandtest.
+
+Prüfungen: 70 Python-Tests erfolgreich. Zusätzlich zur bisherigen Kalibrierung
+prüfen 192 klassifizierte Bilder alle 32 Zustände in drei Perspektiven und zwei
+Beleuchtungen mit Rauschen. Videofolgen prüfen drei Bahnen aus zwei Kameras,
+unterschiedliche Zielreihenfolgen, Verdeckung, kleine/große Bildbewegung,
+Rückstellung, Ausfall, Wiederaufnahme als Grundbeobachtung und Journal-Replay.
+Der neue Browser-Integrationstest führt zwei synthetische laufende Kameras durch
+Erfassung, Persistenz und WebSocket bis zur unveränderten Tablet-Seite und zum
+Kontrollmonitor. Er prüft insbesondere, dass drei sichtbare gefallene Ziele nach
+einem Ausfall nicht zu drei behaupteten beobachteten Fällen werden.
+Alle Prüfungen verwenden synthetisches Bildmaterial. Der RTSP-Transport bleibt
+zusätzlich durch die lokalen Integrationstests aus 0.4 geprüft.
+
+Abschließend 71 Python-Tests erfolgreich, einschließlich unverändertem Replay
+mit dem tatsächlichen `core.py`/`models.py` aus Tag `v0.4.0`. Der Baseline-Marker
+steht deshalb als zusätzliche Ereignismetadaten neben dem für ältere Leser
+strikten Befehl. Ältere Programme öffnen das Journal mit ihren damaligen
+Einlagenregeln; erneutes Replay unter 0.5 berücksichtigt die Grundbeobachtungen.
+Der Optik-Browsertest und die Kamera-/Kalibrierungs-Browserregression sind auch
+nach dieser Speicheranpassung erfolgreich.

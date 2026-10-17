@@ -5,4 +5,4 @@ import os
 # OpenCV vor dem ersten Import konfigurieren: RTSP-Zugangsdaten nicht loggen.
 os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

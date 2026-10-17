@@ -22,6 +22,7 @@ from .config import CameraSettings, Settings, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
 from .core import Conflict, EventStore
 from .models import Assignment, Observation, Release
+from .vision import VisionService
 
 
 def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, simulation: bool = False):
@@ -39,10 +40,16 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             if any(lane > len(app.state.store.state["lanes"]) for camera in app.state.settings.cameras for lane in camera.lane_ids):
                 raise ValueError("Kamerakonfiguration enthält unbekannte Bahn")
             app.state.cameras = CameraManager(app.state.settings.cameras)
+            app.state.vision = VisionService(lambda: app.state.settings, app.state.cameras,
+                                             app.state.calibrations, app.state.store, publish)
+            app.state.vision_task = asyncio.create_task(app.state.vision.run())
             try:
                 yield
             finally:
-                await run_in_threadpool(app.state.cameras.close)
+                app.state.vision_task.cancel()
+                with anyio.CancelScope(shield=True):
+                    await asyncio.gather(app.state.vision_task, return_exceptions=True)
+                    await run_in_threadpool(app.state.cameras.close)
         finally:
             app.state.store.close()
 
@@ -170,7 +177,9 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.get("/api/health")
     async def health():
-        return {"status": "ok", "version": __version__}
+        healthy = not app.state.store.failed and not app.state.vision_task.done()
+        return JSONResponse({"status": "ok" if healthy else "error", "version": __version__},
+                            status_code=200 if healthy else 503)
 
     @app.get("/monitor", include_in_schema=False)
     async def monitor():
