@@ -1,3 +1,8 @@
 """Zentrale Bahnverwaltung und Kalibrierung mechanischer Biathlonziele."""
 
-__version__ = "0.3.0"
+import os
+
+# OpenCV vor dem ersten Import konfigurieren: RTSP-Zugangsdaten nicht loggen.
+os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
+
+__version__ = "0.4.0"

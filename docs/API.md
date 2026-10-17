@@ -1,12 +1,12 @@
-# Ereigniskern und Schnittstellen, Version 0.3
+# Ereigniskern und Schnittstellen, Version 0.4
 
 Die vollständigen JSON-Schemata stehen bei laufendem Server unter `/docs` und
 `/openapi.json`. Technische Zustandsbezeichner bleiben englisch. Installation und
 Start: [README](../README.md). Komponenten und Datenfluss:
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-REST und WebSockets sind implementiert. Kamera-/Sensoradapter
-sind noch nicht vorhanden; der Beobachtungseingang kann bereits integriert werden.
+REST, WebSockets und RTSP-Kameraeingang sind implementiert. Laufende optische
+Zustandsauswertung und Sensoradapter folgen.
 
 | Schnittstelle | Aufgabe |
 |---|---|
@@ -266,3 +266,28 @@ deren Fall während dieser Einlage beobachtet wurde, unabhängig von späterer
 Unsicherheit. Alte Journale erhalten das Feld durch Replay. Der Monitor zeigt
 die Anzahl für `current_bout_id`; ohne aktuelle Einlage null. Es ist kein
 Schusszähler und keine Ergebnisberechnung.
+
+
+## Kameraverwaltung
+
+- `GET /api/cameras`: Liste mit `id`, `name`, `lane_ids`, `url_configured`,
+  `connected`, `captured_at`. Keine RTSP-URL oder Zugangsdaten.
+- `POST /api/cameras`: JSON mit `id`, `name`, `url`, `lane_ids`.
+- `PUT /api/cameras/{id}`: dieselben Felder; leere `url` erhält die gespeicherte
+  Adresse. Kennung bleibt fest. Vollständige RTSP-/RTSPS-Adresse erforderlich.
+- `DELETE /api/cameras/{id}`: Kamera und Zuordnungen entfernen; Kalibrierungen
+  und Ereignisse bleiben gespeichert, sind ohne passende Quelle nicht verwendbar.
+- `GET /api/cameras/{id}/frame`: aktuelles JPEG, `Cache-Control: no-store`;
+  503 bei fehlendem/veraltetem Bild, 404 bei unbekannter Kamera.
+
+Schreiboperationen liefern die bereinigte Kameraliste. Ungültige/mehrfache
+Zuordnung, unbekannte Bahn und ungültige RTSP-Adresse liefern 422 mit allgemeinem
+Text ohne Eingabedaten. Kameraänderungen werden gespeichert und ohne Serverneustart
+angewendet. Der Verbindungsstatus kann anschließend über die Liste geprüft werden.
+
+Bei einer kameragebundenen Bahn ergänzt `GET /api/lanes/{id}/calibration`
+`camera_id` und `valid_for_camera`. Das gespeicherte Kalibrierungsobjekt enthält
+`camera_id` und `camera_url_hash`; weder Hash noch Kennung ersetzen eine Prüfung
+der realen Bildgeometrie. Die bisherigen Multipart-Endpunkte und das Standbild-
+Werkzeug bleiben erhalten. Die Kamera selbst liefert in Version 0.4 noch keine
+Zielbeobachtungen.

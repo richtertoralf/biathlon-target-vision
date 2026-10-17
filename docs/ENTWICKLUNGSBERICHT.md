@@ -1,7 +1,7 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.3 sind
+Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.4 sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md).
 Die folgende redaktionelle Konsolidierung übernimmt vorhandene Testergebnisse;
 sie ist kein erneuter Testlauf.
@@ -319,3 +319,29 @@ WebSocket-Verbindungsabbau. Die Bereinigung sammelt eigene Tasks nun in einem
 abgeschirmten AnyIO-CancelScope ein (AnyIO ist bereits FastAPI-Abhängigkeit).
 Ein zusätzlicher Test wiederholt 30 parallele Verbindungszyklen. Alle 14 API-Tests
 sind lokal erfolgreich; die CI wird vor dem Merge erneut vollständig ausgeführt.
+
+
+## 2026-10-17 – Version 0.4: RTSP-Kameraverwaltung
+
+Je Kamera ein OpenCV-/FFmpeg-Thread und ein aktuelles Bild halten die Architektur
+bei einem Python-Prozess. Vorschau und spätere Auswertung teilen den Decoder.
+Serverkonfiguration bleibt JSON im persistenten Datenordner. Bahnzuordnung wird
+auf Eindeutigkeit geprüft, native Logs und Validierungsdetails mit möglichen
+Zugangsdaten werden unterdrückt; der allgemeine Verbindungsstatus bleibt sichtbar.
+
+Die bestehende Gesamt-ROI-Kalibrierung erhielt einen Kamerabild-Knopf und Links
+für ausgewählte Bahnen. Kamerakennung/URL-Hash verhindern die stillschweigende
+Weiterverwendung nach Quellenwechsel. Keine Einzelzielmarkierung, kein separates
+Frontend oder zusätzlicher Dienst im Produkt. Für lokale Integrationstests sind
+MediaMTX und FFmpeg ausschließlich externe Testwerkzeuge.
+
+Prüfungen: vollständige Suite mit 64 Python-Tests erfolgreich; anschließend sieben
+gezielte Kameratests mit zusätzlicher Wiederverbindung und Prüfung nativer Logs
+auf Zugangsdaten erfolgreich (insgesamt jetzt 65 Tests). Lokaler MediaMTX-/FFmpeg-
+Stream wurde tatsächlich dekodiert; Ausfall und Wiederverbindung sowie eine
+parallel nicht erreichbare Kamera wurden geprüft. Der synthetische Stream liefert
+jede Sekunde ein Schlüsselbild, damit der Verbindungsaufbau innerhalb des
+Lesezeitlimits möglich ist. Bestehender Kalibrierungs-Browsertest und neuer
+Kamera-Browsertest mit realem RTSP-Transport erfolgreich. Syntax-/Diff-Prüfung
+fehlerfrei. In CI wird der optionale RTSP-Test ohne externe Testwerkzeuge explizit
+übersprungen; keine realen Kameras oder Schießstandaufnahmen getestet.
