@@ -55,7 +55,6 @@ Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen S
 
 ### Variante B: Physisches Tastenfeld
 
-
 Alternativ kann die Bahnbelegung über ein robustes Bediengerät mit fühlbaren Tasten erfolgen.
 
 Vorgesehen sind:
@@ -98,7 +97,7 @@ Alternativ werden die einzelnen Klappscheiben mit einfachen Sensoren ausgestatte
 
 Als bevorzugte Lösung werden berührungslose Hall-Sensoren mit Magneten untersucht. Auch Reedkontakte oder geeignete mechanische Schalter kommen infrage.
 
-Ein ESP32-Mikrocontroller erfasst die Zustände der fünf Ziele einer Schießbahn und übermittelt diese über WLAN an den zentralen Server.
+Ein ESP32-Mikrocontroller erfasst die Zustände der fünf Ziele einer Schießbahn und übermittelt diese z.B. über WLAN an den zentralen Server.
 
 Eigenschaften:
 
@@ -199,7 +198,7 @@ Eine eigene Wettkampfverwaltung, Zeitnahme oder Ergebnisgrafik ist nicht Bestand
 Die erste Entwicklungsphase konzentriert sich auf:
 
 1. Funktionsfähige Tablet-Bedienung für die Bahnbelegung.
-2. Optische Erkennung der fünf Klappscheiben für zunächst eine bis drei Bahnen.
+2. Optische Erkennung der fünf Klappscheiben.
 3. Zusammenführung der Ereignisse.
 4. Ausgabe über den vorhandenen KES-Protokollstandard.
 5. Praxistests mit realen mechanischen Biathlonanlagen.
