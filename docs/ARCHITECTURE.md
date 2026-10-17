@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.5.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.6.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -25,10 +25,15 @@ Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 | `core.py` | Gemeinsamer Bahnzustand, Einlagen, Konfliktprüfung, Ereignisjournal und Wiederherstellung |
 | `simulator.py` | Zielbeobachtungen über denselben öffentlichen Eingang wie künftige Erfassungsadapter |
 | `static/tablet.*`, `static/translations.js` | Tablet-Bedienung und zentrale Übersetzungen |
-| `calibration.py`, `static/calibration.*` | Separate Standbild-Kalibrierung und deren Browseransicht |
+| `calibration.py`, `static/calibration.*` | Gemeinsame Standbild-/Kamerakalibrierung und Nachführung |
+| `config.py`, `cameras.py`, `static/admin.*` | Persistente Kamerakonfiguration, RTSP-Eingang, Administration |
+| `vision.py` | Bestätigte optische Zielbeobachtungen und Grundzustände |
+| `static/monitor.*` | Schreibgeschützte Gesamtübersicht |
+| `deployment.py`, `install.sh`, `systemd/` | Installation, Status, Upgrade und Dienstbetrieb |
 
 Bestätigte Bedienbefehle und simulierte Zielbeobachtungen gelangen über REST und
-die Befehlsvalidierung in den Ereigniskern. Dieser prüft sie am gemeinsamen
+die Befehlsvalidierung in den Ereigniskern. Optische Beobachtungen verwenden
+dieselben Befehlsmodelle und dieselbe Veröffentlichung innerhalb des Prozesses. Dieser prüft sie am gemeinsamen
 Zustand, speichert akzeptierte Ereignisse dauerhaft und veröffentlicht erst danach
 den neuen Zustand. REST-Antworten und vollständige WebSocket-Zustände versorgen
 die Bedienplätze. Langsame Empfänger erhalten den neuesten Stand; das Journal
@@ -203,7 +208,9 @@ Klappe, kein trainiertes Modell und kein Nachweis an beliebigen Anlagen.
 oder Verbindungsunterbrechung. Sie aktualisieren sichtbare und zuletzt bekannte
 Stellungen, erzeugen aber keinen neuen Fall, keine neue Einlage und keine
 rückwirkende Rückstellung. Ausfälle setzen Ziele unmittelbar auf unbekannt und
-unterbrechen die zeitliche Kontinuität. Normale kurzzeitige Bildunsicherheit
+unterbrechen die zeitliche Kontinuität. Eine interne Verbindungsnummer je Decoder
+erkennt auch Ausfälle, die zwischen zwei Auswertungsschritten vollständig
+überbrückt wurden. Normale kurzzeitige Bildunsicherheit
 bewahrt die letzte Stellung; eine anschließend bestätigte Rückkehr nach oben
 beendet über den vorhandenen Kern die Einlage. Ein Sportlerwechsel während eines
 Ausfalls bleibt unbestimmt und benötigt die vorhandene ausdrückliche Bedienung.
@@ -211,3 +218,23 @@ Ausfalls bleibt unbestimmt und benötigt die vorhandene ausdrückliche Bedienung
 kein Schusszeitpunkt. Defekte Kalibrierungen betreffen nur ihre Bahn, werden
 protokolliert und in der Kalibrierungs-API sichtbar. Ein unerwartet beendeter
 Auswertungstask oder gesperrter Ereignisspeicher macht `/api/health` fehlerhaft.
+
+
+## Externer Datenvertrag
+
+Version 0.6 stabilisiert die vorhandenen REST-/WebSocket-Schnittstellen als
+API-Version 1. Kein KES-Emulator und kein zusätzlicher Port: externe Anzeigen
+verwenden dieselben vollständigen Zustände wie die Browser. `api_version` trennt
+den Integrationsvertrag von der Anwendungsversion; `instance_id` kennzeichnet
+einen Serverstart. Technischer Erfassungsstatus und bereinigte Kameradaten stehen
+im vorhandenen Zustand, weil eine unveränderte Zielstellung allein keine Aussage
+zur Verfügbarkeit erlaubt. Das ergänzt konkret fehlende Integrationsdaten, ohne
+einen zweiten Ereigniskanal oder ein Adapterframework einzuführen.
+
+`sequence` bleibt die Reihenfolge dauerhaft akzeptierter Befehle. Lebenszeichen
+und Kamerastatus ändern sie nicht. Langsame Empfänger erhalten aktuelle
+vollständige Zustände; das Journal kann separat gelesen werden. Der Monitor
+kennzeichnet `health: error` ausdrücklich als gestörte Erfassung mit letztem Stand.
+Vertrag, Wiederverbindung und Beispielclient stehen ausschließlich in [API.md](API.md#externe-integration-eigenständige-quelle-btv).
+Die spätere GFX-Integration ist in Issue #102 dokumentiert; GFX-Code wurde im
+Rahmen dieser Versionen nicht verändert.

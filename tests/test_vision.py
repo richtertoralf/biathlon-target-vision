@@ -27,6 +27,7 @@ class SequenceCameras:
     def __init__(self): self.frames = {}
     def set(self, camera_id, image, number):
         self.frames[camera_id] = {'frame':image,'frame_number':number,'connected':image is not None,
+                                 'stream_epoch':self.frames.get(camera_id,{}).get('stream_epoch',1),
                                  'captured_at':datetime.now(timezone.utc)}
     def snapshot(self, camera_id): return self.frames[camera_id]
 
@@ -110,6 +111,9 @@ class VisionTests(unittest.TestCase):
                 self.assertEqual([store.state['bouts'][b]['fallen_target_ids'] for b in bouts],[[5],[1],[3]])
                 await frames(18,9,4,missing=2)
                 self.assertEqual(store.state['lanes']['1']['targets'],['standing','fallen','unknown','standing','fallen'])
+                cameras.frames['first']['stream_epoch'] += 1
+                await frames(19,9,4)
+                self.assertEqual(store.state['bouts'][bouts[0]]['fallen_target_ids'],[5,2])
                 await frames(18,9,12,disconnected=True)
                 self.assertEqual(store.state['lanes']['1']['targets'],['unknown']*5)
                 self.assertEqual(store.state['bouts'][bouts[2]]['fallen_target_ids'],[3,4])

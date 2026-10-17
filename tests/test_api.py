@@ -96,7 +96,9 @@ class ApiTests(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.client = TestClient(create_app(self.directory))
         self.client.__enter__()
-        self.assertEqual(self.client.get("/api/state").json(), before)
+        restored = self.client.get("/api/state").json()
+        self.assertNotEqual(restored.pop("instance_id"), before.pop("instance_id"))
+        self.assertEqual(restored, before)
 
     def upload(self, image, quad=None, path="/api/lanes/1/calibration"):
         _, data = cv2.imencode(".png", image)

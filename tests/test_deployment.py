@@ -75,6 +75,7 @@ class DeploymentTests(unittest.TestCase):
             subprocess.run(['git','-C',str(source),'add','.'], check=True)
             subprocess.run(['git','-C',str(source),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'], check=True)
             (source / 'secret-runtime-data').write_text('must not deploy')
+            (package / '__init__.py').write_text('__version__ = "9.9.9"\n')
             original = deployment.run
             def prepare_command(*args, **kwargs):
                 if args[0] == 'git' or args[0] == 'tar':

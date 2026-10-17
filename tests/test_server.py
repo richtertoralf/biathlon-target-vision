@@ -59,6 +59,7 @@ class ServerTests(unittest.TestCase):
                     process.wait(timeout=10)
                     process, restored = start()
                     state.pop("type")
+                    self.assertNotEqual(restored.pop("instance_id"), state.pop("instance_id"))
                     self.assertEqual(restored, state)
                 finally:
                     if process is not None and process.poll() is None:
