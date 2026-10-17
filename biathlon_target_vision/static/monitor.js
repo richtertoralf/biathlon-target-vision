@@ -20,7 +20,9 @@
       });
       const count = document.createElement('p'); count.className = 'fallen-count';
       count.textContent = `Gefallen in aktueller Einlage: ${current?.fallen_target_ids.length ?? 0}/5`;
-      card.append(title, bib, targets, count); lanes.append(card);
+      const effective = document.createElement('p'); effective.className = 'effective-count';
+      effective.textContent = `Wirksamer Zustand: ${lane.targets.filter(value => value === 'fallen').length}/5 gefallen · ${{manual:'Manuell',automatic:'Automatisch',mixed:'Mischbetrieb'}[lane.mode]}`;
+      card.append(title, bib, targets, count, effective); lanes.append(card);
     }
   }
   function connect() {

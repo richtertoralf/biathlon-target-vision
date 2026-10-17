@@ -22,7 +22,8 @@ from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .config import CameraSettings, Settings, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
 from .core import Conflict, EventStore
-from .models import Assignment, Observation, Release
+from .models import (Assignment, Observation, Release, ModeChange, ManualTarget,
+                     OverrideRelease, ManualReset)
 from .vision import VisionService
 
 
@@ -99,7 +100,10 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                 "drafts": [draft for draft, _ in drafts.values()]}
 
     def publish(command):
+        duplicate = command.event_id in app.state.store.by_id
         event = app.state.store.apply(command)
+        if isinstance(command, ManualTarget) and not duplicate and event["manual_input"]["mode"] == "mixed":
+            save_correction_image(command, event)
         message = {"type": "state", **snapshot()}
         wake_subscribers()
         return {"event": event, "state": message}
@@ -123,6 +127,41 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                            "url_configured": True, "connected": capture["connected"],
                            "captured_at": capture["captured_at"].isoformat() if capture["captured_at"] else None})
         return {"cameras": result}
+
+    def save_correction_image(command, event):
+        camera = lane_camera(command.lane_id)
+        if camera is None:
+            return
+        capture = app.state.cameras.snapshot(camera.id)
+        if not capture["connected"] or capture["frame"] is None:
+            return
+        try:
+            calibration = app.state.calibrations.load(command.lane_id)
+            if not calibration or any(calibration.get(k) != v for k, v in camera_binding(camera).items()):
+                return
+            image = capture["frame"]
+            x, y, width, height = cv2.boundingRect(np.int32(calibration["quad"]))
+            crop = image[max(0, y):min(image.shape[0], y + height),
+                         max(0, x):min(image.shape[1], x + width)]
+            ok, encoded = cv2.imencode(".jpg", crop)
+            if not ok:
+                raise ValueError("JPEG-Kodierung fehlgeschlagen")
+            directory = Path(data_dir) / "corrections"
+            directory.mkdir(exist_ok=True)
+            stem = directory / str(event["sequence"])
+            stem.with_suffix(".jpg").write_bytes(encoded.tobytes())
+            # Pufferbild ist ein Vergleichsbeleg, nicht zwingend das Bild der
+            # letzten stabilisierten Beobachtung. Empfangszeit ausdrücklich angeben.
+            stem.with_suffix(".json").write_text(json.dumps({
+                "sequence": event["sequence"], "lane_id": command.lane_id,
+                "target_id": command.target_id, "camera_id": camera.id,
+                "captured_at": capture["captured_at"].isoformat(),
+                "accepted_at": event["accepted_at"], **event["manual_input"],
+            }, ensure_ascii=False), encoding="utf-8")
+        except (OSError, ValueError, cv2.error, CalibrationError):
+            # Eine Bilddatei darf eine bereits bestätigte Kampfrichtereingabe
+            # weder zurücknehmen noch als ungespeichert melden.
+            logging.exception("Vergleichsbild für Korrektur %s konnte nicht gespeichert werden", event["sequence"])
 
     @app.get("/api/cameras")
     async def cameras():
@@ -232,6 +271,27 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         if lane_id != command.lane_id:
             raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
         return publish(command)
+
+    def lane_control(lane_id, command):
+        if lane_id != command.lane_id:
+            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
+        return publish(command)
+
+    @app.put("/api/lanes/{lane_id}/mode")
+    async def set_mode(lane_id: int, command: ModeChange):
+        return lane_control(lane_id, command)
+
+    @app.post("/api/lanes/{lane_id}/manual-target")
+    async def manual_target(lane_id: int, command: ManualTarget):
+        return lane_control(lane_id, command)
+
+    @app.post("/api/lanes/{lane_id}/override-release")
+    async def override_release(lane_id: int, command: OverrideRelease):
+        return lane_control(lane_id, command)
+
+    @app.post("/api/lanes/{lane_id}/reset")
+    async def manual_reset(lane_id: int, command: ManualReset):
+        return lane_control(lane_id, command)
 
     @app.websocket("/ws")
     async def websocket(socket: WebSocket):

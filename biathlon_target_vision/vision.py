@@ -112,7 +112,7 @@ class VisionService:
             except Conflict:
                 # Ein anderer Beobachter kann eine spätere Zeit geliefert haben.
                 logging.warning("Veraltete Kamerabeobachtung für Bahn %s verworfen", command.lane_id)
-                self.trackers[command.lane_id][1].states = list(self.store.state["lanes"][str(command.lane_id)]["targets"])
+                self.trackers[command.lane_id][1].states = list(self.store.state["lanes"][str(command.lane_id)]["automatic_targets"])
 
     def calibration(self, lane_id):
         try:
@@ -132,9 +132,10 @@ class VisionService:
             for lane_id in camera.lane_ids:
                 configured.add(lane_id)
                 calibration = self.calibration(lane_id)
-                key = (camera.id, camera.url, calibration["created_at"] if calibration else None, capture.get("stream_epoch", 0))
+                key = (camera.id, camera.url, calibration["created_at"] if calibration else None, capture.get("stream_epoch", 0),
+                       self.store.state["lanes"][str(lane_id)]["automatic_generation"])
                 if lane_id not in self.trackers or self.trackers[lane_id][0] != key:
-                    initial = self.store.state["lanes"][str(lane_id)]["targets"]
+                    initial = self.store.state["lanes"][str(lane_id)]["automatic_targets"]
                     self.trackers[lane_id] = (key, LaneTracker(lane_id, f"camera:{camera.id}", initial))
                     self.frames.pop(lane_id, None)
                     self.emit(self.trackers[lane_id][1].disconnected(datetime.now(timezone.utc)))
@@ -153,7 +154,8 @@ class VisionService:
                 # Kamera oder Kalibrierung kann während der CPU-Arbeit geändert werden.
                 current = next((c for c in self.settings().cameras if lane_id in c.lane_ids), None)
                 saved = self.calibration(lane_id)
-                if current != camera or saved != calibration:
+                if (current != camera or saved != calibration or
+                        self.store.state["lanes"][str(lane_id)]["automatic_generation"] != key[-1]):
                     continue
                 latest = self.cameras.snapshot(camera.id)
                 # Auch eine zwischen zwei Auswertungen erfolgte Wiederverbindung
