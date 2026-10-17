@@ -29,8 +29,10 @@ Training und Gästeschießen.
 | **Automatisch** | Eine kalibrierte Kamera liefert die Scheibenzustände. |
 | **Mischbetrieb** | Automatische Erfassung mit sofortigen manuellen Korrekturen je Scheibe. Die nicht korrigierten Scheiben bleiben automatisch gesteuert. |
 
-Die Betriebsart lässt sich direkt in jeder Bahnkachel wählen. Unterschiedliche
-Betriebsarten können gleichzeitig an einem Schießstand verwendet werden.
+Die Betriebsart wird unter **„Optionen“** in jeder Bahnkachel gewählt. Für den
+Betrieb ohne Kamera zuerst **„Manuell“** auswählen, anschließend die tatsächliche
+Vorbereitung bestätigen. Unterschiedliche Betriebsarten können gleichzeitig an
+einem Schießstand verwendet werden.
 
 Versorgt beispielsweise eine Kamera die **Bahnen 4 bis 6** und fällt aus oder
 liefert wegen Schneefalls keine zuverlässigen Beobachtungen mehr, können diese

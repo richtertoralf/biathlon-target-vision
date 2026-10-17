@@ -601,8 +601,8 @@ Verschiebungen bei Status-/Moduswechseln. Lange Statuswörter dürfen umbrechen,
 die Bahnnummer bleibt zusammen. Geprüfte Abbildungen liegen unversioniert in
 `.test-artifacts/workflow-*.png`.
 
-README beschreibt jetzt den vollständigen Ablauf und die Aufgabenverteilung.
-Die Kamera erfasst Scheiben und zuverlässig erkannte Rückstellung, niemals
+README beschreibt jetzt den vollständigen Ablauf, die Aufgabenverteilung und
+die Auswahl von Manuell vor der ersten Vorbereitung ohne Kamera. Die Kamera erfasst Scheiben und zuverlässig erkannte Rückstellung, niemals
 Betreten, BIB oder Verlassen. Der Installationspfad beschreibt bewusst den
 aktuellen `main`, weil der neue Ablauf noch nicht in Tag `v0.7.0` enthalten ist.
 `--upgrade` bleibt auf veröffentlichte Tags beschränkt. Sensorik bleibt geplant;
