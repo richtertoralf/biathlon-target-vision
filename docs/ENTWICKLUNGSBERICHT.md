@@ -544,3 +544,19 @@ bestehender Tablet-Test mit zwei Profilen und drei Sprachen, Standbildkalibrieru
 sowie Kameraadministration mit tatsächlichem lokalem RTSP-Transport erfolgreich.
 JavaScript-Syntax und `git diff --check` fehlerfrei. Die CI führt zusätzlich die
 bestehenden Betriebsarten-, Monitor- und Optik-Browserregressionen aus.
+
+## 2026-10-18 – README auf manuellen Nutzen und Mischbetrieb ausrichten
+
+Nach Abschluss der Terminologieprüfung beschreibt die README zuerst reguläre
+manuelle Erfassung und synchronisierte Tablets sowie manuelle Priorität im
+Mischbetrieb. Der Ersatzbetrieb für Bahnen 4–6 bei Kameraausfall/Schneefall wird
+an einem konkreten Beispiel erklärt. Zielgruppe Zeitnahmeunternehmen, vorhandene
+REST-/WebSocket-Ausgabe und noch zu prüfende konkrete Anbindungen sind getrennt.
+Der Arberstadion-Termin Ende Oktober 2026 und die mögliche Begutachtung durch
+tschechische Zeitnehmer sind entsprechend dem Auftrag als geplant bezeichnet.
+
+Installationsbefehle und technische Betriebshinweise bleiben erhalten;
+Dopplungen und das ältere Tablet-Konzeptbild wurden entfernt. Begriffe folgen
+dem Terminologieverzeichnis. Geprüft wurden lokale Links/Anker, Bildverweis,
+identische Shell-Beispiele und die Beschränkung auf Dokumentationsdateien.
+Keine Anwendungscodeänderung und keine neue Aussage über reale Validierung.

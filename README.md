@@ -1,118 +1,119 @@
 # Biathlon Target Vision
 
-**Herstellerunabhängige Live-Erfassung von Bahnbelegung, Startnummern und
-Klappscheibenzuständen für mechanische Biathlon-Schießstände.**
+**Manuelle Schießstanderfassung am Tablet und automatische Kameraerfassung mit
+Vorrang für die Entscheidungen der Kampfrichter.**
 
-Biathlon Target Vision ist ein lokal betreibbares Open-Source-System für Vereine,
-Veranstalter, Kampfrichter und Systemintegratoren. Der Schwerpunkt liegt auf
-temporären 10-Meter-Luftgewehr-Schießständen bei Schülercups,
-Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
+Biathlon Target Vision (BTV) ist ein herstellerunabhängiges, lokal betreibbares
+Open-Source-System für Vereine, Veranstalter, Kampfrichter und Zeitnahmeunternehmen.
+Bereits **ohne Kameras und Sensoren** lässt sich ein Schießstand manuell erfassen:
+Kampfrichter geben Startnummern und die Zustände der fünf Klappscheiben am Tablet
+ein. Mehrere Tablets arbeiten synchronisiert zusammen und können dieselben oder
+unterschiedliche Schießbahnen betreuen. Dafür ist kein Simulationsmodus erforderlich.
 
-Kampfrichter erfassen Bahnbelegung und Zielzustände über Tablets. Vorhandene
-mechanische Anlagen lassen sich durch Kameras und später Sensoren ergänzen.
-Die erfassten Daten stehen über dokumentierte Schnittstellen externen Zeitnahme-
-und Anzeigesystemen zur Verfügung. Version 0.7 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras,
-optische Zielzustände und Simulator. Die Erkennung ist bislang synthetisch geprüft;
-reale Schießstandaufnahmen fehlen.
+Im **priorisierten Mischbetrieb** übernimmt die Kamera die laufende Erfassung.
+Kampfrichter sehen die Beobachtungen unmittelbar und können jede Scheibe durch
+Antippen korrigieren. Die manuelle Korrektur hat Vorrang vor folgenden Kamerabildern;
+die übrigen Scheiben werden weiter automatisch erfasst. Der korrigierte Zustand
+gilt sofort auf allen Tablets, im Kontrollmonitor und für externe Datenempfänger.
 
-## Projektumfang und Abgrenzung
+Die dreisprachige Tablet-Bedienung in **Englisch, Deutsch und Tschechisch** ist für
+internationale Veranstaltungen und Helferteams vorgesehen. Ein Schwerpunkt sind
+mechanische 10-Meter-Luftgewehranlagen bei Schüler- und Nachwuchswettkämpfen,
+Training und Gästeschießen.
 
-Biathlon Target Vision erfasst Schießstanddaten live und stellt sie über
-dokumentierte Schnittstellen bereit. Es ist **kein Wettkampf-, Zeitnahme- oder
-Ergebnisverwaltungssystem**.
+## Drei Betriebsarten je Schießbahn
 
-Wesentliche Grundsätze:
+| Betriebsart | Erfassung und Bedienung |
+|---|---|
+| **Manuell** | Kampfrichter erfassen alle fünf Scheiben am Tablet. Keine Kamera, keine Sensoren und kein `--simulation` erforderlich. |
+| **Automatisch** | Eine kalibrierte Kamera liefert die Scheibenzustände. |
+| **Mischbetrieb** | Automatische Erfassung mit sofortigen manuellen Korrekturen je Scheibe. Die nicht korrigierten Scheiben bleiben automatisch gesteuert. |
 
-- Zuverlässige Erfassung von Bahnbelegung, Startnummer und Klappscheibenzuständen.
-- Einfache Bedienung durch eingewiesene Kampfrichter.
-- Klare Zuordnung einer begrenzten Anzahl von Bahnen je Tablet; die Auswahl darf
-  sich zwischen Tablets überschneiden und kann auch alle Bahnen umfassen.
-- Unkomplizierte Korrektur falscher Startnummerneingaben und Ereignisspeicherung.
-- Mehrere Bedienplätze mit synchronisierten Daten, ohne exklusive Bahnsperren.
-- Live-Datenausgabe für externe Zeitnahme- und Anzeigesysteme.
-- Keine unnötige Absicherung gegen jede theoretisch denkbare Fehlbedienung.
+Die Betriebsart lässt sich direkt in jeder Bahnkachel wählen. Unterschiedliche
+Betriebsarten können gleichzeitig an einem Schießstand verwendet werden.
 
-Ergebnisberechnung, Strafzeiten- oder Strafrundenverwaltung, offizielle
-Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
-angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
-Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
+Versorgt beispielsweise eine Kamera die **Bahnen 4 bis 6** und fällt aus oder
+liefert wegen Schneefalls keine zuverlässigen Beobachtungen mehr, können diese
+Bahnen auf Manuell umgeschaltet und nach Sicht weitergeführt werden. Startnummern,
+laufende Schießeinlagen und bisher erfasste Ereignisse bleiben erhalten. Andere
+Bahnen arbeiten unabhängig weiter. Das ermöglicht einen unterbrechungsarmen
+Ersatzbetrieb, ohne Kameraerkennung vorauszusetzen.
 
-## Aktueller Stand: Version 0.7
+Beim Rückwechsel bleiben manuelle Werte geschützt, bis der Kampfrichter eine
+Scheibe mit `Auto ↩` wieder freigibt, eine Rückstellung bestätigt oder eine neue
+Schießeinlage beginnt. Erste Kamerabilder nach einer Unterbrechung liefern
+Grundbeobachtungen und erzeugen keine rückwirkenden Treffer.
 
-### Implementiert
+**Sensorik ist geplant:** Neben der manuellen und der vorhandenen Kameraerfassung
+ist ein Sensoradapter als zusätzliche Erfassungsquelle vorgesehen. Sensorhardware
+und Sensoranbindung sind noch nicht implementiert. Auch spätere Sensordaten sollen
+manuellen Korrekturen untergeordnet sein.
 
-- Drei Betriebsarten je Bahn: reguläre manuelle Erfassung ohne Kamera,
-  automatischer Betrieb und Mischbetrieb mit unmittelbaren manuellen Korrekturen.
-  Manuelle Eingaben haben Vorrang; Übersteuerungen überleben einen Neustart.
-- Dokumentierter REST-/WebSocket-Vertrag für externe Anwendungen, einschließlich
-  Serverneustart-Erkennung und Erfassungsstatus. BTV liefert Zielzustände und
-  erzeugt keine KES-, Schuss- oder Fehlschussmeldungen.
+## Anbindung an Zeitnahme und Anzeigen
 
-- Laufende optische Auswertung kalibrierter dunkler Öffnungen und heller Klappen,
-  zeitlich bestätigte Zielzustände, Rückstellungen und unbekannte Zustände bei
-  unklarer Sicht oder Kameraausfall. Bislang ausschließlich synthetisch validiert.
+BTV stellt aktuelle Schießbahndaten über dokumentierte **REST- und
+WebSocket-Schnittstellen** bereit: fünf wirksame Scheibenzustände einschließlich
+manueller Korrekturen, bestätigte Startnummern, Schießeinlagen und Bahnbelegung.
+Zeitnahmeunternehmen können diese Daten grundsätzlich in ihre bestehenden
+Systeme übernehmen. Eine konkrete Anbindung muss für das jeweilige Zeitnahmesystem
+entwickelt und geprüft werden; eine Herstellerkompatibilität wird nicht zugesichert.
 
-- Mehrere RTSP-Kameras unter `/admin` verwalten, Livebild prüfen, mehrere Bahnen
-  je Kamera zuordnen und die Gesamt-ROI je Bahn automatisch kalibrieren.
+- Aktueller Zustand: `http://SERVER-IP:8091/api/state`
+- Laufende vollständige Zustände: `ws://SERVER-IP:8091/ws`
+- [API und Integrationshinweise](docs/API.md#externe-integration-eigenständige-quelle-btv)
+  mit Datenfeldern, Wiederverbindung und lesendem Beispielclient.
 
-- Schreibgeschützter Kontrollmonitor unter `/monitor`, einschließlich erkannter
-  gefallener Ziele je aktueller Einlage.
-- Debian-/Ubuntu-Installation mit systemd sowie Version, Status und Upgrade.
+Alle Schnittstellen verwenden denselben Web-Port wie die Tablets. Die geplante
+GFX-Anbindung wird separat in [gfx-engine #102](https://github.com/richtertoralf/gfx-engine/issues/102)
+verfolgt. BTV emuliert kein KES und ersetzt keine bestehenden KES-/HORA-Empfänger.
 
-- Standardmäßig 20 Schießbahnen, Anzahl konfigurierbar.
-- Browserbasierte Tablet-Bedienung im Hoch- und Querformat mit großen,
-  kontrastreichen Bedienelementen und numerischem Tastenfeld.
-- Startnummern zuordnen und korrigieren, Bahnen freigeben, Einlagen einsehen.
-  Auch eine verspätete Zuordnung zu einer Schießeinlage ist möglich.
-- Fünf unabhängige Zielzustände je Bahn: aufgerichtet, gefallen oder unbekannt.
-- Mehrere synchronisierte Bedienplätze mit lokaler Bahn- und Sprachauswahl:
-  English als Standard, Deutsch und Čeština auswählbar.
-- Getrennte, live sichtbare unbestätigte Eingaben je Bedienplatz. Treffer und
-  Rückstellungen unterbrechen die Startnummerneingabe nicht. Bei Verbindungsverlust
-  bleibt der offene Text erhalten; bestätigt werden kann erst wieder online.
-- Simulationsbetrieb ohne Kameras, lokale Ereignisspeicherung und
-  Wiederherstellung nach Neustart sowie REST-API und WebSockets.
-- Standbild-Kalibrierung: gesamten Scheibenbereich markieren, fünf Zielbereiche
-  automatisch erkennen, kontrollieren und speichern; kleine Bildverschiebungen
-  nachführen. Die Zuverlässigkeit an echten mechanischen Anlagen ist noch offen.
+BTV ist **keine Wettkampf-, Zeitnahme- oder Ergebnisverwaltung**. Ergebnisberechnung,
+Strafzeiten, Strafrunden und offizielle Ergebnislisten bleiben beim angeschlossenen
+System. Eine gefallene Scheibe ist eine Zustandsbeobachtung; BTV erfindet daraus
+keine einzelnen Schuss- oder Fehlschussmeldungen. Unbekannte Zustände bleiben
+sichtbar unbekannt.
 
-### Geplante Erweiterungen
+## Entwicklungsstand und geplanter Praxistest
 
-- **Sensorerfassung:** Fünf Sensoren je Bahn mit ESP32 und WLAN. Bevorzugt werden
-  Hall-Sensoren mit Magneten untersucht; Reedkontakte oder mechanische Schalter
-  sind Alternativen. Befestigung und Wetterschutz richten sich nach der Anlage.
-  Kamera- und Sensorerfassung sollen gemeinsam einsetzbar sein.
-- **Physisches Tastenfeld:** Bahn auswählen, Startnummer eingeben, bestätigen
-  und korrigieren sowie freigeben; als Alternative bei Kälte oder Handschuhen.
-  Es soll dieselbe zentrale Bahnverwaltung wie die Tablets nutzen.
-- **GFX-Anbindung:** Ein eigenständiger BTV-Adapter in gfx-engine wird separat in
-  [Issue #102](https://github.com/richtertoralf/gfx-engine/issues/102) verfolgt.
-- **Betrieb und Validierung:** Praxistests mit realen mechanischen Anlagen und Tablets.
+Version **0.7.0** umfasst manuelle Erfassung, automatischen und priorisierten
+Mischbetrieb, synchronisierte Tablets, einen schreibgeschützten Kontrollmonitor,
+RTSP-Kameraverwaltung und browserbasierte Kalibrierung. Startnummern lassen sich
+zuordnen und korrigieren; erfasste Zustände und manuelle Übersteuerungen werden
+nach einem Neustart wiederhergestellt.
 
-Der weitere Ausbau konzentriert sich auf optische Erfassung, deren Integration
-mit dem Ereigniskern, externe Integration und Praxistests. Physische Tastenfelder und
-ESP32-Sensoradapter sind anschließende Erweiterungen.
+Die Kameraerkennung ist bisher mit synthetischen Bildern und Videofolgen geprüft,
+**noch nicht unter realen Schießstandbedingungen validiert**. Ein erster Test an
+realen Schießstandanlagen ist für **Ende Oktober 2026 im Arberstadion geplant**.
+Dabei sollen automatische Erfassung, priorisierter Mischbetrieb und praktische
+Bedienung überprüft werden.
+
+Tschechische Zeitnehmer sollen die Anwendung und ihre Schnittstellen begutachten
+und eine mögliche direkte Anbindung an ihre Zeitnahme beurteilen können. Das ist
+eine geplante Prüfung einer möglichen Integration, kein bereits bestätigter
+Integrations- oder Kompatibilitätsnachweis.
 
 ## Bedienung am Schießstand
 
-Je Tablet beispielsweise drei bis fünf Bahnen auswählen. Eine Bahn öffnen,
-die Startnummer über das Zahlentastenfeld eingeben und ausdrücklich bestätigen.
-Eine falsche Startnummer kann korrigiert werden; beim Verlassen des Schießstandes
-die Belegung freigeben. Bei widersprüchlichen bestätigten Eingaben zeigt der
-Dialog den Konflikt an und erhält den eigenen Text zur Prüfung.
+Pro Tablet die betreuten Bahnen auswählen, beispielsweise drei bis fünf. Die
+Auswahl darf sich zwischen Geräten überschneiden. Startnummer über das
+Zahlentastenfeld eingeben und bestätigen. Andere Tablets sehen unbestätigte
+Eingaben getrennt vom verbindlichen Stand. Bei einem Belegungskonflikt bleibt der
+eigene Text zur Prüfung erhalten.
 
-Zielbeobachtungen bleiben auch ohne Startnummer erhalten. Eine Rückstellung
-beendet die Einlage, ersetzt aber nicht die Bahnfreigabe. Eine verspätete
-Freigabe darf die nächste Einlage nicht dem vorherigen Sportler zuordnen.
-Aus Klappscheibenzuständen werden keine Schuss- oder Fehlschusszeitpunkte erfunden.
+Im manuellen oder gemischten Betrieb wechselt Antippen einer Scheibe zwischen
+aufgerichtet und gefallen; `?` setzt unbekannt. Im Mischbetrieb stehen der
+wirksame Zustand und der automatische Vergleichswert getrennt in der Kachel.
+Manuelle Werte sind markiert und lassen sich mit `Auto ↩` einzeln freigeben.
+Eine einfache Scheibenkorrektur benötigt keine zusätzliche Bestätigung.
 
-<img src="Schießstand-Erfassung_auf_Tablet_UI.png" alt="Bahnbelegung erfassen" width="300">
+**Rückstellung bestätigen** nach tatsächlicher Rückstellung verwenden: Die
+Schießeinlage endet, die Belegung bleibt bestehen. Beim Verlassen die Bahn
+zusätzlich freigeben. Auch ohne bekannte Startnummer erfasste Zustände bleiben
+erhalten; eine Startnummer kann der betreffenden Einlage später zugeordnet werden.
 
-Mechanische Luftgewehranlage und Kalibrierungskonzept:
-
-<img src="./biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" width="400">
-
-<img src="./kalibrierung.svg" alt="automatische Kalibrierung" width="400">
+Der Kontrollmonitor unter `/monitor` zeigt alle Bahnen kompakt und schreibgeschützt.
+Aktuell wirksame gefallene Scheiben und während der Einlage automatisch beobachtete
+Fälle werden getrennt angezeigt; sie sind keine Schusszählung oder Ergebniswertung.
 
 ## Unter Debian/Ubuntu installieren
 
@@ -160,7 +161,8 @@ Serveradresse gespeichert. Die Anwendung benötigt im Betrieb keine Cloud und
 keinen Internetzugang; sie ist ohne Anmeldung für ein vertrauenswürdiges lokales
 Netz ausgelegt.
 
-Beispiel mit anderer Bahnanzahl, Port und eigenem Datenordner:
+Voreingestellt sind 20 Schießbahnen. Beispiel mit anderer Bahnanzahl, Port und
+eigenem Datenordner:
 
 ```bash
 .venv/bin/python -m biathlon_target_vision --lanes 8 --port 8092 --data-dir data-test
@@ -169,90 +171,47 @@ Beispiel mit anderer Bahnanzahl, Port und eigenem Datenordner:
 Die Bahnanzahl wird beim ersten Start gespeichert. Für eine andere Anzahl einen
 neuen Datenordner verwenden. Genau einen Serverprozess je Datenordner betreiben.
 
-## Betriebsarten und Erfassungsquellen
-
-Die Betriebsart wird direkt in jeder Tablet-Bahnkachel gewählt; verschiedene
-Bahnen dürfen gleichzeitig unterschiedlich arbeiten. Zum Start bleibt die
-bisherige automatische Betriebsart voreingestellt.
-
-| Betriebsart | Bedienung |
-|---|---|
-| **Manuell** | Alle fünf Zielzustände am Tablet erfassen; regulärer Betrieb ohne Kamera und ohne `--simulation`. |
-| **Automatisch** | Die Kamera liefert die Zielzustände. |
-| **Mischbetrieb** | Kamera live verfolgen und jedes Ziel unmittelbar durch Antippen korrigieren; manuelle Werte haben Vorrang. |
-
-Großes Ziel antippen: aufgerichtet/gefallen wechseln; `?` setzt ausdrücklich
-unbekannt. Im Mischbetrieb steht unter dem wirksamen Zielzustand der automatische
-Vergleichswert. Manuelle Werte sind markiert. `Auto ↩` hebt die Übersteuerung dieses
-Ziels auf; die anderen Ziele bleiben automatisch gesteuert. Einfache Korrekturen
-benötigen keine zusätzliche Bestätigung. **Rückstellung bestätigen** bestätigt
-die tatsächliche Rückstellung aller Ziele und beendet die Einlage. Bahnfreigabe
-und Startnummernzuordnung bleiben getrennt.
-
-Bei Kameraausfall auf Manuell wechseln und unmittelbar weiterarbeiten.
-Startnummer, Einlage und Ereignisse bleiben erhalten; unbekannte Werte ausdrücklich
-nach Sicht erfassen. Beim Rückwechsel auf Automatisch oder Mischbetrieb bleiben
-die manuellen Werte geschützt, bis `Auto ↩`, bestätigte Rückstellung oder eine
-neue Einlage sie beendet. Neue Kamerabilder liefern zunächst Grundbeobachtungen,
-keine rückwirkenden Treffer. Der Kontrollmonitor zeigt die wirksamen Zustände
-getrennt von der Anzahl automatisch beobachteter Fälle.
-
-Die drei vorgesehenen **Erfassungsquellen** sind Manuell, Kamera und Sensor:
-Manuell ist ohne Hardware nutzbar. Die Kameraerfassung ist vorhanden, aber noch
-nicht unter realen Schießstandbedingungen validiert. Sensorhardware und
-Sensoranbindung sind noch nicht implementiert; auch spätere Sensordaten sollen
-manuellen Korrekturen untergeordnet sein. Es werden keine Schüsse oder Fehlschüsse
-abgeleitet.
-
 ## Kameras einrichten
 
 `http://SERVER-IP:8091/admin` öffnen. Kennung, Name, vollständige RTSP-Adresse
 (zum Beispiel `rtsp://192.168.95.43/1/h264major`) und Bahnnummern eintragen.
-Jede automatisch erfasste Bahn besitzt zunächst genau eine Kamera; manuelle
-Bahnen benötigen keine. Die Vorschau zeigt aktuelle Bilder;
-bei Verbindungsproblemen wird automatisch erneut verbunden.
+Mehrere Bahnen können dasselbe Kamerabild nutzen; jede automatisch erfasste Bahn
+hat genau eine zuständige Kamera. Bei Verbindungsproblemen wird erneut verbunden.
 
-Über „Bahn … kalibrieren“ das aktuelle Kamerabild übernehmen und vier Ecken um den
-gesamten Scheibenbereich markieren. Die fünf automatisch gefundenen Umrisse
-kontrollieren. Bei Kamera-/Adresswechsel, anderer Auflösung oder geänderter
-Ausrichtung neu kalibrieren. Die Auswertung startet nach gültiger Kalibrierung
-selbstständig. Erste Bilder nach Start/Verbindungsausfall liefern Grundzustände;
-sie erzeugen keine rückwirkenden Treffer. Die aktuelle Zielanzeige und die Zahl
-beobachteter Fälle während einer Einlage können deshalb voneinander abweichen.
-Bei fehlenden Endkonturen oder zu großer Bewegung werden alle Ziele unbekannt.
-Beim Bearbeiten bleibt eine leer gelassene RTSP-Adresse
-erhalten; gespeicherte Zugangsdaten werden nicht an den Browser zurückgegeben.
+Über „Bahn … kalibrieren“ das aktuelle Kamerabild übernehmen und vier Ecken um
+den gesamten Scheibenbereich markieren. Die fünf Scheiben werden automatisch
+gesucht; ihre gefundenen Umrisse kontrollieren. Keine einzelne Scheibe muss
+manuell markiert werden. Bei Kamera-/Adresswechsel, anderer Auflösung oder
+geänderter Ausrichtung neu kalibrieren.
 
-## Externe Anwendungen
+Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Kleine
+Bildverschiebungen werden nachgeführt; unklare Sicht oder zu große Bewegung
+führt zu unbekannten Beobachtungen. Beim Bearbeiten bleibt eine leer gelassene
+RTSP-Adresse erhalten; gespeicherte Zugangsdaten werden nicht an den Browser
+zurückgegeben. Administration, Kalibrierung und Monitor sind derzeit deutsch;
+die Tablet-Sprachauswahl ist davon unabhängig.
 
-Aktueller Zustand: `http://SERVER-IP:8091/api/state`, laufende vollständige Zustände:
-`ws://SERVER-IP:8091/ws`. Beide verwenden denselben Web-Port wie die Tablets.
-Der [Integrationsvertrag](docs/API.md#externe-integration-eigenständige-quelle-btv)
-beschreibt Zielzustände, Einlagen, Belegung, Unterbrechungen und ein lesendes Beispiel.
-BTV bildet eine eigenständige Quelle; bestehende KES-/HORA-Empfänger werden dadurch
-nicht ersetzt oder verändert.
+<img src="./biathlon-target_Luftgewehr.jpg" alt="Mechanische Luftgewehr-Scheibenanlage" width="400">
 
-## Simulationsbetrieb
+## Übungen und Weiterentwicklung
 
-Für Übungen mit einem separaten Datenordner starten:
+Für Übungen einen separaten Datenordner verwenden. Der zusätzliche Simulator
+ist von der regulären manuellen Erfassung unabhängig:
 
 ```bash
 .venv/bin/python -m biathlon_target_vision --simulation --data-dir data-simulation --host 0.0.0.0
 ```
 
-Im gekennzeichneten Simulationsmodus ein Ziel antippen und seinen Zustand ändern.
-„Simulation: alle aufrichten“ stellt alle fünf Ziele zurück. Zum Durchspielen:
-Treffer vor der Startnummerneingabe auslösen, die Nummer zuordnen, Ziele
-zurückstellen, die Belegung freigeben und die nächste Einlage beginnen.
-Abgeschlossene Einlagen können unter „Einlagen“ nachträglich zugeordnet werden.
-
-Ohne `--simulation` sind die Simulationsfunktionen deaktiviert. Übungen werden
-regulär gespeichert; Training und Wettkampf deshalb in getrennten Datenordnern
-betreiben. Den Simulator für die Kommandozeile beschreibt die
-[API-Dokumentation](docs/API.md#simulator-für-die-kommandozeile).
+Im gekennzeichneten Simulationsbetrieb lassen sich Scheibenzustände und
+Rückstellungen durchspielen. Übungen werden gespeichert; Training und
+Veranstaltung deshalb getrennt halten. Den Simulator für die Kommandozeile
+beschreibt die [API-Dokumentation](docs/API.md#simulator-für-die-kommandozeile).
+Neben Praxistests und externer Integration sind Sensoradapter und ein physisches
+Tastenfeld geplante Erweiterungen.
 
 ## Weiterführende Dokumentation
 
-- [Architektur](docs/ARCHITECTURE.md): aktuelle Komponenten, Datenfluss und technische Entscheidungen.
 - [API und Integration](docs/API.md): Schnittstellen, Zuordnungsregeln und Integrationshinweise.
-- [Entwicklungsbericht](docs/ENTWICKLUNGSBERICHT.md): Entscheidungen, bisherige Testergebnisse, Prüfaufrufe und bekannte Einschränkungen.
+- [Architektur und Betrieb](docs/ARCHITECTURE.md): Komponenten, Speicherung und Upgrades.
+- [Terminologie](docs/TERMINOLOGIE.md): bestätigte IBU-/Verbandsbegriffe und technische UI-Bezeichnungen.
+- [Entwicklungsbericht](docs/ENTWICKLUNGSBERICHT.md): Entscheidungen, tatsächlich ausgeführte Tests und Grenzen.
