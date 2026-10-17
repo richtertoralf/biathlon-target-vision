@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.6.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.7.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -69,6 +69,58 @@ Journal und Einlagen werden zusätzlich vollständig im Arbeitsspeicher gehalten
 Schreibfehler verhindern weitere Ereignisse bis zum Neustart. Ein beschädigtes
 Journal wird beim Start mit Fehler abgewiesen, nicht automatisch gekürzt.
 Betriebshinweise stehen in [API.md](API.md#speicherung-und-fehlerbehandlung).
+
+## Betriebsarten und Zielpriorität
+
+Jede Bahn startet kompatibel im Modus `automatic`. `manual` und `mixed` werden
+wie Zielkorrekturen im vorhandenen JSONL-Journal gespeichert; es gibt keine zweite
+Konfigurationshoheit oder Prioritäts-Engine. Der Kern führt je Ziel die
+`automatic_targets` und nullable `manual_targets` getrennt. `targets` bleibt der
+maßgebliche Live-Zustand: Ein vorhandener manueller Wert gewinnt, andernfalls
+gilt die automatische Beobachtung. Im manuellen Modus werden alle fünf
+wirksamen Werte beim Wechsel übernommen, einschließlich unbekannter Zustände.
+Automatische Bilder werden weiter verarbeitet und journalisiert, ändern aber
+weder manuelle Werte noch Einlagengrenzen des manuellen Betriebs.
+
+Beim Wechsel zurück zur Automatik bleiben diese Werte als einzelne
+Übersteuerungen erhalten, auch im Modus `automatic`. Die ausdrückliche Freigabe
+je Ziel übernimmt dessen letzte automatische Beobachtung ohne neues Fallereignis.
+Ein Generationszähler verwirft noch laufende Bildauswertungen nach Rückwechsel
+oder bestätigter Rückstellung. Der vorhandene Tracker beginnt erneut mit
+Grundbeobachtungen. Auch REST-Beobachtungen werden nach Rückwechsel je Ziel bis
+zum ersten bekannten Zustand als Grundbeobachtung behandelt.
+
+Eine bestätigte automatische Rückstellung im automatischen/Mischbetrieb oder
+eine ausdrücklich neue Einlage beendet alte Übersteuerungen. Die Erkennung
+vergleicht dafür ausschließlich die zugrunde liegenden automatischen Werte;
+ein manuell von gefallen auf aufgerichtet korrigiertes Ziel ist keine Rückstellung.
+Im rein manuellen Betrieb bestätigt der Kampfrichter die physische Rückstellung
+aller Ziele ausdrücklich. Keine Rückstellung und kein Sportlerwechsel werden aus
+Zeitabständen oder einzelnen Korrekturen erraten. Eine erstmals manuell erfasste
+gefallene Scheibe kann wie bisher eine noch unzugeordnete Einlage eröffnen,
+erzeugt aber kein automatisch beobachtetes Fallereignis.
+
+Ein eigener kleiner Bedienzähler schützt Ziel-/Modusbefehle gegen konkurrierende
+Bediener und Einlagenwechsel. Unabhängige Kamerabilder machen eine unmittelbare
+Korrektur nicht ungültig. Startnummern behalten ihren bestehenden Belegungszähler.
+Journal-Replay verwendet dieselben Regeln; optionale Felder alter Befehle bleiben
+lesbar. Manuelle Ereignisse enthalten den Vergleich zur Automatik und den
+vorherigen wirksamen Wert, alle neuen Ereignisse den anschließenden wirksamen
+Zustand. API-Felder und Befehle stehen ausschließlich in [API.md](API.md).
+
+Bei einer Korrektur im Mischbetrieb speichert `app.py` nach erfolgreicher
+Journalbuchung nach Möglichkeit den Gesamt-ROI aus dem vorhandenen letzten
+Kamerabild unter `corrections/SEQUENZ.jpg` samt kleiner JSON-Begleitdatei. Es wird
+kein weiterer Bildpuffer angelegt. Das Bild kann von der letzten zeitlich
+stabilisierten Beobachtung abweichen; seine Empfangszeit wird angegeben. Fehlende
+Kamera/Kalibrierung ergibt keinen Bildbeleg, Schreib-/Kodierungsfehler werden
+protokolliert und nehmen die bestätigte Korrektur nicht zurück. Bildbelege liegen
+im persistenten Datenordner und werden bei Upgrades erhalten; keine automatische
+Archivbereinigung oder Analyseplattform.
+
+Manuelle Erfassung und Kamera sind implementierte Quellen. Sensorhardware und
+Sensoradapter bleiben geplant. Ihre späteren Beobachtungen können denselben
+Eingang und dieselbe Priorität verwenden; kein zusätzlicher Dienst ist vorgesehen.
 
 ## Tablet-Bedienung und Mehrbenutzerbetrieb
 
@@ -140,11 +192,13 @@ Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner un
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
 Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
 vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
-Upgrades müssen deshalb das Journalformat rückwärtskompatibel halten. Neue
-Grundbeobachtungen speichern ihren Marker als zusätzliche Ereignismetadaten;
-Version 0.4 kann das Journal weiterhin öffnen. Ältere Programme kennen diese
-Kennzeichnung nicht und verwenden bei einem Rollback ihre damaligen
-Einlagenregeln. Version 0.5 stellt beim erneuten Replay die neuere Bedeutung wieder her. Sicherungen
+Alte Journale bleiben unter 0.7 lesbar. Der automatische Rückwechsel bei einem
+Startfehler bleibt möglich, solange keine neuen 0.7-Bedienbefehle angenommen
+wurden. Nach produktiver Nutzung dieser Befehle können ältere Versionen das
+Journal nicht mehr lesen. Ein solcher Downgrade benötigt bewusst die Sicherung
+vor dem Upgrade und würde neuere Eingaben verlieren; er geschieht niemals
+automatisch. Grundbeobachtungen verwenden weiterhin die seit 0.5 vorhandenen
+zusätzlichen Ereignismetadaten. Sicherungen
 und alte Programmstände werden bewusst nicht automatisch gelöscht.
 Ein Dateilock verhindert parallele Installationen/Upgrades.
 
@@ -152,9 +206,12 @@ Ein Dateilock verhindert parallele Installationen/Upgrades.
 
 `/monitor` liest vollständige Zustände über `/ws`, zeigt ausschließlich bestätigte
 Daten und besitzt keine Bedienfunktionen. Der Kern führt je Einlage die eindeutig
-beobachteten gefallenen Zielpositionen als `fallen_target_ids`; Replay berechnet
+automatisch wirksam gewordenen gefallenen Zielpositionen als `fallen_target_ids`; Replay berechnet
 sie auch für alte Journale. Das ist keine Anzahl abgegebener Schüsse. Eine
 Verdeckung löscht diese Beobachtungen nicht, eine neue Einlage beginnt bei null.
+Zusätzlich zeigt der Monitor die aktuell wirksame Anzahl gefallener Ziele und die
+Betriebsart. So werden manuelle Korrekturen und reine Grundbeobachtungen sichtbar,
+ohne sie als zusätzliche beobachtete Fälle zu zählen.
 
 
 ## RTSP-Kameras und Administration

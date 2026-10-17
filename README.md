@@ -8,10 +8,10 @@ Veranstalter, Kampfrichter und Systemintegratoren. Der Schwerpunkt liegt auf
 temporären 10-Meter-Luftgewehr-Schießständen bei Schülercups,
 Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
 
-Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
-mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
-Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
-weiterzugeben. Version 0.6 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras,
+Kampfrichter erfassen Bahnbelegung und Zielzustände über Tablets. Vorhandene
+mechanische Anlagen lassen sich durch Kameras und später Sensoren ergänzen.
+Die erfassten Daten stehen über dokumentierte Schnittstellen externen Zeitnahme-
+und Anzeigesystemen zur Verfügung. Version 0.7 bietet Tablet-Bedienung, Kontrollmonitor, Installation, RTSP-Kameras,
 optische Zielzustände und Simulator. Die Erkennung ist bislang synthetisch geprüft;
 reale Schießstandaufnahmen fehlen.
 
@@ -37,10 +37,13 @@ Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
 angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
 Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
-## Aktueller Stand: Version 0.6
+## Aktueller Stand: Version 0.7
 
 ### Implementiert
 
+- Drei Betriebsarten je Bahn: reguläre manuelle Erfassung ohne Kamera,
+  automatischer Betrieb und Mischbetrieb mit unmittelbaren manuellen Korrekturen.
+  Manuelle Eingaben haben Vorrang; Übersteuerungen überleben einen Neustart.
 - Dokumentierter REST-/WebSocket-Vertrag für externe Anwendungen, einschließlich
   Serverneustart-Erkennung und Erfassungsstatus. BTV liefert Zielzustände und
   erzeugt keine KES-, Schuss- oder Fehlschussmeldungen.
@@ -119,7 +122,7 @@ für die Installation. Installation des veröffentlichten Stands:
 ```bash
 git clone https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
-git checkout v0.6.0
+git checkout v0.7.0
 ./install.sh
 ```
 
@@ -166,11 +169,47 @@ Beispiel mit anderer Bahnanzahl, Port und eigenem Datenordner:
 Die Bahnanzahl wird beim ersten Start gespeichert. Für eine andere Anzahl einen
 neuen Datenordner verwenden. Genau einen Serverprozess je Datenordner betreiben.
 
+## Betriebsarten und Erfassungsquellen
+
+Die Betriebsart wird direkt in jeder Tablet-Bahnkachel gewählt; verschiedene
+Bahnen dürfen gleichzeitig unterschiedlich arbeiten. Zum Start bleibt die
+bisherige automatische Betriebsart voreingestellt.
+
+| Betriebsart | Bedienung |
+|---|---|
+| **Manuell** | Alle fünf Zielzustände am Tablet erfassen; regulärer Betrieb ohne Kamera und ohne `--simulation`. |
+| **Automatisch** | Die Kamera liefert die Zielzustände. |
+| **Mischbetrieb** | Kamera live verfolgen und jedes Ziel unmittelbar durch Antippen korrigieren; manuelle Werte haben Vorrang. |
+
+Großes Ziel antippen: aufgerichtet/gefallen wechseln; `?` setzt ausdrücklich
+unbekannt. Im Mischbetrieb steht unter dem wirksamen Zielzustand der automatische
+Vergleichswert. Manuelle Werte sind markiert. `Auto ↩` hebt die Übersteuerung dieses
+Ziels auf; die anderen Ziele bleiben automatisch gesteuert. Einfache Korrekturen
+benötigen keine zusätzliche Bestätigung. **Rückstellung bestätigen** bestätigt
+die tatsächliche Rückstellung aller Ziele und beendet die Einlage. Bahnfreigabe
+und Startnummernzuordnung bleiben getrennt.
+
+Bei Kameraausfall auf Manuell wechseln und unmittelbar weiterarbeiten.
+Startnummer, Einlage und Ereignisse bleiben erhalten; unbekannte Werte ausdrücklich
+nach Sicht erfassen. Beim Rückwechsel auf Automatisch oder Mischbetrieb bleiben
+die manuellen Werte geschützt, bis `Auto ↩`, bestätigte Rückstellung oder eine
+neue Einlage sie beendet. Neue Kamerabilder liefern zunächst Grundbeobachtungen,
+keine rückwirkenden Treffer. Der Kontrollmonitor zeigt die wirksamen Zustände
+getrennt von der Anzahl automatisch beobachteter Fälle.
+
+Die drei vorgesehenen **Erfassungsquellen** sind Manuell, Kamera und Sensor:
+Manuell ist ohne Hardware nutzbar. Die Kameraerfassung ist vorhanden, aber noch
+nicht unter realen Schießstandbedingungen validiert. Sensorhardware und
+Sensoranbindung sind noch nicht implementiert; auch spätere Sensordaten sollen
+manuellen Korrekturen untergeordnet sein. Es werden keine Schüsse oder Fehlschüsse
+abgeleitet.
+
 ## Kameras einrichten
 
 `http://SERVER-IP:8091/admin` öffnen. Kennung, Name, vollständige RTSP-Adresse
 (zum Beispiel `rtsp://192.168.95.43/1/h264major`) und Bahnnummern eintragen.
-Jede Bahn besitzt zunächst genau eine Kamera. Die Vorschau zeigt aktuelle Bilder;
+Jede automatisch erfasste Bahn besitzt zunächst genau eine Kamera; manuelle
+Bahnen benötigen keine. Die Vorschau zeigt aktuelle Bilder;
 bei Verbindungsproblemen wird automatisch erneut verbunden.
 
 Über „Bahn … kalibrieren“ das aktuelle Kamerabild übernehmen und vier Ecken um den

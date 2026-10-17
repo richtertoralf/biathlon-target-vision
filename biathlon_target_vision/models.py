@@ -50,4 +50,30 @@ class Release(Command):
     expected_assignment_revision: int | None = Field(default=None, ge=0, strict=True)
 
 
-EventCommand = Annotated[Observation | Assignment | Release, Field(discriminator="kind")]
+class LaneControl(Command):
+    # Automatische Bilder dürfen unmittelbare Bedienung nicht ständig ablehnen.
+    expected_control_revision: int = Field(ge=0, strict=True)
+
+
+class ModeChange(LaneControl):
+    kind: Literal["mode"] = "mode"
+    mode: Literal["manual", "automatic", "mixed"]
+
+
+class ManualTarget(LaneControl):
+    kind: Literal["manual_target"] = "manual_target"
+    target_id: int = Field(ge=1, le=5, strict=True)
+    state: Literal["standing", "fallen", "unknown"]
+
+
+class OverrideRelease(LaneControl):
+    kind: Literal["override_release"] = "override_release"
+    target_id: int = Field(ge=1, le=5, strict=True)
+
+
+class ManualReset(LaneControl):
+    kind: Literal["manual_reset"] = "manual_reset"
+
+
+EventCommand = Annotated[Observation | Assignment | Release | ModeChange | ManualTarget |
+                         OverrideRelease | ManualReset, Field(discriminator="kind")]

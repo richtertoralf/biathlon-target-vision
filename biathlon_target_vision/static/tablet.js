@@ -105,7 +105,19 @@
     const button = (action, label, classes = '', extra = '') => `<button class="${classes}" data-action="${action}" ${disabled} ${extra}>${escape(label)}</button>`;
     const targets = lane.targets.map((value, index) => {
       const label = `${t('target', {n: index + 1})}: ${t(value)}`;
+      const manual = lane.manual_targets[index] !== null;
+      const automatic = lane.automatic_targets[index];
+      const detail = lane.mode === 'manual' ? t('manualValue') : `${t('autoValue')}: ${t(automatic)}${manual ? ` · ${t('manualValue')}` : ''}`;
       const content = `<span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span><span>${index + 1}</span>`;
+      if (lane.mode !== 'automatic' || manual) {
+        return `<div class="target-control ${manual ? 'overridden' : ''}" data-target-control="${index + 1}">
+          ${lane.mode === 'automatic' ? `<span class="target" data-state="${value}" role="img" aria-label="${escape(label)}">${content}</span>` :
+          `<button class="target" data-action="manual-target" data-target="${index + 1}" data-state="${value}" aria-label="${escape(label)}" ${disabled}>${content}</button>`}
+          <small class="source-detail" data-automatic-state="${automatic}">${escape(detail)}</small>
+          ${lane.mode === 'manual' ? '' : manual ? button('override-release', t('returnAuto'), 'return-auto', `data-target="${index + 1}"`) : `<span class="auto-label">${t('autoValue')}</span>`}
+          ${lane.mode === 'automatic' ? '' : button('manual-unknown', '?', 'set-unknown', `data-target="${index + 1}" aria-label="${escape(t('setUnknown', {n: index + 1}))}"`)}
+        </div>`;
+      }
       return state.simulation
         ? `<button class="target" data-action="target" data-target="${index + 1}" data-state="${value}" aria-label="${escape(label)}" ${disabled}>${content}</button>`
         : `<span class="target" data-state="${value}" role="img" aria-label="${escape(label)}">${content}</span>`;
@@ -116,11 +128,14 @@
       <div class="bib-line"><span>${t('bib')}</span><strong class="bib">${escape(occupied?.bib ?? '—')}</strong></div>
       <p class="bout-line">${escape(context)}</p>
       <div class="lane-drafts"></div>
+      <label class="mode-label">${t('mode')} <select class="lane-mode" aria-label="${escape(t('mode'))}" ${disabled}>${['manual','automatic','mixed'].map(mode => `<option value="${mode}" ${lane.mode === mode ? 'selected' : ''}>${t(mode)}</option>`).join('')}</select></label>
+      <p class="capture-status">${escape(captureStatus(lane))}</p>
       <div class="targets">${targets}</div>
+      ${lane.mode === 'automatic' ? '' : `<p class="target-help">${t('targetHelp')}</p>`}
       <div class="card-actions">${button('bib', t(chosen?.bib != null ? 'correctBib' : 'enterBib'), 'primary', previous && current ? 'disabled' : '')}
       ${button('release', t('release'), 'release', occupied || current ? '' : 'disabled')}</div>
       ${button('history', t('history', {n: boutsFor(lane.lane_id).length}), 'history')}
-      ${state.simulation ? button('reset', t('reset'), 'simulate-reset') : ''}`;
+      ${lane.mode !== 'automatic' ? button('manual-reset', t('confirmReset'), 'simulate-reset') : state.simulation ? button('reset', t('reset'), 'simulate-reset') : ''}`;
     let card = $(`lane-${lane.lane_id}`);
     if (!card) {
       card = document.createElement('article');
@@ -131,6 +146,14 @@
     card.className = `lane-card ${previous || (current && !occupied) ? 'attention' : occupied ? 'occupied' : ''}`;
     // Unveränderte Karten behalten Fokus und Touch-Ziel auch bei anderen Bahnen.
     if (card._content !== content) { card.innerHTML = content; card._content = content; }
+  }
+
+  function captureStatus(lane) {
+    if (lane.mode === 'manual') return t('manualSource');
+    const camera = state.capture?.cameras.find(item => item.lane_ids.includes(lane.lane_id));
+    if (!camera) return t('noCamera');
+    if (!camera.connected) return t('cameraOffline');
+    return `${camera.name} · ${t(lane.automatic_targets.includes('unknown') ? 'cameraUncertain' : 'cameraOnline')}`;
   }
 
   function invalidate(key) {
@@ -204,7 +227,8 @@
     if (value.type && value.type !== 'state') return;
     // Eine verspätete HTTP-Antwort darf einen neueren WebSocket-Stand nie ersetzen.
     if (!freshConnection && state && value.sequence < state.sequence) return;
-    const changed = !state || value.sequence !== state.sequence || value.simulation !== state.simulation || !connected;
+    const changed = !state || value.sequence !== state.sequence || value.simulation !== state.simulation || !connected
+      || JSON.stringify(value.capture) !== JSON.stringify(state?.capture);
     state = value;
     if (value.editor_id !== undefined) editorId = value.editor_id;
     if (value.drafts !== undefined) drafts = value.drafts;
@@ -215,6 +239,8 @@
       if (lane.occupied_bout_id !== edit.baseOccupancy || state.bouts[edit.boutId]?.bib !== edit.baseBib
         || ![lane.occupied_bout_id, lane.current_bout_id].includes(edit.boutId)) invalidate('assignmentConflict');
       else if (!edit.stale) { edit.revision = lane.revision; edit.assignmentRevision = lane.assignment_revision; }
+    } else if (edit?.action === 'manual-reset') {
+      if (state.lanes[String(edit.laneId)].control_revision !== edit.controlRevision) invalidate('stale');
     } else if (edit?.action === 'history' && changed) openHistory(edit.laneId);
     else if (edit?.laneId && edit.action !== 'history' && state.lanes[String(edit.laneId)]?.revision !== edit.revision) invalidate('stale');
     $('review-edit').disabled = !connected || busy;
@@ -290,6 +316,7 @@
     if (edit.action === 'target') { openTarget(edit.laneId, edit.targetId); return; }
     if (edit.action === 'reset' || edit.action === 'release') { openConfirmation(edit.action, edit.laneId); return; }
     if (edit.action === 'history') { openHistory(edit.laneId); return; }
+    if (edit.action === 'manual-reset') { dialog.close(); return; }
     if (edit.action !== 'bib') return;
     const lane = state.lanes[String(edit.laneId)];
     edit.baseBib = state.bouts[edit.boutId]?.bib ?? null;
@@ -440,13 +467,53 @@
     }
   }
 
+  async function control(laneId, endpoint, fields = {}, method = 'POST') {
+    if (!connected || busy) return;
+    const revision = state.lanes[String(laneId)].control_revision;
+    busy = true; render();
+    try {
+      const response = await fetch(`/api/lanes/${laneId}/${endpoint}`, {method,
+        headers: {'Content-Type': 'application/json'}, signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({event_id: eventId(), lane_id: laneId,
+          expected_control_revision: revision, ...fields})});
+      const result = await response.json();
+      if (response.ok) { acceptState(result.state); notify('saved'); }
+      else {
+        notify(response.status === 409 ? 'conflict' : response.status === 503 ? 'storageError' : 'invalidRequest', true);
+        const fresh = await fetch('/api/state', {cache: 'no-store', signal: AbortSignal.timeout(5000)});
+        if (!fresh.ok) throw new Error('state unavailable');
+        acceptState(await fresh.json());
+      }
+    } catch { notify('uncertain', true); connect(); }
+    finally { busy = false; render(); }
+  }
+
+  $('lanes').onchange = event => {
+    if (!event.target.matches('.lane-mode')) return;
+    control(Number(event.target.closest('[data-lane]').dataset.lane), 'mode', {mode: event.target.value}, 'PUT');
+  };
+
   $('lanes').onclick = event => {
     const button = event.target.closest('button[data-action]');
     if (!button || button.disabled || !connected || busy) return;
     const laneId = Number(button.closest('[data-lane]').dataset.lane);
     const lane = state.lanes[String(laneId)];
     $('dialog-body').onclick = null;
-    if (button.dataset.action === 'bib') {
+    if (['manual-target','manual-unknown'].includes(button.dataset.action)) {
+      const targetId = Number(button.dataset.target);
+      control(laneId, 'manual-target', {target_id: targetId, state: button.dataset.action === 'manual-unknown' ? 'unknown' : lane.targets[targetId - 1] === 'fallen' ? 'standing' : 'fallen'});
+    } else if (button.dataset.action === 'override-release') {
+      control(laneId, 'override-release', {target_id: Number(button.dataset.target)});
+    } else if (button.dataset.action === 'manual-reset') {
+      openDialog('manual-reset', laneId, t('confirmReset'), t('resetHelp'));
+      edit.controlRevision = lane.control_revision;
+      $('dialog-body').innerHTML = `<button id="confirm-action" class="primary wide">${t('confirm')}</button>`;
+      $('confirm-action').onclick = async () => {
+        if (edit.stale) return;
+        dialog.close();
+        await control(laneId, 'reset');
+      };
+    } else if (button.dataset.action === 'bib') {
       const boutId = lane.current_bout_id || lane.occupied_bout_id;
       if (!boutId && boutsFor(laneId).some(bout => bout.bib === null)) openHistory(laneId);
       else openBib(laneId, boutId);

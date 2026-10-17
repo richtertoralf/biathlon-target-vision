@@ -1,6 +1,11 @@
 // Alle Texte des Tablet-Bedienplatzes; keine Sprachlogik im Ereigniskern.
 window.BTV_I18N = {
   en: {
+    mode: 'Mode', manual: 'Manual', automatic: 'Automatic', mixed: 'Mixed',
+    manualValue: 'Manual', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Target {n}: set unknown',
+    confirmReset: 'Confirm target reset', targetHelp: 'Tap: standing / fallen. ?: unknown. Auto ↩: release manual override.',
+    manualSource: 'Manual capture · no camera required', noCamera: 'No camera assigned',
+    cameraOffline: 'Camera disconnected · manual mode available', cameraUncertain: 'Unreliable observation', cameraOnline: 'Camera connected',
     language: 'Language', chooseLanes: 'Choose lanes', range: 'Range control', overview: 'Shooting lanes',
     connected: '● Connected', disconnected: '○ Reconnecting…', offlineHelp: 'Connection interrupted. Display may be out of date. Changes are disabled until the server reconnects.',
     simulationBanner: 'SIMULATION MODE · Target controls are enabled. Events are saved.',
@@ -35,6 +40,11 @@ window.BTV_I18N = {
     inputOffline: 'Your input is preserved locally. Confirmation is unavailable until reconnection.',
   },
   de: {
+    mode: 'Betriebsart', manual: 'Manuell', automatic: 'Automatisch', mixed: 'Mischbetrieb',
+    manualValue: 'Manuell', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Ziel {n}: unbekannt setzen',
+    confirmReset: 'Rückstellung bestätigen', targetHelp: 'Antippen: aufgerichtet / gefallen. ?: unbekannt. Auto ↩: Übersteuerung aufheben.',
+    manualSource: 'Manuelle Erfassung · keine Kamera erforderlich', noCamera: 'Keine Kamera zugeordnet',
+    cameraOffline: 'Kamera getrennt · manuelle Erfassung möglich', cameraUncertain: 'Unsichere Beobachtung', cameraOnline: 'Kamera verbunden',
     language: 'Sprache', chooseLanes: 'Bahnen auswählen', range: 'Schießstand', overview: 'Schießbahnen',
     connected: '● Verbunden', disconnected: '○ Verbinde erneut…', offlineHelp: 'Verbindung unterbrochen. Die Anzeige kann veraltet sein. Änderungen sind bis zur Wiederverbindung gesperrt.',
     simulationBanner: 'SIMULATIONSBETRIEB · Zielbedienung freigeschaltet. Ereignisse werden gespeichert.',
@@ -69,6 +79,11 @@ window.BTV_I18N = {
     inputOffline: 'Deine Eingabe bleibt lokal erhalten. Bestätigen ist erst nach Wiederverbindung möglich.',
   },
   cs: {
+    mode: 'Režim', manual: 'Ruční', automatic: 'Automatický', mixed: 'Smíšený',
+    manualValue: 'Ručně', autoValue: 'Auto', returnAuto: 'Auto ↩', setUnknown: 'Terč {n}: nastavit neznámý',
+    confirmReset: 'Potvrdit vztyčení terčů', targetHelp: 'Klepnutí: vztyčený / sklopený. ?: neznámý. Auto ↩: zrušit ruční přepsání.',
+    manualSource: 'Ruční zadávání · kamera není nutná', noCamera: 'Kamera není přiřazena',
+    cameraOffline: 'Kamera odpojena · lze zadávat ručně', cameraUncertain: 'Nejisté pozorování', cameraOnline: 'Kamera připojena',
     language: 'Jazyk', chooseLanes: 'Vybrat stavy', range: 'Střelnice', overview: 'Střelecké stavy',
     connected: '● Připojeno', disconnected: '○ Obnovování spojení…', offlineHelp: 'Spojení přerušeno. Zobrazený stav může být zastaralý. Změny jsou do obnovení spojení zakázány.',
     simulationBanner: 'REŽIM SIMULACE · Ovládání terčů je povoleno. Události se ukládají.',

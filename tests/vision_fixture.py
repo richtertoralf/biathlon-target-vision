@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import socket
+import sys
 import tempfile
 from time import monotonic
 from unittest.mock import patch
@@ -20,7 +21,7 @@ from tests.synthetic import scene
 if __name__ == '__main__':
     with tempfile.TemporaryDirectory(prefix='btv-vision-browser-') as temporary:
         directory=Path(temporary); control=directory/'frames.json';control.write_text('{}')
-        cameras=[CameraSettings(id=f'camera{n}',name=f'Kamera {n}',url=f'rtsp://synthetic/{n}',lane_ids=[n]) for n in (1,2)]
+        cameras=[] if '--manual-only' in sys.argv else [CameraSettings(id=f'camera{n}',name=f'Kamera {n}',url=f'rtsp://synthetic/{n}',lane_ids=[n]) for n in (1,2)]
         save_settings(directory,Settings(cameras=cameras));calibrations=CalibrationStore(directory)
         for camera in cameras:
             image,quad,_,_=scene();calibration=calibrate(image,quad);calibration.update(camera_binding(camera));calibrations.save(camera.lane_ids[0],calibration)

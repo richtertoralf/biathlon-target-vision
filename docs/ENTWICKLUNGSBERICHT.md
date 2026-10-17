@@ -436,3 +436,66 @@ und Optik bis Tablet/Monitor) sowie `pip check`, Shell-/JS-Syntax und Diff-Prüf
 sind erfolgreich. GFX-Arbeitsbaum unverändert. Frische Betriebssysteminstallation
 mit echtem systemd sowie reale Kameras/Schießstandaufnahmen bleiben Praxistests;
 synthetische Tests werden ausdrücklich nicht als Praxistauglichkeitsnachweis gewertet.
+
+## 2026-10-18 – Version 0.7: Manuell, automatisch und priorisierter Mischbetrieb
+
+Die bisherigen Kamera-/Tablet-/Journalwege wurden zuerst geprüft. Der Kern bleibt
+zentral; zwei Listen je Bahn trennen automatische Beobachtungen von manuellen
+Werten. `targets` ist weiterhin der wirksame Zustand für bestehende Verbraucher.
+Betriebsart und Übersteuerungen werden im vorhandenen Journal gespeichert, nicht
+zusätzlich in Kamerakonfiguration oder Browserpräferenzen. Kein zusätzlicher
+Dienst, keine Datenbank, keine Prioritäts-Engine.
+
+Reguläre manuelle Erfassung funktioniert ohne Kamera und ohne Simulation.
+Mischbetrieb verwendet dieselben Kacheln und erlaubt unmittelbare Korrekturen
+mit einem Antippen. Ein separater Bedienzähler verhindert Konkurrenz zwischen
+Bedienern, ohne jede neue Kamerabeobachtung als Bedienkonflikt zu behandeln.
+Einlagenwechsel und Freigabe der aktuellen Einlage machen alte Bedienbefehle
+ungültig. Unbekannt ist ausdrücklich wählbar. Übersteuerungen lassen sich je Ziel
+aufheben; technische Verfügbarkeit, Vergleichswert und wirksamer Wert sind getrennt
+sichtbar. Der Monitor ergänzt seine bisherige historische Fallzählung um die
+aktuell wirksame Anzahl, ohne manuelle Eingaben als beobachtete Fälle auszugeben.
+
+Beim Rückwechsel aus Manuell bleiben vorhandene Werte geschützt. Eine neue
+Erfassungsgeneration unterbricht die alte Bildfolge und verwirft noch laufende
+CPU-Auswertungen. Die ersten bekannten Beobachtungen sind Grundbeobachtungen.
+Automatische Rückstellungen beziehen sich auf automatische Vorwerte; manuelles
+Korrigieren nach oben beendet keine Einlage. Im manuellen Modus bestätigt der
+Kampfrichter die tatsächliche vollständige Rückstellung. Es werden keine Schuss-,
+Treffer- oder Fehlschussmeldungen aus Korrekturen erzeugt.
+
+Das Journal enthält bei manuellen Eingaben den automatischen Vergleichswert mit
+Beobachtungszeit, vorherigen wirksamen und neuen manuellen Wert. Bildbelege nutzen
+nach Möglichkeit den bestehenden aktuellen Kamerapuffer und die Gesamt-ROI. Die
+Begleitdatei nennt die Bildempfangszeit, da es nicht zwingend das Bild der letzten
+stabilisierten Beobachtung ist. Fehlende Belege verhindern keine Erfassung;
+Speicher-/Kodierungsfehler werden sichtbar protokolliert. Keine automatische
+Auswertung, kein Training und keine neue Bildverwaltung.
+
+Alte Journale einschließlich eines tatsächlich mit dem Code aus `v0.6.0`
+erzeugten Journals werden ohne Migration gelesen. Neu eingeführte Bedienbefehle
+benötigen beim Replay mindestens 0.7; der frühere pauschale Hinweis auf mögliche
+Programm-Downgrades ist entsprechend eingeschränkt. Der Installer behält seine
+Sicherung und seinen Rückwechsel bei einem Startfehler. Nach produktiver Nutzung
+neuer Befehle wird niemals automatisch eine alte Datensicherung zurückgespielt.
+
+Prüfstand: vollständig synthetisch und lokal. Kameraerkennung ist weiter nicht
+unter realen Schießstandbedingungen validiert. Die manuelle Erfassung ist ein
+regulärer Betriebsweg; eine Kamera ist dafür nicht erforderlich. Sensorhardware
+und Sensoradapter sind weiterhin nicht implementiert. GFX und dessen KES-/HORA-
+Verarbeitung wurden nicht verändert. Der anschließende eigenständige Auftrag zur
+IBU-konformen Prüfung der GUI-Terminologie wird in einem separaten PR bearbeitet.
+
+Abnahme 0.7: **92 Python-Tests erfolgreich**. Hinzugekommen sind 15 Tests für
+manuelle Einlagen ohne Kamera, Zielpriorität und unabhängige automatische Ziele,
+Übersteuerungsfreigabe, konkurrierende Bedienung und Freigabegrenzen,
+Kameraausfall/Rückwechsel, Rückstellung, Journal-Replay einschließlich Original-
+0.6-Journal, Bildbelege samt Speicherfehler sowie drei parallele Bahnen aus zwei
+Kameras und verworfene Bildauswertung während einer Rückstellung. Alle sechs
+Browserprüfungen erfolgreich: bisherige Tablet-, Monitor-, Kalibrierungs-,
+RTSP-Administrations- und Optikprüfungen sowie die neue Betriebsartenprüfung mit
+zwei Touch-Profilen, manuell ohne Kamera/Simulation und gemischtem Livebetrieb.
+Kontrollbilder des manuellen und gemischten Betriebs wurden visuell geprüft;
+keine Testartefakte werden versioniert. `pip check`, Shell-/JavaScript-Syntax und
+`git diff --check` sind fehlerfrei. CI ergänzt fünf Browserprüfungen ohne externe
+RTSP-Testwerkzeuge; der tatsächliche RTSP-Transport wurde lokal zusätzlich geprüft.
