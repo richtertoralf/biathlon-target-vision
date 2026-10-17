@@ -23,8 +23,7 @@ Die Zuordnung der Sportler zu den Schießbahnen bleibt Aufgabe der Kampfrichter.
 
 ### Variante A: Tablet
 
-
-Eine browserbasierte Bedienoberfläche ermöglicht die Verwaltung von bis zu 20 oder mehr Schießbahnen.
+|Eine browserbasierte Bedienoberfläche ermöglicht die Verwaltung von bis zu 20 oder mehr Schießbahnen.
 
 Jedes Tablet kann individuell konfiguriert werden:
 
@@ -39,9 +38,10 @@ Die Bedienung ist bewusst einfach gehalten:
 3. Startnummer bestätigen.
 4. Beim Verlassen des Schießstandes die Bahn per Schaltfläche freigeben.
 
-Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen Schaltflächen ausgelegt.
+Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen Schaltflächen ausgelegt.|
 
-![Bahnbelegung erfassen](Schießstand-Erfassung_auf_Tablet_UI.png)
+![Bahnbelegung erfassen](Schießstand-Erfassung_auf_Tablet_UI.png) |
+|---|---|
 
 ### Variante B: Physisches Tastenfeld
 
