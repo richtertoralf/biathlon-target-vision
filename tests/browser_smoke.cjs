@@ -60,12 +60,12 @@ for name, options in [('base', {'mask':10, 'perspective':1}), ('moved', {'mask':
     await page.waitForFunction(() => !document.querySelector('#file').disabled);
     await page.locator('#file').setInputFiles(path.join(directory, 'moved.png'));
     await page.locator('#align').click();
-    await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Fünf Ziele bestätigt'));
+    await page.waitForFunction(() => document.querySelector('#status').textContent.includes('Fünf Scheiben bestätigt'));
     assert.deepEqual(await (await fetch(url + '/api/lanes/1/calibration')).json(), saved);
     await page.locator('#file').setInputFiles(path.join(directory, 'missing.png'));
     await page.locator('#detect').click();
     await page.waitForFunction(() => document.querySelector('#status').classList.contains('error'));
-    assert.match(await page.locator('#status').textContent(), /fünf sichtbaren Zielen/);
+    assert.match(await page.locator('#status').textContent(), /fünf sichtbaren Scheiben/);
     assert.deepEqual(await (await fetch(url + '/api/lanes/1/calibration')).json(), saved);
     assert.deepEqual(errors, []);
     console.log('Browserprüfung erfolgreich: ROI, fünf Zielbereiche, Wiederladen, Nachführung, Fehlerfall.');

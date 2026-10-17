@@ -14,7 +14,7 @@ const {spawn}=require('node:child_process');const readline=require('node:readlin
   await page.locator('#calibrations a').first().click();await expect(page.locator('#capture')).toBeEnabled();await page.locator('#capture').click();await expect(page.locator('#image')).toBeVisible();
   const canvas=page.locator('#image');const box=await canvas.boundingBox();
   for(const [x,y]of quad)await canvas.click({position:{x:x*box.width/960,y:y*box.height/440}});
-  await page.locator('#detect').click();await expect(page.locator('#status')).toContainText('Fünf Ziele erkannt und gespeichert');
+  await page.locator('#detect').click();await expect(page.locator('#status')).toContainText('Fünf Scheiben erkannt und gespeichert');
   await page.reload();await expect(page.locator('#saved')).toContainText('Grundkalibrierung gespeichert');
   await page.goto(url+'/admin');await page.locator('#camera').selectOption('test');await page.locator('#camera-name').fill('Umbenannt');await page.locator('button[type=submit]').click();await expect(page.locator('#status')).toHaveText('Kamera gespeichert.');
   await page.locator('#remove').click();await expect(page.locator('#status')).toHaveText('Kamera entfernt.');

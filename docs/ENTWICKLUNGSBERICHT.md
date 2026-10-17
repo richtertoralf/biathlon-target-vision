@@ -499,3 +499,48 @@ Kontrollbilder des manuellen und gemischten Betriebs wurden visuell geprüft;
 keine Testartefakte werden versioniert. `pip check`, Shell-/JavaScript-Syntax und
 `git diff --check` sind fehlerfrei. CI ergänzt fünf Browserprüfungen ohne externe
 RTSP-Testwerkzeuge; der tatsächliche RTSP-Transport wurde lokal zusätzlich geprüft.
+
+## 2026-10-18 – Originaltexte und Schutz vor doppelter Browserübersetzung
+
+Zuerst wurden alle ausgelieferten HTML-/JavaScript-Dateien durchsucht. Keiner der
+vier gemeldeten Fehlbegriffe kommt im Original vor. Chromium zeigt ohne zusätzliche
+Browserübersetzung die vorhandenen Originaltexte korrekt. Das stützt die Vermutung
+einer automatischen Chrome-Übersetzung, reproduziert aber nicht den unbekannten
+Zustand des betroffenen Geräts. Die vier eigenen HTML-Seiten erhielten die drei
+verlangten Schutzmerkmale; die bestehende Tablet-Sprachwahl setzt bereits `lang`
+korrekt und wurde dafür nicht umgebaut. Die übrigen drei Seiten sind deutsch,
+nicht dreisprachig; eine neue Übersetzungsbibliothek wurde nicht eingeführt.
+
+Die von IBU bzw. Český svaz biatlonu veröffentlichten PDFs wurden heruntergeladen
+und auf ihre tatsächlichen Begriffe geprüft: Englisch Version September 2026,
+Deutsch Version Juli 2025, tschechische Verbandsfassung Version 2025 mit Änderungen.
+Fassungen, direkte Quellen und Artikel-/PDF-Fundstellen stehen im neuen,
+ausdrücklich beauftragten [Terminologieverzeichnis](TERMINOLOGIE.md).
+
+`Schießbahn`, `Schießstand`, `Schießeinlage`, `střelecký stav`, `střelecká položka`
+und das englische `Bib` sind belegt und bleiben erhalten. Deutsche
+Scheibenbeschriftungen verwenden konsistent `Scheibe`, einschließlich
+Kalibrierungsmeldungen und zugänglicher Monitorbeschriftungen. Im tschechischen
+Freigabedialog wurde ein Satz umgestellt, damit die eingefügte nominative
+Einlagenbeschriftung keinen falschen Akkusativ erzeugt. Die übrigen Originaltexte
+wurden geprüft, ohne sie pauschal neu zu übersetzen. Mechanische Stellungen,
+Unsicherheit und Bedienvorgänge werden ausdrücklich nicht als offizielle
+IBU-Schaltflächen ausgegeben. Es werden keine Kleinkaliber-Wettkampfvorgaben auf
+die technischen Eigenschaften einer 10-Meter-Luftgewehranlage übertragen.
+
+Keine Änderung an Ereigniskern, Befehlen, Journalformat, Erkennung oder
+Quellenpriorität. In `calibration.py` wurden ausschließlich ausgegebene
+Meldungstexte und der Dateikommentar angepasst. Der neue Browsercheck prüft alle
+vier Seiten, Vererbung des Übersetzungsschutzes, EN/DE/CS-Originaltexte, Sprachwahl
+und Wiederladen sowie Startnummern-, Einlagen-, Freigabe- und Rückstelldialoge.
+Sprachwechsel/Dialogprüfungen dürfen die Journalfolge nicht verändern. Zwei kleine
+Python-Checks prüfen sämtliche eigenen HTML-Dateien und verhindern die erneute
+Einführung der gemeldeten Fehlbegriffe in den Original-Browserdateien. Der
+Browsercheck wird auch in CI ausgeführt; kein Test beansprucht Kontrolle über den
+externen Google-Dienst oder beliebige Browsererweiterungen.
+
+Prüfergebnis: **94 Python-Tests erfolgreich**. Neuer Übersetzungs-Browsercheck,
+bestehender Tablet-Test mit zwei Profilen und drei Sprachen, Standbildkalibrierung
+sowie Kameraadministration mit tatsächlichem lokalem RTSP-Transport erfolgreich.
+JavaScript-Syntax und `git diff --check` fehlerfrei. Die CI führt zusätzlich die
+bestehenden Betriebsarten-, Monitor- und Optik-Browserregressionen aus.

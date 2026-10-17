@@ -1,4 +1,4 @@
-"""Fünf sichtbare Zielkonturen in einer Gesamt-ROI finden und begrenzt nachführen."""
+"""Fünf sichtbare Scheibenkonturen in einer Gesamt-ROI finden und begrenzt nachführen."""
 
 from datetime import datetime, timezone
 from itertools import combinations
@@ -88,7 +88,7 @@ def _candidates(gray):
         if not any(np.linalg.norm(np.array(candidate[:2]) - other[:2]) < min(other[2:4]) * .3 for other in unique):
             unique.append(candidate)
     if len(unique) > 25:
-        raise CalibrationError("Zu viele mögliche Ziele. ROI enger um eine einzelne Bahn markieren.")
+        raise CalibrationError("Zu viele mögliche Scheiben. ROI enger um eine einzelne Bahn markieren.")
     return sorted(unique, key=lambda c: c[0])
 
 
@@ -112,11 +112,11 @@ def _select_row(candidates):
         score = float(spacing_error + size_error + line_error)
         plausible.append((score, row))
     if not plausible:
-        raise CalibrationError("Keine eindeutige Reihe aus fünf sichtbaren Zielen erkannt. ROI, Schärfe, Kontrast und freie Sicht prüfen.")
+        raise CalibrationError("Keine eindeutige Reihe aus fünf sichtbaren Scheiben erkannt. ROI, Schärfe, Kontrast und freie Sicht prüfen.")
     plausible.sort(key=lambda item: item[0])
     # Auch eine etwas schlechtere zweite vollständige Reihe ist mehrdeutig.
     if len(plausible) > 1:
-        raise CalibrationError("Mehrere plausible Zielreihen erkannt. ROI auf genau eine Schießbahn begrenzen.")
+        raise CalibrationError("Mehrere plausible Scheibenreihen erkannt. ROI auf genau eine Schießbahn begrenzen.")
     return plausible[0]
 
 
@@ -176,12 +176,12 @@ class CalibrationStore:
             arrays = [(value["quad"], (4, 2)), (value["offset"], (2,))]
             for number, target in enumerate(value["targets"], start=1):
                 if target["target_id"] != number:
-                    raise ValueError("Ungültige Zielreihenfolge")
+                    raise ValueError("Ungültige Scheibenreihenfolge")
                 arrays.extend([(target["center"], (2,)), (target["polygon"], (32, 2))])
             for coordinates, shape in arrays:
                 array = np.asarray(coordinates, dtype=float)
                 if array.shape != shape or not np.isfinite(array).all():
-                    raise ValueError("Ungültige Zielkoordinaten")
+                    raise ValueError("Ungültige Scheibenkoordinaten")
             if not isinstance(value["created_at"], str):
                 raise ValueError("Ungültige Speicherzeit")
             return value
@@ -230,7 +230,7 @@ def align_visible(image, calibration):
         index = int(np.argmin(distances))
         if distances[index] <= limit:
             if index in matched:
-                raise CalibrationError("Mehrdeutige Zielkonturen")
+                raise CalibrationError("Mehrdeutige Scheibenkonturen")
             matched[index] = center - original[index]
     if len(matched) < 3:
         raise CalibrationError("Weniger als drei sichtbare Geometrieanker")
@@ -242,7 +242,7 @@ def align_visible(image, calibration):
     if not {1, 5}.issubset(visible):
         # Ohne beide Endanker könnte eine Verschiebung um einen Zielabstand
         # dieselben Innenpositionen als vermeintlich gültige Nachbarn liefern.
-        raise CalibrationError("Bei Teilverdeckung müssen beide Endziele sichtbar sein")
+        raise CalibrationError("Bei Teilverdeckung müssen beide äußeren Scheiben sichtbar sein")
     # Nur eine begrenzte Translation von der festen Basis, keine fortgesetzte Drift.
     from copy import deepcopy
     result = deepcopy(calibration)

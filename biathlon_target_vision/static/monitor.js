@@ -15,7 +15,7 @@
       lane.targets.forEach((value, index) => {
         const target = document.createElement('span'); target.className = `target ${value}`;
         target.dataset.state = value; target.textContent = value === 'unknown' ? '?' : value === 'fallen' ? '✓' : '○';
-        target.title = `Ziel ${index + 1}: ${{standing:'aufgerichtet', fallen:'gefallen', unknown:'unbekannt'}[value]}`;
+        target.title = `Scheibe ${index + 1}: ${{standing:'aufgerichtet', fallen:'gefallen', unknown:'unbekannt'}[value]}`;
         targets.append(target);
       });
       const count = document.createElement('p'); count.className = 'fallen-count';
