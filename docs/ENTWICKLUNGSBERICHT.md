@@ -274,3 +274,14 @@ angeben:
 node tests/tablet_browser.cjs
 node tests/browser_smoke.cjs
 ```
+
+## 2026-10-17 – Vollständigen Stand 0.2 sichern
+
+Anwendung, statische Browserdateien, Tests und Abhängigkeitslisten werden erstmals
+vollständig versioniert. Virtuelle Umgebung, Laufzeitdaten, Testartefakte und
+lokale Codex-Sitzungsprotokolle bleiben ausgeschlossen. GitHub Actions führt die
+Python-Tests mit Python 3.11 aus.
+
+Erneut geprüft: 49 Python-Tests, Tablet-Browsertest mit zwei Profilen und drei
+Sprachen, Kalibrierungs-Browsertest sowie `pip check` erfolgreich. Die Netz- und
+Browserprüfungen liefen wegen der Socketbeschränkung außerhalb der Sandbox.
