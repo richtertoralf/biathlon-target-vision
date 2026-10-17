@@ -47,7 +47,7 @@ Die Oberfläche wird für die Bedienung im Freien mit großen, kontrastreichen S
 </td>
 <td valign="top">
 
-<img src="Schießstand-Erfassung_auf_Tablet_UI.png" alt="Bahnbelegung erfassen" width="200">
+<img src="Schießstand-Erfassung_auf_Tablet_UI.png" alt="Bahnbelegung erfassen" width="250">
 
 </td>
 </tr>
