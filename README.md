@@ -76,6 +76,9 @@ Die Erkennung der Treffer erfolgt unabhängig von der manuellen Startnummerneing
 
 ### Variante A: Optische Erfassung
 
+<img src="./kalibrierung.svg" alt="automatische Kalibrierung" width="400">
+
+
 Handelsübliche IP-Kameras beobachten die mechanischen Klappscheiben.
 
 Die Bildverarbeitung erkennt, welche Ziele aufgerichtet beziehungsweise gefallen sind.
