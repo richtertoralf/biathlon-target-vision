@@ -133,7 +133,7 @@ Widersprüchliche Zuordnungen müssen erkannt werden. Die Software darf keine Sp
 
 Biathlon Target Vision soll das bereits dokumentierte serielle Kurvinen-KES-PC-Nachrichtenprotokoll bereitstellen.
 
-Referenz ist die vorhandene Schnittstellendokumentation `KES-PC-Message-description-2001.pdf`, die bereits für die Kurvinen-Integration verwendet wurde.
+Referenz ist die [Original-KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf), die bereits für die Kurvinen-Integration verwendet wurde.
 
 Zu den dokumentierten Ereignistypen gehören:
 
