@@ -73,6 +73,8 @@ Beide Bedienvarianten verwenden dieselbe zentrale Bahnverwaltung.
 
 ![Luftgewehr Target](biathlon-target_Luftgewehr.jpg)
 
+<img src="biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" width="400">
+
 Die Erkennung der Treffer erfolgt unabhängig von der manuellen Startnummerneingabe.
 
 ### Variante A: Optische Erfassung
