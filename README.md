@@ -11,7 +11,7 @@ Nachwuchswettkämpfen, Trainingsveranstaltungen und Gästeschießen.
 Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
 mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
 Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
-weiterzugeben. Version 0.2 bietet die Tablet-Bedienung und einen Simulator;
+weiterzugeben. Version 0.3 bietet Tablet-Bedienung, Kontrollmonitor, Installation und Simulator;
 die automatische Erfassung und KES-Ausgabe sind noch geplant.
 
 ## Projektumfang und Abgrenzung
@@ -36,9 +36,13 @@ Ergebnislisten und umfangreiche nachträgliche Ergebniskorrekturen gehören zum
 angeschlossenen Zeitnahme- beziehungsweise Ergebnissystem. Die einfache
 Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 
-## Aktueller Stand: Version 0.2
+## Aktueller Stand: Version 0.3
 
 ### Implementiert
+
+- Schreibgeschützter Kontrollmonitor unter `/monitor`, einschließlich erkannter
+  gefallener Ziele je aktueller Einlage.
+- Debian-/Ubuntu-Installation mit systemd sowie Version, Status und Upgrade.
 
 - Standardmäßig 20 Schießbahnen, Anzahl konfigurierbar.
 - Browserbasierte Tablet-Bedienung im Hoch- und Querformat mit großen,
@@ -71,14 +75,14 @@ Eingabekorrektur und die Ereignisspeicherung bleiben Teil dieses Projekts.
 - **Physisches Tastenfeld:** Bahn auswählen, Startnummer eingeben, bestätigen
   und korrigieren sowie freigeben; als Alternative bei Kälte oder Handschuhen.
   Es soll dieselbe zentrale Bahnverwaltung wie die Tablets nutzen.
-- **KES-Ausgabe:** Anbindung kompatibler Zeitnahme- und Anzeigesysteme über TCP
-  gemäß der [Original-KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf).
-  Eine direkte serielle Ausgabe kann später folgen.
-- **Betrieb und Validierung:** systemd-Installation unter Debian/Ubuntu und
-  Praxistests mit realen mechanischen Anlagen und Tablets.
+- **Externe Integration:** BTV liefert tatsächliche Zielzustände über REST und
+  WebSockets. BTV ist keine KES-Quelle und erzeugt keine KES-, Schuss- oder
+  Fehlschussmeldungen. Die separate GFX-Integration wird in
+  [gfx-engine #102](https://github.com/richtertoralf/gfx-engine/issues/102) verfolgt.
+- **Betrieb und Validierung:** Praxistests mit realen mechanischen Anlagen und Tablets.
 
 Der weitere Ausbau konzentriert sich auf optische Erfassung, deren Integration
-mit dem Ereigniskern, KES und Praxistests. Physische Tastenfelder und
+mit dem Ereigniskern, externe Integration und Praxistests. Physische Tastenfelder und
 ESP32-Sensoradapter sind anschließende Erweiterungen.
 
 ## Bedienung am Schießstand
@@ -101,6 +105,31 @@ Mechanische Luftgewehranlage und Kalibrierungskonzept:
 <img src="./biathlon-target_Luftgewehr.jpg" alt="Luftgewehr Target" width="400">
 
 <img src="./kalibrierung.svg" alt="automatische Kalibrierung" width="400">
+
+## Unter Debian/Ubuntu installieren
+
+Voraussetzung: Debian/Ubuntu mit Python 3.11 oder neuer, systemd und Internet
+für die Installation. Installation des veröffentlichten Stands:
+
+```bash
+git clone https://github.com/richtertoralf/biathlon-target-vision.git
+cd biathlon-target-vision
+git checkout v0.3.0
+./install.sh
+```
+
+Der Installer nutzt bei Bedarf sudo. Der Dienst startet automatisch als Benutzer
+`btv`. Tablet: `http://SERVER-IP:8091/`, Monitor: `http://SERVER-IP:8091/monitor`.
+
+```bash
+biathlon-target-vision --version
+biathlon-target-vision --status
+sudo biathlon-target-vision --upgrade
+```
+
+Upgrades verwenden den neuesten veröffentlichten Versionstag und erhalten
+Konfiguration, Kalibrierungen und Ereignisse. Betrieb und Speicherorte beschreibt
+[ARCHITECTURE.md](docs/ARCHITECTURE.md#installation-und-upgrades).
 
 ## Lokal installieren und starten
 

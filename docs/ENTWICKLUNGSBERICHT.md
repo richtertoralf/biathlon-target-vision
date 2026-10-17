@@ -1,7 +1,7 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.2 sind
+Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.3 sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md).
 Die folgende redaktionelle Konsolidierung übernimmt vorhandene Testergebnisse;
 sie ist kein erneuter Testlauf.
@@ -247,7 +247,7 @@ Integrationsregeln sind zentral in [API.md](API.md) dokumentiert.
   bei einem stillen Funkloch bis zum Ablauf verzögert verschwinden.
 - Journal und Einlagen liegen zusätzlich zur Datei vollständig im Arbeitsspeicher;
   automatische Archivierung, Speicherbegrenzung und Prüfung der Netzlast bei
-  wachsender Historie fehlen. systemd-Installation und KES-Ausgabe stehen ebenfalls aus.
+  wachsender Historie fehlen. Die systemd-Installation wurde mit Version 0.3 ergänzt; die KES-Ausgabe wurde verworfen.
 
 ## Prüfungen nachvollziehen
 
@@ -285,3 +285,31 @@ Python-Tests mit Python 3.11 aus.
 Erneut geprüft: 49 Python-Tests, Tablet-Browsertest mit zwei Profilen und drei
 Sprachen, Kalibrierungs-Browsertest sowie `pip check` erfolgreich. Die Netz- und
 Browserprüfungen liefen wegen der Socketbeschränkung außerhalb der Sandbox.
+
+
+## 2026-10-17 – Version 0.3: Installation und Kontrollmonitor
+
+Verbindliche Architekturkorrektur: BTV ist eine Zielzustandsquelle, keine
+KES-Quelle. Die ursprünglich geplante KES-Ausgabe ist überholt und entfällt.
+Version 0.6 stabilisiert REST/WebSocket und deren Integration. In gfx-engine wurde
+nur Issue #102 angelegt; KES-/HORA-Code bleibt unberührt. Der geprüfte GFX-Stand
+führt HORA noch als nicht verfügbaren Platzhalter.
+
+Installation verwendet Git-Archiv, venv, systemd und einen festen Dienstbenutzer.
+Programmstände werden vor dem kurzen Dienststopp vorbereitet; API-Prüfung mit
+Versionsnummer und Rückschalten des Programmlinks ermöglichen einen einfachen
+Rollback. Persistente Daten bleiben außerhalb des Programms. Kein eigener
+Paketmanager, keine automatische Datenmigration oder Archivbereinigung.
+
+Der schreibgeschützte Monitor verwendet die vorhandenen WebSocket-Zustände.
+Eindeutige beobachtete Zielpositionen je Einlage werden beim Journal-Replay
+rekonstruiert. Alte gefallene Ziele zählen nicht in eine neu zugeordnete Einlage.
+
+Prüfungen: 57 Python-Tests erfolgreich, einschließlich Git-Archiv ohne unversionierte
+Dateien, Rechte des Programmstands, Konfigurationsrechte, erfolgreicher Umschaltung,
+Startfehler-/Sicherungsfehler-Rollback und Datenerhalt. Neuer Monitor-Browsertest und
+bestehender Tablet-Browsertest erfolgreich. Shell-/JavaScript-Syntax und
+`git diff --check` erfolgreich. Keine Installation in das laufende Hostsystem:
+systemd-Aufrufe sind in den Installationstests isoliert ersetzt. Die Unit wurde
+mit systemd-analyze gelesen; die erwartete Meldung zum noch nicht installierten
+ExecStart-Pfad ersetzt keinen realen Debian-/Ubuntu-Installationstest.

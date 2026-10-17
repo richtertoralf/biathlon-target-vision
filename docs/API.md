@@ -1,11 +1,11 @@
-# Ereigniskern und Schnittstellen, Version 0.2
+# Ereigniskern und Schnittstellen, Version 0.3
 
 Die vollständigen JSON-Schemata stehen bei laufendem Server unter `/docs` und
 `/openapi.json`. Technische Zustandsbezeichner bleiben englisch. Installation und
 Start: [README](../README.md). Komponenten und Datenfluss:
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
-REST und WebSockets sind implementiert. Kamera-/Sensoradapter und KES-Ausgabe
+REST und WebSockets sind implementiert. Kamera-/Sensoradapter
 sind noch nicht vorhanden; der Beobachtungseingang kann bereits integriert werden.
 
 | Schnittstelle | Aufgabe |
@@ -251,27 +251,18 @@ uneinheitliche Bewegungen, andere Auflösung und unklare Zielreihen benötigen e
 neue Kalibrierung. Das ist eine Standbildprüfung; ein laufender Kameratreiber
 kann dieselbe Funktion später pro geeigneter Beobachtung verwenden.
 
-## Geplante KES-Integration
+## Externe Integration: eigenständige Quelle BTV
 
-In Version 0.2 gibt es noch keine KES-Ausgabe. Verbindlich für die spätere
-Integration ist die [KES-Protokolldokumentation vom 17.10.2001](../KES%20-Protocol%20description17.10.2001.pdf).
-Die vorgesehenen Nachrichtentypen sind:
+BTV liefert ausschließlich tatsächliche Zielbeobachtungen und bestätigte
+Zuordnungen. Es ist keine KES-Quelle. KES-Telegramme, Schuss-/Fehlschussereignisse,
+Schusszähler, Anschlag und Ergebnisse werden nicht erzeugt. Die geplante
+KES-TCP-Ausgabe ist verworfen. Die Original-KES-Dokumentation bleibt als Referenz
+für die Abgrenzung erhalten. GFX integriert BTV später als eigene Quelle neben
+KES und HORA; [Integrationsauftrag #102](https://github.com/richtertoralf/gfx-engine/issues/102).
 
-| Typ | Ereignis |
-|---|---|
-| 1 | BEGIN – Beginn |
-| 2 | SHOOTER – Startnummer |
-| 3 | SHOT – Schussmeldung |
-| 4 | HIT – Treffer |
-| 5 | LEAVE – Bahn verlassen |
-| 6 | CLEAR – Zurücksetzen |
-| 7 | STOP – Stopp |
-| 8 | HEARTBEAT – Verbindungstest |
-| 9 | MISS – Fehlschuss |
-
-Geplant ist zunächst ein TCP-Server, der das serielle KES-PC-Nachrichtenformat
-über Ethernet bereitstellt; direkte serielle Ausgabe kann folgen. Der Adapter
-darf nur durch tatsächliche Daten und das Protokoll gedeckte Meldungen erzeugen,
-insbesondere keine aus Zielzuständen erfundenen Fehlschusszeitpunkte.
-Der vorgesehene Kompatibilitätsabgleich mit Originaldaten aus Oberwiesenthal,
-KES-Simulator und bestehendem KES-Parser ist noch nicht erfolgt.
+`GET /api/health` liefert `status: "ok"` und `version` für Start-/Upgradeprüfung.
+Einlagen enthalten zusätzlich `fallen_target_ids`: eindeutige Zielpositionen,
+deren Fall während dieser Einlage beobachtet wurde, unabhängig von späterer
+Unsicherheit. Alte Journale erhalten das Feld durch Replay. Der Monitor zeigt
+die Anzahl für `current_bout_id`; ohne aktuelle Einlage null. Es ist kein
+Schusszähler und keine Ergebnisberechnung.
