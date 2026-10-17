@@ -4,7 +4,7 @@
 
 Projekt und Funktionsumfang: [README.md](README.md).
 Technische Architektur: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
-Die [KES-Protokolldokumentation](KES -Protocol description17.10.2001.pdf) im Repository ist die verbindliche Schnittstellenreferenz.
+Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf) im Repository ist die verbindliche Schnittstellenreferenz.
 
 ## Programmierung
 
