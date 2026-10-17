@@ -23,7 +23,16 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 - Nicht offensichtliche Abläufe, Entscheidungen und technische Besonderheiten direkt im Code kommentieren.
 - Kommentare erklären vor allem **warum**, nicht bloß, was der Code ohnehin zeigt.
 - Keine überflüssigen Kommentare, generierten Dokumentationsmengen oder doppelten Erklärungen.
-- Dokumentation und Benutzeroberfläche auf Deutsch, technische Bezeichner im Code auf Englisch.
+- Dokumentation auf Deutsch, technische Bezeichner im Code auf Englisch. Die Sprachen der Benutzeroberflächen legt die Architektur fest.
+
+## Zuständigkeiten der Dokumentation
+
+- `README.md`: Projektbeschreibung, Funktionsumfang, Abgrenzung und kurzer Nutzungseinstieg; keine Implementierungsdetails oder Testprotokolle.
+- `docs/ARCHITECTURE.md`: aktuelle Architektur und grundlegende technische Entscheidungen.
+- `docs/API.md`: Schnittstellen und Integrationshinweise.
+- `docs/ENTWICKLUNGSBERICHT.md`: Entwicklungsverlauf, Entscheidungen, Tests und Einschränkungen; überholte Entscheidungen kennzeichnen.
+- Informationen nicht unnötig mehrfach dokumentieren. Bei Änderungen gezielt aktualisieren, statt pauschal Abschnitte anzuhängen.
+- Zusätzliche Dokumentationsdateien nur bei konkretem Bedarf anlegen.
 
 ## Änderungen und Qualität
 
