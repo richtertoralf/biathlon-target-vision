@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
     if args.status or args.upgrade:
         from .deployment import status, upgrade
-        raise SystemExit(upgrade() if args.upgrade else status(args.data_dir))
+        raise SystemExit(upgrade() if args.upgrade else status(args.data_dir, args.host, args.port))
     if args.lanes is not None and args.lanes < 1:
         parser.error("--lanes muss größer als null sein")
     from .config import load_settings

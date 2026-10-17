@@ -12,7 +12,7 @@ Kampfrichter erfassen die Bahnbelegung über Tablets. Ziel ist, vorhandene
 mechanische Anlagen durch Kameras oder Sensoren zu ergänzen und die erfassten
 Daten über dokumentierte Schnittstellen an externe Zeitnahme- und Anzeigesysteme
 weiterzugeben. Version 0.3 bietet Tablet-Bedienung, Kontrollmonitor, Installation und Simulator;
-die automatische Erfassung und KES-Ausgabe sind noch geplant.
+die automatische Kameraerfassung folgt im nächsten Ausbau.
 
 ## Projektumfang und Abgrenzung
 

@@ -24,24 +24,28 @@ def run(*args, **kwargs):
     return subprocess.run(args, check=True, **kwargs)
 
 
-def reachable(directory, expected_version=None):
+def reachable(directory, expected_version=None, host=None, port=None):
     try:
-        config = json.loads((Path(directory) / "config.json").read_text())
-        host = config.get("host", "127.0.0.1")
+        try:
+            config = json.loads((Path(directory) / "config.json").read_text())
+        except (PermissionError, FileNotFoundError):
+            # Status darf ohne Leserecht auf spätere Kamera-Zugangsdaten arbeiten.
+            config = {}
+        host = host or config.get("host", "127.0.0.1")
         if host in ("0.0.0.0", "::"):
             host = "127.0.0.1"
         if ":" in host:
             host = f"[{host}]"
-        with urlopen(f"http://{host}:{config.get('port', 8091)}/api/health", timeout=1) as response:
+        with urlopen(f"http://{host}:{port or config.get('port', 8091)}/api/health", timeout=1) as response:
             health = json.load(response)
         return health.get("status") == "ok" and (expected_version is None or health.get("version") == expected_version)
     except (OSError, URLError, ValueError):
         return False
 
 
-def status(directory):
+def status(directory, host=None, port=None):
     result = subprocess.run(["systemctl", "is-active", SERVICE], capture_output=True, text=True)
-    online = reachable(directory)
+    online = reachable(directory, host=host, port=port)
     print(f"Dienst: {result.stdout.strip() or 'unbekannt'}; API: {'erreichbar' if online else 'nicht erreichbar'}")
     return 0 if result.returncode == 0 and online else 1
 

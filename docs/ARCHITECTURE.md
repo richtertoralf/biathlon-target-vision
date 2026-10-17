@@ -131,7 +131,9 @@ Die Konfiguration enthält zunächst `host` und `port`; die Installation bindet 
 
 Der Dienst startet über systemd, Logs liegen im Journal (`journalctl -u
 biathlon-target-vision`). Der Starter unter `/usr/local/bin/biathlon-target-vision`
-bietet `--version`, `--status` und `--upgrade`. Upgrade lädt den höchsten stabilen
+bietet `--version`, `--status` und `--upgrade`. Ohne Leserecht auf die geschützte
+Konfiguration prüft Status die Standardadresse; einen abweichenden Port explizit
+mit `--status --port PORT` angeben oder Status mit sudo aufrufen. Upgrade lädt den höchsten stabilen
 Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner unter
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
 Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
