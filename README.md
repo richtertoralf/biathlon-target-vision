@@ -3,6 +3,10 @@
 **Manuelle Schießstanderfassung am Tablet und automatische Kameraerfassung mit
 Vorrang für die Entscheidungen der Kampfrichter.**
 
+**[Produktkonzept und Weiterentwicklung](docs/PRODUKTKONZEPT.md):** Nutzen für
+Kampfrichter, Jury, Zeitnahme und Liveproduktionen sowie klar getrennte vorhandene,
+geplante und perspektivische Funktionen.
+
 Biathlon Target Vision (BTV) ist ein herstellerunabhängiges, lokal betreibbares
 Open-Source-System für Vereine, Veranstalter, Kampfrichter und Zeitnahmeunternehmen.
 Bereits **ohne Kameras und Sensoren** lässt sich ein Schießstand manuell erfassen:
