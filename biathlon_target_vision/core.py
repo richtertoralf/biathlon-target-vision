@@ -54,6 +54,7 @@ class EventStore:
                     "automatic_last_known": ["unknown"] * 5,
                     "automatic_baseline_pending": [False] * 5,
                     "manual_targets": [None] * 5,
+                    "unassigned_manual_target_ids": [],
                     "targets": ["unknown"] * 5,
                     "last_known_targets": ["unknown"] * 5,
                     "observed_at": [None] * 5,
@@ -83,9 +84,9 @@ class EventStore:
                     if command.event_id in self.by_id:
                         raise ValueError("Doppelte Ereigniskennung")
                     rules = event.get("rules_version", 1)
-                    if rules not in (1, 2):
+                    if rules not in (1, 2, 3):
                         raise ValueError("Unbekannte Ereignisregeln")
-                    self._reduce(self.state, command, legacy=rules == 1)
+                    self._reduce(self.state, command, rules)
                     self.state["sequence"] = event["sequence"]
                     self.events.append(event)
                     self.by_id[command.event_id] = event
@@ -140,7 +141,7 @@ class EventStore:
             # Baseline bleibt außerhalb des bisherigen Beobachtungsbefehls.
             # Neue Bedienbefehle benötigen hingegen mindestens Version 0.7.
             baseline = payload.pop("baseline", False)
-            event = {"sequence": sequence, "rules_version": 2,
+            event = {"sequence": sequence, "rules_version": 3,
                      "accepted_at": datetime.now(timezone.utc).isoformat(),
                      "command": payload}
             if baseline:
@@ -172,8 +173,9 @@ class EventStore:
             payload["baseline"] = event["baseline"]
         return payload
 
-    def _new_bout(self, state, lane, command, legacy=False):
-        self._clear_manual(lane, legacy)
+    def _new_bout(self, state, lane, command, rules):
+        self._clear_manual(lane, rules)
+        lane["unassigned_manual_target_ids"] = []
         # Vom auslösenden Ereignis abgeleitet: auch beim Replay dieselbe Kennung.
         bout_id = command.event_id
         bout = {"bout_id": bout_id, "lane_id": command.lane_id,
@@ -192,16 +194,17 @@ class EventStore:
             state["bouts"][bout_id].update(closed=True, close_reason=reason)
             lane["current_bout_id"] = None
 
-    def _reduce(self, state, command, legacy=False):
+    def _reduce(self, state, command, rules=3):
+        legacy = rules == 1
         lane = state["lanes"].get(str(command.lane_id))
         if lane is None:
             raise Conflict("Schießbahn existiert nicht.")
         if isinstance(command, Observation):
-            self._observe(state, lane, command, legacy)
+            self._observe(state, lane, command, rules)
         elif isinstance(command, LaneControl):
             if command.expected_control_revision != lane["control_revision"]:
                 raise Conflict("Bedienzustand wurde geändert. Bahn neu prüfen.")
-            self._control(state, lane, command, legacy)
+            self._control(state, lane, command, rules)
             lane["control_revision"] += 1
         else:
             expected = command.expected_assignment_revision
@@ -210,13 +213,13 @@ class EventStore:
             if changed:
                 raise Conflict("Bahn wurde zwischenzeitlich geändert. Zustand neu laden.")
             if command.kind == "assign":
-                self._assign(state, lane, command, legacy)
+                self._assign(state, lane, command, rules)
             elif isinstance(command, Occupy):
                 if lane["occupied_bout_id"]:
                     raise Conflict("Bahn ist bereits belegt.")
                 bout = state["bouts"].get(lane["current_bout_id"])
                 if bout is None:
-                    bout = self._new_bout(state, lane, command, legacy)
+                    bout = self._new_bout(state, lane, command, rules)
                 lane["occupied_bout_id"] = bout["bout_id"]
                 lane["reset_confirmed"] = False
                 lane["automatic_reset_pending"] = False
@@ -239,7 +242,7 @@ class EventStore:
             lane["assignment_revision"] += 1
         lane["revision"] += 1
 
-    def _assign(self, state, lane, command, legacy=False):
+    def _assign(self, state, lane, command, rules):
         bout_id = command.bout_id
         if bout_id is None and command.bout_after_sequence is not None:
             if command.bout_after_sequence > state["sequence"]:
@@ -271,9 +274,10 @@ class EventStore:
                 if other is not lane and occupied and state["bouts"][occupied]["bib"] == command.bib:
                     raise Conflict("Startnummer belegt bereits eine andere Bahn.")
         if bout is None:
-            # Ausdrücklich neue Einlage: keine Übersteuerung des Vorgängers.
+            # Erste Zuordnung darf bereits erfasste, noch ungebundene Werte
+            # übernehmen, aber keine Übersteuerungen des Vorgängers.
             lane["control_revision"] += 1
-            bout = self._new_bout(state, lane, command, legacy)
+            bout = self._new_bout(state, lane, command, rules)
         bout["bib"] = command.bib
         if active:
             if lane["occupied_bout_id"] != bout["bout_id"]:
@@ -281,7 +285,8 @@ class EventStore:
                 lane["automatic_reset_pending"] = False
             lane["occupied_bout_id"] = bout["bout_id"]
 
-    def _observe(self, state, lane, command, legacy=False):
+    def _observe(self, state, lane, command, rules):
+        legacy = rules == 1
         if command.kind == "target":
             if command.target_id is None or command.state is None:
                 raise Conflict("Zielbeobachtung benötigt target_id und state.")
@@ -333,18 +338,19 @@ class EventStore:
             lane["reset_confirmed"] = True
             lane["automatic_reset_pending"] = False
             if legacy:
-                self._clear_manual(lane, legacy)
+                self._clear_manual(lane, rules)
             else:
                 self._close_bout(state, lane, "reset")
                 lane["manual_targets"] = [None] * 5
                 indexes = list(range(5))
+            lane["unassigned_manual_target_ids"] = []
             lane["control_revision"] += 1
         self._effective(lane, indexes, legacy)
         bout_id = lane["current_bout_id"]
         changed_fall = not baseline and not reset and new_state == "fallen" and any(
             previous[i] != "fallen" and lane["manual_targets"][i] is None for i in indexes)
         if changed_fall and not bout_id:
-            bout_id = self._new_bout(state, lane, command, legacy)["bout_id"]
+            bout_id = self._new_bout(state, lane, command, rules)["bout_id"]
             lane["control_revision"] += 1
         if bout_id:
             bout = state["bouts"][bout_id]
@@ -373,25 +379,27 @@ class EventStore:
             if value == "fallen" or (not legacy and value == "unknown"):
                 lane["reset_confirmed"] = False
 
-    def _clear_manual(self, lane, legacy=False):
-        if legacy:
+    def _clear_manual(self, lane, rules):
+        if rules == 1:
             # Historische Befehle müssen auch ihre damaligen Revisionen erzeugen.
             if lane["mode"] != "manual":
                 lane["manual_targets"] = [None] * 5
                 self._effective(lane, legacy=True)
             return
-        if any(value is not None for value in lane["manual_targets"]):
+        indexes = [i for i, value in enumerate(lane["manual_targets"])
+                   if value is not None and (rules < 3 or i + 1 not in lane["unassigned_manual_target_ids"])]
+        if indexes:
             # Eine bestätigte Vorbereitung bleibt gültig, auch aus alten Journalen.
             # Sonst keine Stellungen des Vorgängers oder alte Kamerawerte einsetzen.
             prepared = lane["reset_confirmed"] and lane["targets"] == ["standing"] * 5
-            for index, value in enumerate(lane["manual_targets"]):
-                if value is not None:
-                    lane["targets"][index] = "standing" if prepared else "unknown"
-            lane["manual_targets"] = [None] * 5
+            for index in indexes:
+                lane["targets"][index] = "standing" if prepared else "unknown"
+                lane["manual_targets"][index] = None
             lane["automatic_baseline_pending"] = [True] * 5
             lane["automatic_generation"] += 1
 
-    def _control(self, state, lane, command, legacy=False):
+    def _control(self, state, lane, command, rules):
+        legacy = rules == 1
         if isinstance(command, ModeChange):
             if command.mode == lane["mode"]:
                 return
@@ -407,6 +415,7 @@ class EventStore:
             if not legacy:
                 return
         elif isinstance(command, ManualReset):
+            lane["unassigned_manual_target_ids"] = []
             self._close_bout(state, lane, "reset")
             lane["reset_confirmed"] = True
             lane["automatic_reset_pending"] = False
@@ -425,12 +434,19 @@ class EventStore:
                 raise Conflict("Im manuellen Betrieb gibt es keine automatische Zielsteuerung.")
             index = command.target_id - 1
             lane["manual_targets"][index] = None
+            if command.target_id in lane["unassigned_manual_target_ids"]:
+                lane["unassigned_manual_target_ids"].remove(command.target_id)
             if not legacy:
                 lane["targets"][index] = lane["automatic_targets"][index]
         elif isinstance(command, ManualTarget):
             if command.start_bout and command.state == "fallen" and not lane["current_bout_id"]:
-                self._new_bout(state, lane, command, legacy)
+                self._new_bout(state, lane, command, rules)
             lane["manual_targets"][command.target_id - 1] = command.state
+            # Ohne aktive Einlage oder Belegung ist dies eine neue Entscheidung,
+            # keine Korrektur des Vorgängers. Erst der Einlagenbeginn bindet sie.
+            if not lane["current_bout_id"] and not lane["occupied_bout_id"]:
+                if command.target_id not in lane["unassigned_manual_target_ids"]:
+                    lane["unassigned_manual_target_ids"].append(command.target_id)
             if command.state != "standing":
                 lane["reset_confirmed"] = False
             # Eine menschliche Zustandseingabe ist kein beobachteter Schuss und

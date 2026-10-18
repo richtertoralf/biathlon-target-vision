@@ -155,6 +155,7 @@ Schusszählung aus Zustandseingaben konstruieren.
 | `targets` | Fünf wirksame Zustände, einschließlich manueller Priorität |
 | `automatic_targets` | Fünf letzte automatische Beobachtungen; auch bei Übersteuerung aktuell |
 | `manual_targets` | Fünf manuelle Übersteuerungen oder `null`; automatische Beobachtungen verdrängen sie nicht |
+| `unassigned_manual_target_ids` | Interne Zuordnung: manuelle Zieleingaben ohne aktive Einlage/Belegung, die beim nächsten Einlagenbeginn übernommen werden; nicht von Clients setzen |
 | `observed_at`, `last_observed_at` | Zeit der automatischen Beobachtungen; keine Zeit manueller Eingaben |
 | `last_known_targets` | Letzte bekannte wirksame Stellung; ersetzt aktuell `unknown` nicht |
 | `automatic_last_known` | Letzte bekannte automatische Stellung, für Rückstellungserkennung |
@@ -238,12 +239,18 @@ stabilisierten Beobachtung gehörenden Bild. Ohne aktuelles Bild oder gültige
 Kalibrierung wird nur das Journal geschrieben. Dateien mit Betriebssystemrechten
 des Diensts wie andere persistente Daten behandeln.
 
-Neue Ereignisse kennzeichnen die angepasste Verarbeitung mit **`rules_version: 2`**
-neben `command`. Fehlendes Feld bedeutet die bisherigen Regeln (`1`). Beim Replay
+Neue Ereignisse kennzeichnen die angepasste Verarbeitung mit **`rules_version: 3`**
+neben `command`. Fehlendes Feld bedeutet die bisherigen Regeln (`1`). Regel `2`
+enthält den einheitlichen Ablauf aus PR #10; Regel `3` erhält zusätzlich noch
+ungebundene manuelle Eingaben beim Einlagenbeginn (Issue #21). Beim Replay
 bleiben alte Einlagengrenzen, Revisionen und effektive Zustände erhalten, auch
 wenn damals bereits Teilrückstellungen eine Einlage beendet haben. Neue Befehle
 verwenden die aktuellen Regeln. Es werden keine vorhandenen Zeilen umgeschrieben;
 unbekannte Regelversionen verhindern den Start mit sichtbarem Fehler.
+Auch der frühere Verlust manueller Werte durch BIB-Zuordnung wird bei alten
+Ereignissen unverändert wiedergegeben, nicht rückwirkend repariert. Noch wirksame,
+ungebundene Eingaben bleiben beim ersten neuen Zuordnungsbefehl nach dem Upgrade
+erhalten; ihre Zuordnung wird aus den vorhandenen Journalbefehlen wiederhergestellt.
 
 Die öffentlichen Befehlsformen und API-Version 1 bleiben erhalten. Journalleser
 müssen den Regelmarker berücksichtigen oder die ausgegebenen `effective_targets`
@@ -253,6 +260,9 @@ wenn ein älterer Leser das Feld stillschweigend ignorieren würde: Er berechnet
 andere Einlagen/Revisionen. Nur eine bewusste Rückkehr zur Datensicherung vor dem
 Upgrade ist möglich und verliert neuere Eingaben. Kein automatisches Zurückspielen.
 Neue `occupy`-/`start_bout`-Befehle bleiben dem älteren Tag `v0.7.0` zudem unbekannt.
+Nach ersten Ereignissen mit Regelversion `3` können Stände vor dem Fix für #21
+dieses Journal ebenfalls nicht mehr sicher weiterführen (Regel-2-Leser weisen es
+ab). Auch hier ist für einen Downgrade die Sicherung vor dem Upgrade erforderlich.
 
 ## Bahn belegen, verlassen und vorbereiten
 
@@ -277,6 +287,17 @@ ob schon eine BIB vorhanden ist. Bestehende Startnummern-/Freigabeendpunkte blei
 unverändert. Eine spätere Startnummer wird derselben `bout_id` zugeordnet; dies
 gilt auch nach Rückstellung. Der bisherige Startnummernbefehl darf aus
 Kompatibilitätsgründen weiterhin direkt belegen.
+
+Manuelle Eingaben ohne aktive Einlage **und** ohne Belegung werden beim nächsten
+Einlagenbeginn übernommen, auch wenn zuerst Scheiben erfasst und erst danach die
+BIB eingegeben wurde. Bereits gebundene Korrekturen des Vorgängers werden dagegen
+weiterhin bereinigt. Eine neue Eingabe nach dessen Verlassen kann das betreffende
+Ziel ausdrücklich neu bestätigen; andere alte Korrekturen bleiben davon unberührt.
+Rückstellungen beenden auch ungebundene Eingaben. Korrekturen auf einer noch
+belegten Bahn nach Rückstellung gehören weiterhin zum bisherigen Sportler.
+BIB-Ergänzung/-Korrektur einer vorhandenen Einlage ändert weder Scheibenzustände
+noch Einlagengrenzen. Einzelne manuelle Eingaben bleiben Zustandskorrekturen,
+keine nachträglich erzeugten Fall- oder Schussereignisse.
 
 Zusätzliche Bahnfelder in REST-/WebSocket-Zuständen:
 

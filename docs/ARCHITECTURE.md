@@ -97,7 +97,16 @@ somit nicht verhindern. Bekannte Grundbeobachtungen übernehmen wieder die
 nicht korrigierten Ziele, ohne rückwirkende Fälle oder Rückstellungen auszulösen.
 Aktive Einzelkorrekturen bleiben auch nach Wiederverbindung vorrangig.
 
-Bei einer neuen Einlage enden alte Übersteuerungen. Ohne zwischenzeitliche
+Vor einer Belegung erfasste manuelle Werte dürfen bei der späteren BIB-Eingabe
+nicht mit Korrekturen des Vorgängers verwechselt werden. Der Kern merkt deshalb
+die betroffenen Zielnummern in `unassigned_manual_target_ids`, solange weder eine
+aktive Einlage noch eine Belegung besteht. Beim nächsten Einlagenbeginn bleiben
+diese Werte erhalten und sind danach gebunden; die übrigen alten Übersteuerungen
+werden bereinigt. Eine Rückstellung oder ausdrückliche Freigabe eines einzelnen
+Ziels beendet auch diese ungebundene Korrektur. Der Marker entsteht aus denselben
+Journalbefehlen wie die Zielwerte, ohne neue Eingabeoption oder Ereignisart.
+
+Bei einer neuen Einlage enden Übersteuerungen des Vorgängers. Ohne zwischenzeitliche
 Rückstellung werden zuvor korrigierte Ziele zunächst unbekannt; ein alter
 Kamerawert wird nicht als neuer Beleg eingesetzt. Der vorhandene Generationszähler
 fordert frische Grundbeobachtungen an und verwirft noch laufende Bildauswertungen.
@@ -149,9 +158,11 @@ Ein Bedienzähler schützt Korrekturen gegen andere Bediener und Einlagengrenzen
 ohne jedes Kamerabild als Konflikt zu behandeln. Auch Freigabe nach bereits
 geschlossener Einlage macht eine noch offene Zielauswahl ungültig.
 
-Neue Journalereignisse tragen `rules_version: 2`. Fehlendes Feld bedeutet die
-historischen Regeln. Kleine Kompatibilitätszweige im selben Reducer erhalten bei
-alten Ereignissen insbesondere Teilrückstellungen, Revisionen und Zielwerte.
+Neue Journalereignisse tragen `rules_version: 3`. Fehlendes Feld bedeutet die
+historischen Regeln (`1`); `2` kennzeichnet den Ablauf aus PR #10. Kleine
+Kompatibilitätszweige im selben Reducer erhalten bei alten Ereignissen insbesondere
+Teilrückstellungen, Revisionen, Zielwerte und die frühere Bereinigung beim
+Einlagenbeginn. Regel `3` übernimmt ungebundene manuelle Eingaben beim Beginn.
 Das Journal wird weder migriert noch umgeschrieben. Nach Wiederherstellung gelten
 für neue Befehle die neuen Regeln. Details und Downgrade-Grenzen: [API.md](API.md).
 

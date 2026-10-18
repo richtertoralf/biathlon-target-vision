@@ -56,6 +56,64 @@ class WorkflowTests(unittest.TestCase):
         self.control(ManualReset);self.assertEqual(self.lane()['status'],'ready')
         self.occupy();self.assertNotEqual(self.lane()['occupied_bout_id'],bout)
 
+    def test_late_bib_preserves_manual_values_with_and_without_occupancy(self):
+        for occupied_first in (False, True, False):
+            with self.subTest(occupied_first=occupied_first):
+                self.control(ManualReset)
+                if occupied_first:
+                    self.occupy()
+                self.manual(1, 'fallen'); self.manual(3, 'fallen')
+                before = self.lane()
+                count = len(self.store.state['bouts'])
+                self.assign(42, before['current_bout_id'])
+                bout = self.lane()['current_bout_id']
+                self.assertEqual(len(self.store.state['bouts']), count + (not occupied_first))
+                if occupied_first:
+                    self.assertEqual(bout, before['current_bout_id'])
+                for bib in (43, 44):
+                    self.assign(bib, bout)
+                    self.assertEqual(self.lane()['targets'], before['targets'])
+                    self.assertEqual(self.lane()['manual_targets'], before['manual_targets'])
+                    self.assertEqual(self.lane()['current_bout_id'], bout)
+                    self.assertEqual(self.store.state['bouts'][bout]['fallen_target_ids'], [])
+                expected = self.store.snapshot()
+                self.store.close(); self.store = EventStore(self.directory)
+                self.assertEqual(self.store.snapshot(), expected)
+                self.leave()
+
+    def test_new_bib_preserves_fresh_corrections_but_not_previous_athletes(self):
+        self.control(ManualReset); self.occupy(); self.assign(41)
+        old_bout = self.lane()['current_bout_id']
+        self.manual(1, 'fallen'); self.manual(3, 'fallen'); self.leave()
+        # Neue Entscheidungen auf freier Bahn gehören nicht zum Vorgänger.
+        self.manual(3, 'standing'); self.manual(4, 'fallen')
+        self.assign(42)
+        self.assertNotEqual(self.lane()['current_bout_id'], old_bout)
+        self.assertEqual(self.lane()['targets'], ['unknown', 'standing', 'standing', 'fallen', 'standing'])
+        self.assertEqual(self.lane()['manual_targets'], [None, None, 'standing', 'fallen', None])
+        self.assertEqual(len(self.store.state['bouts']), 2)
+        before = self.store.snapshot()
+        self.store.close(); self.store = EventStore(self.directory)
+        self.assertEqual(self.store.snapshot(), before)
+
+    def test_automatic_bout_start_preserves_unassigned_manual_decisions(self):
+        self.standing(baseline=True)
+        self.manual(3, 'fallen')
+        self.assertIsNone(self.lane()['current_bout_id'])
+        self.observe(1, 'fallen')
+        bout = self.lane()['current_bout_id']
+        self.assign(42, bout)
+        self.standing(baseline=True)
+        self.assertEqual(self.lane()['targets'][2], 'fallen')
+        self.assertEqual(self.store.state['bouts'][bout]['fallen_target_ids'], [1])
+        self.assertEqual(len(self.store.state['bouts']), 1)
+
+    def test_correction_after_reset_on_occupied_lane_still_belongs_to_previous_athlete(self):
+        self.occupy(); self.assign(41); self.control(ManualReset)
+        self.manual(3, 'fallen'); self.leave(); self.assign(42)
+        self.assertEqual(self.lane()['manual_targets'], [None] * 5)
+        self.assertEqual(self.lane()['targets'][2], 'unknown')
+
     def test_leaving_after_manual_reset_stays_occupied_until_departure(self):
         self.control(ModeChange,mode='manual');self.control(ManualReset);self.occupy()
         bout=self.lane()['occupied_bout_id'];self.manual(2,'fallen')
@@ -154,6 +212,38 @@ class WorkflowTests(unittest.TestCase):
 
 
 class WorkflowApiTests(unittest.TestCase):
+    def test_late_bib_two_tablets_conflict_idempotence_and_restart_preserve_targets(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with TestClient(create_app(directory, 1)) as client:
+                with client.websocket_connect('/ws') as first, client.websocket_connect('/ws') as second:
+                    first.receive_json(); second.receive_json()
+                    # BIB-Eingabe beginnt vor den manuellen Zuständen auf dem zweiten Tablet.
+                    pending = {'lane_id':1, 'bib':42, 'expected_revision':0,
+                               'expected_assignment_revision':0, 'bout_after_sequence':0, 'event_id':'bib-first'}
+                    competing = {**pending, 'bib':43, 'event_id':'bib-other'}
+                    for revision, target in enumerate((1, 3)):
+                        response = client.post('/api/lanes/1/manual-target', json={
+                            'lane_id':1, 'target_id':target, 'state':'fallen', 'start_bout':False,
+                            'expected_control_revision':revision})
+                        self.assertEqual(response.status_code, 200)
+                        for socket in (first, second): socket.receive_json()
+                    response = client.put('/api/lanes/1/bib', json=pending)
+                    self.assertEqual(response.status_code, 200)
+                    state = response.json()['state']; lane = state['lanes']['1']
+                    expected = ['fallen', 'unknown', 'fallen', 'unknown', 'unknown']
+                    self.assertEqual(lane['targets'], expected)
+                    for socket in (first, second):
+                        self.assertEqual(socket.receive_json()['lanes']['1'], lane)
+                    self.assertEqual(client.put('/api/lanes/1/bib', json=competing).status_code, 409)
+                    self.assertEqual(client.put('/api/lanes/1/bib', json=pending).json()['event'], response.json()['event'])
+                    self.assertEqual(client.get('/api/state').json()['sequence'], state['sequence'])
+            with TestClient(create_app(directory)) as client:
+                restored = client.get('/api/state').json()
+                self.assertEqual(restored['lanes']['1'], lane)
+                self.assertEqual(len(restored['bouts']), 1)
+                self.assertEqual(restored['bouts'][lane['occupied_bout_id']]['bib'], 42)
+
     def test_occupy_without_bib_two_tablets_and_existing_bib_release_api(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory=Path(temporary)
