@@ -1,7 +1,24 @@
 # Ereigniskern und Schnittstellen, Version 0.7
 
+## Interaktive API-Dokumentation
+
+FastAPI stellt die API-Dokumentation automatisch bereit:
+
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
+- OpenAPI 3.x (JSON): `/openapi.json`
+
+Die Endpunkte sind über die Serveradresse erreichbar,
+beispielsweise `http://SERVER-IP:8091/docs`.
+
+Lesende Endpunkte wie `GET /api/state` sind ohne Anmeldung
+zugänglich. Schreibende Endpunkte unterliegen den
+konfigurierten Bediener- und Administratorberechtigungen (in Version 0.7 noch nicht umgesetzt).
+
 Die validierten Befehlsmodelle stehen bei laufendem Server unter `/docs` und
-`/openapi.json`; Zustandsvertrag und Kamerafelder sind hier dokumentiert. Technische Zustandsbezeichner bleiben englisch. Installation und
+`/openapi.json`; Zustandsvertrag und Kamerafelder sind hier dokumentiert. Technische Zustandsbezeichner bleiben englisch. 
+
+Installation und
 Start: [README](../README.md). Komponenten und Datenfluss:
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
