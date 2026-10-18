@@ -75,7 +75,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(self.lane()['status'],'reset_required')
         self.standing(baseline=True);self.assertEqual(self.lane()['status'],'reset_required')
 
-    def test_automatic_partial_reset_closes_bout_but_only_full_reset_prepares_lane(self):
+    def test_automatic_full_reset_prepares_lane_after_departure(self):
         self.standing(baseline=True);self.occupy();bout=self.lane()['occupied_bout_id']
         self.observe(1,'fallen');self.observe(4,'fallen');self.leave()
         self.observe(1)

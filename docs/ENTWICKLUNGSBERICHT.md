@@ -630,3 +630,113 @@ Praxistestgrenzen bleiben: synthetische Kamerabilder und Chromium, keine realen
 Schießstandaufnahmen, keine physischen Tablets bei Sonne/Schnee/Handschuhen und
 keine Sensorhardware. Der geplante Arberstadion-Test wird nicht als bereits
 durchgeführte Validierung dargestellt.
+
+## 2026-10-18 – Ein Kampfrichterablauf und weniger Sonderwege
+
+Ausgangspunkt ist `main` nach PR #9 (`39674032`). Zwei gleichrangige Ziele sind
+vereinfachte Bedienung und einfachere Implementierung. Die bisherigen
+Betriebsartkonzepte aus 0.7/PR #9 sind für die normale Tablet-Bedienung überholt.
+
+Die Prüfung fand konkrete fachliche Probleme: Automatisch sperrte manuelle
+Korrekturen; eine manuelle Vorbereitung blieb von Kameranachweisen abhängig;
+Quellensperren kopierten alle fünf Werte als vermeintlich manuelle Korrekturen;
+beim Löschen von Übersteuerungen konnten alte Kamerawerte wieder wirksam werden.
+Bereits die erste Teilrückstellung schloss eine Einlage. Außerdem machte Verlassen
+nach einer bereits abgeschlossenen Rückstellung eine offene Zielauswahl eines
+zweiten Tablets nicht ungültig. Diese Fälle sind korrigiert und gezielt geprüft.
+
+Ein Tipp auf eine bekannte Scheibe korrigiert direkt. Ein unbekanntes Ziel bietet
+zwei große, ausdrücklich beschriftete Auswahlflächen für aufgerichtet/gefallen.
+Belegen/Verlassen und vollständige Rückstellbestätigung sind immer sichtbar.
+Moduswahl, fünf Vergleichsanzeigen, permanente Auto-Freigaben und die Funktion
+„Unbekannt setzen“ entfallen. Kameraausfall verlangt keine Umschaltung. Der
+Monitor übernimmt dieselben ganzen Kachelfarben, Startnummer und fünf effektive
+Stellungen; technische Zähler entfallen. Vergleichswerte und die bisherige
+administrative Quellensperre liegen unter `/admin`, ohne neue Konfigurationsdatei.
+
+Die Vereinfachung betrifft tatsächliche Verarbeitungswege:
+
+- Alle regulären Scheiben nutzen dieselbe manuelle Korrektur. Die vorher getrennten
+  schreibgeschützten/bedienbaren Zielkacheln, Übersteuerungsreihe, Modus-Handler und
+  Unbekannt-Menü entfallen samt CSS und ungenutzten Übersetzungen.
+- Direkte Aktionen und Dialogeingaben verwenden einen gemeinsamen HTTP-Ablauf für
+  Übermittlung, Fehler, Zustandsabgleich und Wiederverbindung. Der alte
+  Freigabe-Bestätigungsdialog und sein eigener Konfliktabgleich sind entfernt.
+- Alle REST-Bahnendpunkte teilen die Prüfung von URL-/Befehlsbahn und Veröffentlichung.
+  Jeder Einlagenbeginn bereinigt alte Übersteuerungen am selben vorhandenen Ort.
+- `automatic` und `mixed` haben dieselbe Bedeutung: zugelassene automatische Daten
+  mit menschlicher Priorität. Eine administrative Sperre erzeugt keine fünf
+  künstlichen manuellen Werte mehr. Korrekturbilder hängen nicht mehr vom Modus ab.
+- Nur das tatsächlich beobachtete Ziel wird neu berechnet. Das verhindert zugleich,
+  dass ein fremdes Zielereignis manuell bestätigte Vorbereitung durch alte oder
+  unbekannte Vergleichswerte ersetzt. Erfolgsmeldungen starten nicht mehr bei
+  jedem Rendern weitere Timer.
+
+Notwendige Informationen bleiben bewusst getrennt: tatsächliche automatische
+Beobachtung, manuelle Übersteuerung und wirksamer Zustand; Belegung, BIB und Einlage;
+letzte bekannte Stellung trotz Unklarheit; Vorbereitung gegenüber bloß fünf
+stehenden Scheiben. Der Generations-/Baseline-Schutz verhindert alte CPU-Ergebnisse
+und rückwirkende Ereignisse nach Wiederverbindung. Getrennte Belegungs- und
+Bedienzähler sind durch reale Mehrtablett-/HTTP-Rennen begründet. Öffentliche
+Historienfelder und vorhandene Quellenbefehle bleiben aus API-Kompatibilitätsgründen
+erhalten. Es entsteht kein zusätzliches Zustandsfeld je Bahn und kein Framework.
+
+Die korrigierte Vollrückstellregel darf historische Einlagengrenzen und Revisionen
+nicht ändern. Deshalb kennzeichnen neue Ereignisse ihre Regeln mit
+`rules_version: 2`; wenige Zweige im selben Reducer erhalten die alte Verarbeitung
+für unmarkierte Ereignisse. Ein tatsächlich mit PR #9 erzeugtes Journal wird
+bytegleich gelesen, einschließlich alter Teilrückstellung, manueller Vorbereitung,
+Revisionen und idempotenter Wiederholung. Anschließende neue Befehle und erneutes
+Replay werden geprüft. Eine alte bestätigte Vorbereitung bleibt auch beim ersten
+neuen Belegen erhalten. Kein generischer Kompatibilitätsadapter oder zweiter Kern.
+Nach neuen Ereignissen ist Downgrade auf PR #9 unsicher, selbst wenn ältere Leser
+den Marker ignorieren. Auswirkungen und Sicherungsgrenzen stehen in API.md.
+
+Prüfungen: **119 Python-Tests erfolgreich**, ausgehend von 107; zwölf neue Prüfungen
+betreffen u. a. drei Sportler ohne Kamera/Quellenwahl, null/eine/mehrere gefallene
+Scheiben, Einzelkorrektur ohne Einlagengrenze, volle statt teilweiser Rückstellung,
+direkte manuelle Weiterarbeit und Wiederverbindung, echte gegenüber künstlichen
+Übersteuerungen, veraltete Auswahl nach Freigabe, unbekannte Stellungen,
+ausgefallene Optik und historisches Replay. Die bestehenden API-, Speicher-,
+Upgrade-/Rollback-, RTSP- und synthetischen Optiktests bleiben erfolgreich.
+Angepasste ältere Tests erwarten ausdrücklich keine Korrektursperre im Modus
+`automatic` und keine Einlagengrenze bei bloßer Teilrückstellung mehr.
+
+Acht lokale Browserprüfungen erfolgreich: Übersetzung, Tablet, Erfassung,
+Schießstandablauf, Monitor, Standbildkalibrierung, Optik und Kameraadministration
+mit tatsächlichem lokalem RTSP-Stream. Zwei unabhängige Touch-Profile prüfen
+600×960/960×600 und größere Tablets, alle drei Sprachen, sichtbare Zustände,
+Korrekturen, Ausfall, administrative Quellenwahl und Synchronisierung. Verglichen
+werden echte Hintergrund-/Scheibenfarben, Touchflächen und Aktionspositionen.
+Tablet, unbekannte Auswahl, Monitor und Administration wurden zusätzlich anhand
+von Browserbildern visuell geprüft. Bilder bleiben unversionierte Testartefakte.
+JavaScript-/Shell-Syntax, `pip check` und `git diff --check` sind fehlerfrei.
+Die erste CI-Prüfung zeigte ein Rennen bei der Browser-Layoutmessung während
+einer Live-Aktualisierung. Die Prüfung misst die Hauptaktion jetzt atomar relativ
+zur Kachel; sie hängt damit weder an einem ersetzten DOM-Element noch am Scrollstand.
+
+Die optische Validierung bleibt synthetisch. Reale Schießstandbilder, Schnee,
+Lichtwechsel, Handschuhe, physische Tablets und WLAN unter Veranstaltungsbedingungen
+müssen im geplanten Arberstadion-Test überprüft werden. Sensorik bleibt geplant.
+Keine GFX-Änderung, KES-Emulation, Schussmeldung oder neue Veröffentlichungsversion.
+
+### Umfang der Produktänderungen
+
+Physische Zeilen einschließlich Kommentaren/Leerzeilen, verglichen mit PR #9;
+Tests und Dokumentation sind nicht mitgezählt. Eine niedrigere Zahl ist kein
+alleiniger Qualitätsnachweis. Der Kern wächst für die fachlichen Korrekturen und
+das nachgewiesene historische Replay; entfernt wurden vor allem parallele
+Bedien-/Übermittlungswege und abgeleitete UI-Sonderfälle.
+
+| Produktdatei | Vorher | Nachher | Differenz |
+|---|---:|---:|---:|
+| `app.py` | 443 | 434 | -9 |
+| `core.py` | 407 | 439 | +32 |
+| `static/admin.html` | 17 | 19 | +2 |
+| `static/admin.js` | 31 | 57 | +26 |
+| `static/monitor.css` | 4 | 3 | -1 |
+| `static/monitor.js` | 49 | 50 | +1 |
+| `static/tablet.css` | 112 | 100 | -12 |
+| `static/tablet.js` | 569 | 511 | -58 |
+| `static/translations.js` | 135 | 114 | -21 |
+| **Summe** | **1767** | **1727** | **-40** |

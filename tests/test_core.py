@@ -175,13 +175,13 @@ class CoreTests(unittest.TestCase):
         self.assertIsNone(self.lane()["current_bout_id"])
         self.assertEqual(len(self.store.state["bouts"]), 1)
 
-    def test_partial_reset_closes_bout_without_transferring_bib(self):
+    def test_partial_reset_keeps_bout_without_transferring_bib(self):
         self.assign(11)
         bout = self.lane()["current_bout_id"]
         self.observe()
         self.observe(target=2)
         self.observe(state="standing", target=1)
-        self.assertTrue(self.store.state["bouts"][bout]["closed"])
+        self.assertFalse(self.store.state["bouts"][bout]["closed"])
         self.assertEqual(self.lane()["targets"][1], "fallen")
         self.assertEqual(self.lane()["occupied_bout_id"], bout)
 
@@ -193,7 +193,8 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(self.lane()["targets"][0], "unknown")
         self.assertTrue(all(e["command"]["kind"] == "target" for e in self.store.events))
 
-    def test_unknown_between_fallen_and_standing_still_closes_bout(self):
+    def test_unknown_between_fallen_and_full_reset_still_closes_bout(self):
+        self.observe(kind="reset")
         self.observe()
         bout = self.lane()["current_bout_id"]
         self.observe(state="unknown")

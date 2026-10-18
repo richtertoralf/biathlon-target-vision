@@ -63,13 +63,16 @@ nicht das den Zieleinlauf bezeichnende `cíl`.
 | Mechanische Stellung `fallen` | Fallen | Gefallen | Sklopený | technische Zustandsbeschreibung, keine Schussmeldung |
 | Unsicherer Zustand | Unknown | Unbekannt | Neznámý | technischer Beobachtungsstatus, kein Fehlschuss |
 | Bedienbestätigung der Rückstellung | All targets are standing | Alle Scheiben aufgerichtet | Všechny terče jsou vztyčené | technischer Vorgang dieser Anwendung; keine behauptete gleichlautende IBU-Schaltfläche |
-| Betriebsarten | Manual / Automatic / Mixed | Manuell / Automatisch / Mischbetrieb | Ruční / Automatický / Smíšený | Softwarebetrieb, keine Wettkampfformate |
-| Priorität/Freigabe | M / Auto ↩ | M / Auto ↩ | M / Auto ↩ | manuelle Übersteuerung und Rückgabe an die Automatik |
 
 Die neuen Bedienaktionen `Occupy lane / Bahn belegen / Obsadit stav` und
 `Leave lane / Bahn verlassen / Opustit stav` sowie die drei Vorbereitungsstatus
 sind technische UI-Beschreibungen. Ihre Sportbegriffe verwenden die oben belegten
 Kurzformen; die vollständigen Schaltflächen sind keine behaupteten IBU-Zitate.
+
+Die Auswahl „Standing / Fallen“, „Aufgerichtet / Gefallen“, „Vztyčený / Sklopený“
+bei unbekannter Stellung verwendet dieselben technischen Zustandswörter.
+Quellenverwaltung und Hinweise zur Sichtprüfung sind ebenfalls Softwaretexte;
+die frühere Moduswahl und Auto-Vergleichsreihe entfallen am Tablet.
 
 Auch Kameraverbindung, RTSP-Adresse, Kalibrierung, Gesamt-ROI, Bildverschiebung,
 Tablet-Nummer, Entwurf, Speichern, Freigabe einer Belegung und Netzwerk-/Speicherstatus

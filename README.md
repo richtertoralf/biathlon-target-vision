@@ -10,7 +10,7 @@ Kampfrichter geben Startnummern und die Zustände der fünf Klappscheiben am Tab
 ein. Mehrere Tablets arbeiten synchronisiert zusammen und können dieselben oder
 unterschiedliche Schießbahnen betreuen. Dafür ist kein Simulationsmodus erforderlich.
 
-Im **priorisierten Mischbetrieb** übernimmt die Kamera die laufende Erfassung.
+Eine vorhandene, kalibrierte Kamera übernimmt die laufende Erfassung im Hintergrund.
 Kampfrichter sehen die Beobachtungen unmittelbar und können jede Scheibe durch
 Antippen korrigieren. Die manuelle Korrektur hat Vorrang vor folgenden Kamerabildern;
 die übrigen Scheiben werden weiter automatisch erfasst. Der korrigierte Zustand
@@ -21,35 +21,27 @@ internationale Veranstaltungen und Helferteams vorgesehen. Ein Schwerpunkt sind
 mechanische 10-Meter-Luftgewehranlagen bei Schüler- und Nachwuchswettkämpfen,
 Training und Gästeschießen.
 
-## Drei Betriebsarten je Schießbahn
+## Ein Ablauf – mit oder ohne Kamera
 
-| Betriebsart | Erfassung und Bedienung |
-|---|---|
-| **Manuell** | Kampfrichter erfassen alle fünf Scheiben am Tablet. Keine Kamera, keine Sensoren und kein `--simulation` erforderlich. |
-| **Automatisch** | Eine kalibrierte Kamera liefert die Scheibenzustände. |
-| **Mischbetrieb** | Automatische Erfassung mit sofortigen manuellen Korrekturen je Scheibe. Die nicht korrigierten Scheiben bleiben automatisch gesteuert. |
+Der Kampfrichter bedient immer dieselben Bahnkacheln. Ohne Kameras erfasst er die
+fünf Scheiben selbst; eine zugeordnete Kamera liefert ihre Beobachtungen automatisch.
+**Jede Scheibe bleibt jederzeit direkt korrigierbar. Menschliche Eingaben haben
+Vorrang**, während die anderen Scheiben weiter automatisch erfasst werden. Es gibt
+keine Betriebsartwahl am Tablet.
 
-Die Betriebsart wird unter **„Optionen“** in jeder Bahnkachel gewählt. Für den
-Betrieb ohne Kamera zuerst **„Manuell“** auswählen, anschließend die tatsächliche
-Vorbereitung bestätigen. Unterschiedliche Betriebsarten können gleichzeitig an
-einem Schießstand verwendet werden.
+Versorgt eine Kamera beispielsweise die **Bahnen 4 bis 6** und fällt aus oder
+liefert wegen Schneefalls keine zuverlässigen Beobachtungen mehr, erfassen die
+Kampfrichter dort unmittelbar nach Sicht weiter. Kein Umschalten ist erforderlich;
+Startnummern, laufende Schießeinlagen und Ereignisse bleiben erhalten. Andere
+Bahnen arbeiten unabhängig weiter. Auch nach Wiederverbindung bleiben einzelne
+Korrekturen geschützt. Sie enden mit bestätigter vollständiger Rückstellung oder
+einer neuen Schießeinlage. Erste Kamerabilder nach einer Unterbrechung sind
+Grundbeobachtungen und erzeugen keine rückwirkenden Fälle oder Rückstellungen.
 
-Versorgt beispielsweise eine Kamera die **Bahnen 4 bis 6** und fällt aus oder
-liefert wegen Schneefalls keine zuverlässigen Beobachtungen mehr, können diese
-Bahnen auf Manuell umgeschaltet und nach Sicht weitergeführt werden. Startnummern,
-laufende Schießeinlagen und bisher erfasste Ereignisse bleiben erhalten. Andere
-Bahnen arbeiten unabhängig weiter. Das ermöglicht einen unterbrechungsarmen
-Ersatzbetrieb, ohne Kameraerkennung vorauszusetzen.
-
-Beim Rückwechsel bleiben manuelle Werte geschützt, bis der Kampfrichter eine
-Scheibe mit `Auto ↩` wieder freigibt, eine Rückstellung bestätigt oder eine neue
-Schießeinlage beginnt. Erste Kamerabilder nach einer Unterbrechung liefern
-Grundbeobachtungen und erzeugen keine rückwirkenden Treffer.
-
-**Sensorik ist geplant:** Neben der manuellen und der vorhandenen Kameraerfassung
-ist ein Sensoradapter als zusätzliche Erfassungsquelle vorgesehen. Sensorhardware
-und Sensoranbindung sind noch nicht implementiert. Auch spätere Sensordaten sollen
-manuellen Korrekturen untergeordnet sein.
+**Sensorik ist geplant:** Manuelle Erfassung und Kameraerfassung sind vorhanden.
+Sensorhardware und Sensoradapter sind noch nicht implementiert. Auch spätere
+Sensordaten sollen im Hintergrund helfen und menschlichen Korrekturen unterliegen.
+Quellenzuordnung und technische Einstellungen gehören in die Administration.
 
 ## Anbindung an Zeitnahme und Anzeigen
 
@@ -77,8 +69,8 @@ sichtbar unbekannt.
 
 ## Entwicklungsstand und geplanter Praxistest
 
-Der aktuelle Entwicklungsstand auf `main` umfasst manuelle Erfassung, automatischen und priorisierten
-Mischbetrieb, synchronisierte Tablets, einen schreibgeschützten Kontrollmonitor,
+Der aktuelle Entwicklungsstand auf `main` umfasst einen einheitlichen Bedienablauf
+mit manueller Priorität, synchronisierte Tablets, einen schreibgeschützten Kontrollmonitor,
 RTSP-Kameraverwaltung und browserbasierte Kalibrierung. Startnummern lassen sich
 zuordnen und korrigieren; erfasste Zustände und manuelle Übersteuerungen werden
 nach einem Neustart wiederhergestellt.
@@ -86,8 +78,8 @@ nach einem Neustart wiederhergestellt.
 Die Kameraerkennung ist bisher mit synthetischen Bildern und Videofolgen geprüft,
 **noch nicht unter realen Schießstandbedingungen validiert**. Ein erster Test an
 realen Schießstandanlagen ist für **Ende Oktober 2026 im Arberstadion geplant**.
-Dabei sollen automatische Erfassung, priorisierter Mischbetrieb und praktische
-Bedienung überprüft werden.
+Dabei sollen automatische Erfassung, unmittelbare menschliche Korrekturen und
+praktische Bedienung überprüft werden.
 
 Tschechische Zeitnehmer sollen die Anwendung und ihre Schnittstellen begutachten
 und eine mögliche direkte Anbindung an ihre Zeitnahme beurteilen können. Das ist
@@ -96,16 +88,10 @@ Integrations- oder Kompatibilitätsnachweis.
 
 ## Ablauf für Kampfrichter am Schießstand
 
-Der Ablauf ist in allen drei Betriebsarten gleich. Nur die Erfassung der
-Scheibenstellungen unterscheidet sich:
-
-| Aufgabe | Manuell | Automatisch | Mischbetrieb |
-|---|---|---|---|
-| Bahn belegen/verlassen | Kampfrichter | Kampfrichter | Kampfrichter |
-| BIB erfassen | Kampfrichter | Kampfrichter | Kampfrichter |
-| Gefallene Scheiben erfassen | Kampfrichter | Kamera | Kamera + Korrektur durch Kampfrichter |
-| Rückstellung erkennen/bestätigen | Kampfrichter | Kamera, soweit zuverlässig erkennbar | Kamera, bei Bedarf Kampfrichter |
-| Überwachung | Kampfrichter | Kampfrichter | Kampfrichter |
+Die Kamera erfasst ausschließlich Scheibenzustände und zuverlässig beobachtete
+vollständige Rückstellungen. Betreten, Startnummer, Beaufsichtigung und Verlassen
+bleiben Aufgaben der Kampfrichter. Die mechanischen Scheiben müssen tatsächlich
+aufgerichtet werden; eine Schaltfläche bewegt sie nicht.
 
 0. **Bahn frei und vorbereitet:** Kein Sportler auf der Bahn, alle fünf Scheiben
    tatsächlich aufgerichtet und die Vorbereitung bestätigt. Die Kachel ist
@@ -117,43 +103,43 @@ Scheibenstellungen unterscheidet sich:
    über das Zahlentastenfeld eingeben und bestätigen. Die Nummer erscheint groß
    auf allen verbundenen Tablets. Verspätete Eingabe und Korrektur bleiben möglich.
 3. **Schießeinlage verfolgen:** **Schwarz bedeutet aufgerichtet, weiß bedeutet
-   gefallen.** Im manuellen Betrieb jede gefallene Scheibe einmal antippen;
-   erneutes Antippen korrigiert eine Fehleingabe, ohne eine neue Einlage anzulegen.
-   Automatisch liefert die Kamera die Stellungen. Im Mischbetrieb kann jede Scheibe
-   sofort korrigiert werden; manuelle Werte haben Vorrang, andere Scheiben bleiben
-   automatisch gesteuert. `M` markiert eine Übersteuerung, die kleine Auto-Anzeige
-   zeigt den Vergleichswert. Antippen von `Auto ↩` gibt nur diese Scheibe frei.
+   gefallen.** Die Kamera aktualisiert automatisch, soweit vorhanden. Fehlt sie
+   oder stimmt eine Anzeige nicht, die betreffende Scheibe antippen: Schwarz wird
+   weiß, erneutes Antippen korrigiert die Eingabe. Bei **„?“** öffnet Antippen die
+   eindeutige Auswahl **„Aufgerichtet“ / „Gefallen“**. Eine Einzelkorrektur beginnt
+   oder beendet keine Einlage und wird nicht durch unveränderte Kamerabilder
+   überschrieben.
 4. **Sportler verlässt die Bahn:** **„Bahn verlassen“** antippen. Die Belegung endet;
    Scheibenstellungen bleiben erhalten. Fehlt die bestätigte Rückstellung, ist die
    Kachel **grau: „Frei – Rückstellung ausstehend“**.
 5. **Mechanisch zurückstellen:** Die Scheiben tatsächlich aufrichten, etwa durch
-   Ziehen am Seil. Im manuellen Betrieb anschließend **„Alle Scheiben aufgerichtet“**
-   antippen. Automatisch oder im Mischbetrieb kann eine zuverlässig erkannte
-   vollständige Rückstellung übernommen werden. Ist die Bahn nicht mehr belegt,
-   wechselt sie auf Grün und ist für den nächsten Sportler bereit.
+   Ziehen am Seil, dann **„Alle Scheiben aufgerichtet“** bestätigen. Diese Aktion ist
+   immer sichtbar und funktioniert auch ohne Kamera. Alternativ kann eine Kamera
+   eine zuverlässig beobachtete vollständige Rückstellung bestätigen. Ist die
+   Bahn nicht mehr belegt, wechselt die Kachel auf Grün.
+
+| Kachel | Bedeutung | Nächste Aufgabe |
+|---|---|---|
+| **Grün – Frei, bereit** | Unbelegt, alle Scheiben aufgerichtet, Vorbereitung bestätigt | Nächsten Sportler mit „Bahn belegen“ erfassen |
+| **Gelb – Belegt** | Sportler auf der Bahn, unabhängig von Scheibenstellungen | BIB und Scheiben beaufsichtigen, dann „Bahn verlassen“ |
+| **Grau – Frei, Rückstellung ausstehend** | Unbelegt, Vorbereitung fehlt oder Scheiben gefallen/unbekannt | Mechanisch zurückstellen und bestätigen |
 
 Bahnverlassen und Rückstellung dürfen in umgekehrter Reihenfolge erfolgen:
-Eine Rückstellung gibt eine belegte Bahn nicht frei; sie bleibt gelb bis
-**„Bahn verlassen“** bestätigt wird. Fünf unverändert aufgerichtete Scheiben allein
-beweisen keine neue Rückstellung, beispielsweise nach einer Einlage ohne erkannte
-gefallene Scheibe. Dann nach tatsächlicher Vorbereitung ausdrücklich
-**„Alle Scheiben aufgerichtet“** bestätigen; die Aktion ist auch unter **„Optionen“**
-erreichbar. Bei Kameraausfall oder unklarer Sicht gibt es keine automatische
-Bereitmeldung. Betroffene Bahnen können manuell weitergeführt werden.
+Eine Rückstellung gibt eine belegte Bahn nicht frei. Fünf unverändert aufgerichtete
+Scheiben beweisen keine neue Rückstellung, etwa nach einer Einlage ohne gefallene
+Scheibe oder nach Kameraneustart. Dann die tatsächliche Vorbereitung ausdrücklich
+bestätigen. Unsichere Kameradaten machen eine Bahn nicht automatisch bereit;
+eine menschliche Rückstellbestätigung gilt auch bei ausgefallener Kamera.
 
-Die Betriebsart ist in jeder Kachel sichtbar. Unter **„Optionen“** liegen die
-Betriebsartwahl, Einlagenhistorie und die Sonderfunktion für eine ausdrücklich
-unbekannte Scheibenstellung. Unbekannt ist kein Fehlschuss. Je Tablet die betreuten
-Bahnen auswählen; Auswahlen dürfen sich überschneiden. Andere Tablets zeigen
-unbestätigte Startnummerneingaben getrennt vom verbindlichen Stand. Bei einem
-Belegungskonflikt bleibt der eigene Text zur Prüfung erhalten. Eine zuvor ohne BIB
-erfasste Einlage kann später über ihre Historie zugeordnet werden.
+Unter **„Optionen“** liegt die Einlagenhistorie für verspätete BIB-Zuordnungen.
+Je Tablet die betreuten Bahnen auswählen; Auswahlen dürfen sich überschneiden.
+Andere Tablets zeigen unbestätigte Startnummerneingaben getrennt vom verbindlichen
+Stand. Bei einem Belegungskonflikt bleibt die eigene Eingabe zur Prüfung erhalten.
 
-Der Kontrollmonitor unter `/monitor` zeigt alle Bahnen schreibgeschützt mit
-Belegung, Vorbereitung und wirksamen Scheibenstellungen. Automatisch beobachtete
-Fälle und aktuell wirksame gefallene Scheiben bleiben getrennt; dies ist keine
-Schusszählung oder Ergebniswertung. Sensorhardware und Sensoradapter sind weiter
-geplant und übernehmen in diesem Stand keine Erfassungsaufgabe.
+Der Jury-/Kontrollmonitor unter `/monitor` zeigt alle Bahnen schreibgeschützt mit
+denselben drei Hintergrundfarben, bestätigter Startnummer und fünf wirksamen
+Scheibenstellungen. Hinweise auf unzuverlässige Erfassung fordern zur Sichtprüfung
+auf. Technische Vergleichswerte und Quellenverwaltung stehen unter `/admin`.
 
 ## Unter Debian/Ubuntu installieren
 
@@ -225,8 +211,13 @@ gesucht; ihre gefundenen Umrisse kontrollieren. Keine einzelne Scheibe muss
 manuell markiert werden. Bei Kamera-/Adresswechsel, anderer Auflösung oder
 geänderter Ausrichtung neu kalibrieren.
 
-Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Kleine
-Bildverschiebungen werden nachgeführt; unklare Sicht oder zu große Bewegung
+Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Unter „Erfassungsquellen
+je Bahn“ lässt sich eine fehlerhafte Quelle administrativ sperren oder wieder
+zulassen; dort stehen auch automatische Vergleichswerte und aktive Korrekturen.
+Für den normalen Ablauf oder einen Kameraausfall ist diese Einstellung unnötig.
+Aus älteren Installationen übernommene manuelle Quellensperren bleiben erhalten.
+
+Kleine Bildverschiebungen werden nachgeführt; unklare Sicht oder zu große Bewegung
 führt zu unbekannten Beobachtungen. Beim Bearbeiten bleibt eine leer gelassene
 RTSP-Adresse erhalten; gespeicherte Zugangsdaten werden nicht an den Browser
 zurückgegeben. Administration, Kalibrierung und Monitor sind derzeit deutsch;

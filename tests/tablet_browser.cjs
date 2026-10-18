@@ -336,7 +336,10 @@ async function stop(server) {
     // Auch Freigabe einer noch unzugeordneten Einlage ist eine echte Bedienänderung.
     await card(first, 3).locator('[data-action="bib"]').click();
     await typeBib(first, 85);
-    await action(second, 3, 'release');
+    const unoccupied = (await getState()).lanes['3'];
+    const released = await fetch(server.url+'/api/lanes/3/release', {method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lane_id:3,bout_id:unoccupied.current_bout_id,expected_revision:unoccupied.revision,expected_assignment_revision:unoccupied.assignment_revision})});
+    assert.equal(released.status,200);
     await expect(first.locator('#confirm-bib')).toBeDisabled();
     await expect(first.locator('#bib-input')).toHaveValue('85');
     await expect(first.locator('#dialog-context')).toContainText('Completed');
@@ -366,14 +369,15 @@ async function stop(server) {
     assert.equal(await second.evaluate(() => document.querySelector('#editor').scrollWidth > document.querySelector('#editor').clientWidth), false);
     await second.locator('#close-dialog').click();
 
-    // Wettkampfbetrieb bietet keinerlei Zielbedienung und weist den Simulator ab.
+    // Reguläre Scheibenbedienung braucht keine Simulation; deren Quelle bleibt gesperrt.
     normal = await startServer(path.join(directory, 'normal'), false);
     const normalPage = await browser.newPage();
     normalPage.on('pageerror', error => errors.push(error.message));
     await normalPage.goto(normal.url);
     await expect(normalPage.locator('#connection')).toHaveAttribute('data-status', 'online');
     await expect(normalPage.locator('#simulation-banner')).not.toBeVisible();
-    await expect(normalPage.locator('button.target, .simulate-reset')).toHaveCount(0);
+    await expect(normalPage.locator('button.target')).toHaveCount(100);
+    await expect(normalPage.locator('.simulate-reset')).toHaveCount(0);
     const denied = await fetch(normal.url + '/api/observations', {method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({kind: 'reset', lane_id: 1, source: 'simulator', observed_at: new Date().toISOString()})});
     assert.equal(denied.status, 403);
