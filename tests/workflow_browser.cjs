@@ -35,10 +35,18 @@ async function scenario(browser,manualOnly){
   async function occupy(n){await card(first,n).locator('.lane-main[data-action=occupy]').tap();await status(n,'occupied');}
   async function leave(n){await card(first,n).locator('.lane-main[data-action=release]').tap();await expect(card(first,n).locator('.bib')).toBeEnabled();}
   async function bib(n,number){
+   const before=(await snapshot()).lanes[String(n)];
    await card(first,n).locator('[data-action=bib]').tap();await first.locator('[data-key=clear]').click();
    for(const digit of String(number))await first.locator(`[data-key="${digit}"]`).click();
    await first.locator('#confirm-bib').click();await expect(first.locator('#editor')).not.toBeVisible();
    await expect(card(second,n).locator('.bib')).toHaveText(String(number));
+   if(manualOnly){
+    const after=(await snapshot()).lanes[String(n)];
+    assert.deepEqual(after.targets,before.targets);
+    assert.deepEqual(after.manual_targets,before.manual_targets);
+    if(before.current_bout_id)assert.equal(after.current_bout_id,before.current_bout_id);
+    for(const page of pages)for(let i=0;i<5;i++)await expect(card(page,n).locator('.target').nth(i)).toHaveAttribute('data-state',before.targets[i]);
+   }
   }
   async function target(page,n,position,value='fallen'){
    await card(page,n).locator('.target').nth(position-1).tap();
@@ -96,6 +104,9 @@ async function scenario(browser,manualOnly){
    await target(second,2,1,'standing');await target(first,2,2,'fallen');
    await expect(card(first,2).locator('.target').nth(0)).toHaveAttribute('data-state','standing');
    await expect(card(second,2).locator('.target').nth(1)).toHaveAttribute('data-state','fallen');
+   // Auch ohne vorherige Belegung müssen Eingabe und BIB-Korrektur die Werte behalten.
+   await bib(2,46);await bib(2,47);await status(2,'occupied');
+   await expect(monitor.locator('#lane-2 .target[data-state=fallen]')).toHaveCount(1);
    assert.equal(await first.locator('.lane-mode,.target-comparison,[data-action=override-release],[data-action=unknown-menu]').count(),0);
    await leave(1);await status(1,'reset_required');
    await reset(1);await status(1,'ready');

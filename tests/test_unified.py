@@ -9,7 +9,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 
 from biathlon_target_vision.core import EventStore, Conflict
-from biathlon_target_vision.models import Occupy, Release, ManualReset, ManualTarget, Observation, ModeChange
+from biathlon_target_vision.models import Occupy, Release, ManualReset, ManualTarget, Observation, ModeChange, Assignment
 
 
 class UnifiedTests(unittest.TestCase):
@@ -229,6 +229,7 @@ print(json.dumps(s.state));s.close()
         original = (directory/'events.jsonl').read_bytes()
         store = EventStore(directory)
         try:
+            old['lanes']['1']['unassigned_manual_target_ids'] = []
             self.assertEqual(store.state, old)
             self.assertEqual((directory/'events.jsonl').read_bytes(), original)
             command = Release.model_validate(store.events[-1]['command'])
@@ -236,9 +237,62 @@ print(json.dumps(s.state));s.close()
             store.apply(Occupy(lane_id=1,expected_revision=store.state['lanes']['1']['revision']))
             self.assertEqual(store.state['lanes']['1']['targets'], ['standing']*5)
             self.assertEqual(store.state['lanes']['1']['manual_targets'], [None]*5)
-            self.assertEqual(store.events[-1]['rules_version'], 2)
+            self.assertEqual(store.events[-1]['rules_version'], 3)
             expected = store.snapshot()
         finally: store.close()
         store = EventStore(directory)
         try: self.assertEqual(store.snapshot(), expected)
         finally: store.close()
+
+    def test_actual_rules2_journal_keeps_history_and_preserves_unassigned_inputs_after_upgrade(self):
+        legacy = self.directory/'rules2'; package = legacy/'biathlon_target_vision'; package.mkdir(parents=True)
+        for name in ('__init__.py', 'core.py', 'models.py'):
+            (package/name).write_bytes(subprocess.run(
+                ['git', 'show', f'0921a98:biathlon_target_vision/{name}'],
+                check=True, capture_output=True).stdout)
+        script = '''from pathlib import Path
+import sys,json
+from biathlon_target_vision.core import EventStore
+from biathlon_target_vision.models import Assignment, ManualReset, ManualTarget, Occupy, Release
+s=EventStore(Path(sys.argv[1]),2)
+def lane(n):return s.state['lanes'][str(n)]
+def control(n,cls,**fields):s.apply(cls(lane_id=n,expected_control_revision=lane(n)['control_revision'],**fields))
+for n in (1,2):control(n,ManualReset)
+control(1,ManualTarget,target_id=1,state='fallen',start_bout=False)
+s.apply(Assignment(lane_id=1,bib=41,expected_revision=lane(1)['revision']))
+assert lane(1)['targets'][0]=='unknown' # Tatsächlich gespeicherter alter Fehler bleibt historisch erhalten.
+s.apply(Release(lane_id=1,bout_id=lane(1)['occupied_bout_id'],expected_revision=lane(1)['revision']))
+control(1,ManualTarget,target_id=3,state='fallen',start_bout=False)
+control(2,ManualTarget,target_id=2,state='fallen',start_bout=False)
+print(json.dumps(s.state));s.close()
+'''
+        directory = self.directory/'rules2-data'
+        result = subprocess.run([sys.executable, '-c', script, str(directory)], cwd=legacy,
+            env={**os.environ, 'PYTHONPATH':str(legacy)}, check=True, capture_output=True, text=True)
+        old = json.loads(result.stdout)
+        original = (directory/'events.jsonl').read_bytes()
+        store = EventStore(directory)
+        try:
+            old['lanes']['1']['unassigned_manual_target_ids'] = [3]
+            old['lanes']['2']['unassigned_manual_target_ids'] = [2]
+            self.assertEqual(store.state, old)
+            self.assertEqual((directory/'events.jsonl').read_bytes(), original)
+            last = ManualTarget.model_validate(store.events[-1]['command'])
+            self.assertEqual(store.apply(last), store.events[-1])
+            for n in (1, 2):
+                lane = store.state['lanes'][str(n)]
+                before = list(lane['targets'])
+                command = Assignment(lane_id=n, bib=50+n, expected_revision=lane['revision'])
+                event = store.apply(command)
+                self.assertEqual(event['rules_version'], 3)
+                self.assertEqual(store.state['lanes'][str(n)]['targets'], before)
+                self.assertEqual(store.apply(command), event)
+            expected = store.snapshot()
+        finally:
+            store.close()
+        store = EventStore(directory)
+        try:
+            self.assertEqual(store.snapshot(), expected)
+            self.assertTrue((directory/'events.jsonl').read_bytes().startswith(original))
+        finally:
+            store.close()

@@ -1,16 +1,15 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Geprüfter Implementierungsstand: `main` nach
+Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
-(`56a56b9`, 18.10.2026). Der letzte Versionstag bleibt `v0.7.0`; die Änderungen
-aus PR #9 und #10 sind darin noch nicht enthalten. Der jüngste Abschnitt beschreibt
-den einheitlichen Kampfrichterablauf und die Vereinfachung der Implementierung.
+(`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
+[Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
+Der letzte Versionstag bleibt `v0.7.0`; die nachfolgenden Änderungen sind darin
+noch nicht enthalten. Der jüngste Abschnitt beschreibt die Korrektur und ihre Prüfungen.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
-Diese redaktionelle Prüfung gleicht vorhandene Testergebnisse und GitHub-CI ab;
-sie ist kein erneuter lokaler Anwendungstest.
 
 ## 2026-10-17 – Version 0.1: Ereigniskern und Standbild-Kalibrierung
 
@@ -784,3 +783,50 @@ Bedien-/Übermittlungswege und abgeleitete UI-Sonderfälle.
 | `static/tablet.js` | 569 | 511 | -58 |
 | `static/translations.js` | 135 | 114 | -21 |
 | **Summe** | **1767** | **1727** | **-40** |
+
+## 2026-10-18 – Issue #21: Manuelle Werte bei nachträglicher BIB erhalten
+
+**Prüfung und Relevanz:** Der Fehler ist auf dem Stand `0921a98` reproduzierbar:
+Ohne vorherige Belegung und ohne aktive Einlage setzt eine erste BIB-Zuordnung
+zuvor manuell erfasste gefallene Scheiben auf `unknown`. `_assign()` erzeugt die
+bislang fehlende Einlage; `_new_bout()` bereinigt dabei pauschal alle manuellen
+Werte als vermeintliche Korrekturen des Vorgängers. Mit vorherigem „Bahn belegen“
+bleiben Werte und Einlagenkennung in der Reproduktion bereits erhalten. Dieser
+P1-Fix ist vor dem Arberstadion-Test sinnvoll und benötigt keines der geplanten
+Journal-, Jury-, Kamera- oder Zugriffsschutzfeatures. Die Terminologieabstimmung
+in Issue #20 bleibt davon unabhängig; Browsertexte werden nicht geändert.
+
+**Kleine Kernkorrektur:** Eine Liste mit höchstens fünf Zielnummern unterscheidet
+noch ungebundene manuelle Eingaben von Übersteuerungen einer bisherigen Einlage.
+Diese Unterscheidung ist erforderlich: Nach dem Verlassen können gleichzeitig
+alte Korrekturen und frisch bestätigte Werte auf derselben Bahn vorliegen.
+Alle Einlagenstarts verwenden weiterhin denselben vorhandenen Weg. Er übernimmt
+frische Werte, bindet sie an die Einlage und bereinigt nur Korrekturen des
+Vorgängers. BIB-Korrekturen ändern keine Zustände. Einzelne Scheibeneingaben
+beginnen weiterhin keine Einlage; es entstehen keine Schuss- oder Fallereignisse.
+Keine neuen Befehle, Bedienfunktionen, Dienste oder Abstraktionsschichten.
+
+**Replay und Upgrade:** Neue Ereignisse tragen `rules_version: 3`. Die Regeln `1`
+und `2` bleiben für alte Zeilen erhalten, einschließlich des damaligen Fehlers;
+Journaldateien werden nicht nachträglich korrigiert. Die zusätzliche Zuordnung
+wird beim Lesen aus vorhandenen Befehlen rekonstruiert. Damit können noch wirksame
+ungebundene Werte nach dem Upgrade korrekt übernommen werden. Ein Downgrade nach
+neuen Regel-3-Ereignissen benötigt die Sicherung vor dem Upgrade; siehe API.md.
+
+**Prüfungen:** Die unveränderte Ausgangssuite bestand mit 119 Python-Tests.
+Drei neue Reproduktionen scheiterten vor dem Fix am Verlust manueller Werte;
+nach der Korrektur bestehen alle **125 Python-Tests**. Die sechs ergänzten Tests
+prüfen BIB-Eingabe/-Korrektur mit und ohne Belegung, mehrere Sportler, alte gegenüber
+frischen Korrekturen, automatischen Einlagenbeginn, Rückstellung bei fortbestehender
+Belegung, zwei WebSocket-Clients, konkurrierende BIBs, Idempotenz und Neustart.
+Ein tatsächlich mit `0921a98` erzeugtes Regel-2-Journal bleibt bytegleich lesbar;
+Zustände/Revisionen bleiben erhalten, neue Befehle und erneutes Replay stimmen
+überein. Der bestehende Test mit einem echten PR-9-Journal bleibt erfolgreich.
+
+Die erweiterte Ablauf-Browserprüfung bestätigt erhaltene Scheiben auf zwei
+Touch-Tablets und dem Kontrollmonitor, auch bei BIB-Eingabe ohne vorherige
+Belegung. Sie prüft weiterhin EN/DE/CS sowie Hoch-/Querformat. Alle acht lokalen
+Browserprüfungen einschließlich RTSP-Kameraadministration bestanden; `pip check`,
+JavaScript-Syntax und `git diff --check` sind fehlerfrei. Die Änderung
+validiert Zuordnung und Datenhaltung; reale Kameraerkennung und Schießstandbetrieb
+bleiben Gegenstand des geplanten Praxistests.
