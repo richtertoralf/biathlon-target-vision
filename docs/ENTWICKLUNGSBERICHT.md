@@ -1,10 +1,16 @@
 # Entwicklungsbericht
 
 Chronologischer Entwicklungsverlauf mit Entscheidungen und damaligen
-Testergebnissen. Maßgeblich für den aktuellen Stand von Version 0.6 sind
-[ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md).
-Die folgende redaktionelle Konsolidierung übernimmt vorhandene Testergebnisse;
-sie ist kein erneuter Testlauf.
+Testergebnissen. Geprüfter Implementierungsstand: `main` nach
+[PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
+(`56a56b9`, 18.10.2026). Der letzte Versionstag bleibt `v0.7.0`; die Änderungen
+aus PR #9 und #10 sind darin noch nicht enthalten. Der jüngste Abschnitt beschreibt
+den einheitlichen Kampfrichterablauf und die Vereinfachung der Implementierung.
+Maßgeblich für die aktuelle Architektur und Schnittstelle sind
+[ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
+dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
+Diese redaktionelle Prüfung gleicht vorhandene Testergebnisse und GitHub-CI ab;
+sie ist kein erneuter lokaler Anwendungstest.
 
 ## 2026-10-17 – Version 0.1: Ereigniskern und Standbild-Kalibrierung
 
@@ -232,9 +238,10 @@ Integrationsregeln sind zentral in [API.md](API.md) dokumentiert.
   müssen unabhängig annotiert und geprüft werden. Besonders relevant sind weiße
   Klappen ohne Rand und Rückstellungen über mehrere Bilder. Unklare Bilder sollen
   sichtbar fehlschlagen. Laufende Videoauswertung wurde mit Version 0.5 ergänzt; reale Aufnahmen fehlen weiterhin.
-- Ohne Freigabe oder erkennbare Rückstellung kann aus Zielzuständen kein
-  Sportlerwechsel abgeleitet werden. Zeitliche Stabilisierung und
-  Quellenzuständigkeit gehören später in die Kamera-/Sensoradapter.
+- Die Kamera bestimmt weder Bahnbelegung noch Sportlerwechsel oder Startnummer.
+  Betreten und Verlassen bestätigt der Kampfrichter. Zeitliche Stabilisierung
+  und eindeutige Kamerazuordnung sind seit Version 0.5 beziehungsweise 0.4
+  implementiert; Sensorhardware und Sensoradapter fehlen weiterhin.
 - Geprüft wurden zwei Chromium-Profile mit Touch-Unterstützung und
   Tablet-Auflösungen, keine physischen Tablets bei Sonnenlicht oder mit Handschuhen,
   kein Safari und kein Langzeitlasttest mit 20 Geräten. `dialog`, WebSockets und
@@ -247,7 +254,8 @@ Integrationsregeln sind zentral in [API.md](API.md) dokumentiert.
   bei einem stillen Funkloch bis zum Ablauf verzögert verschwinden.
 - Journal und Einlagen liegen zusätzlich zur Datei vollständig im Arbeitsspeicher;
   automatische Archivierung, Speicherbegrenzung und Prüfung der Netzlast bei
-  wachsender Historie fehlen. Die systemd-Installation wurde mit Version 0.3 ergänzt; die KES-Ausgabe wurde verworfen.
+  wachsender Historie fehlen. Die systemd-Installation ist vorhanden; eine frische
+  Debian-/Ubuntu-Installation mit echtem systemd bleibt praktisch zu prüfen.
 
 ## Prüfungen nachvollziehen
 
@@ -271,9 +279,24 @@ Chromium. Eine externe Playwright-Installation lässt sich über `PLAYWRIGHT_MOD
 angeben:
 
 ```bash
+node tests/translation_browser.cjs
 node tests/tablet_browser.cjs
+node tests/capture_browser.cjs
+node tests/workflow_browser.cjs
+node tests/monitor_browser.cjs
 node tests/browser_smoke.cjs
+node tests/vision_browser.cjs
 ```
+
+Diese sieben Browserprüfungen laufen auch in CI. Für den zusätzlichen lokalen
+RTSP-Test müssen `mediamtx` und `ffmpeg` im `PATH` verfügbar sein:
+
+```bash
+node tests/admin_browser.cjs
+```
+
+Ohne diese externen Testwerkzeuge überspringt die Python-Suite ihren optionalen
+RTSP-Integrationstest ausdrücklich; der RTSP-Browsertest wird in CI nicht gestartet.
 
 ## 2026-10-17 – Vollständigen Stand 0.2 sichern
 
@@ -439,6 +462,12 @@ synthetische Tests werden ausdrücklich nicht als Praxistauglichkeitsnachweis ge
 
 ## 2026-10-18 – Version 0.7: Manuell, automatisch und priorisierter Mischbetrieb
 
+**Teilweise überholt durch PR #10:** Die sichtbare Betriebsartwahl, automatische
+Vergleichsreihe und Übersteuerungsfreigabe am Tablet entfallen. Manuelle Korrekturen
+sind nun bei jeder Quellenkonfiguration möglich; technische Quellensteuerung liegt
+in der Administration. Die folgende Beschreibung dokumentiert den damaligen Tag
+`v0.7.0`, nicht den aktuellen Bedienablauf.
+
 Die bisherigen Kamera-/Tablet-/Journalwege wurden zuerst geprüft. Der Kern bleibt
 zentral; zwei Listen je Bahn trennen automatische Beobachtungen von manuellen
 Werten. `targets` ist weiterhin der wirksame Zustand für bestehende Verbraucher.
@@ -562,6 +591,11 @@ identische Shell-Beispiele und die Beschränkung auf Dokumentationsdateien.
 Keine Anwendungscodeänderung und keine neue Aussage über reale Validierung.
 
 ## 2026-10-18 – Ergonomie und einheitlicher Schießstandablauf
+
+**Historischer Stand von PR #9:** PR #10 ersetzt die hier beschriebene Moduswahl
+und Vergleichsanzeige. Eine automatische Teilrückstellung beendet keine Einlage
+mehr; eine ausdrückliche manuelle Vorbereitung benötigt keinen Kameranachweis.
+Die Einzelheiten und Prüfungen stehen im folgenden Abschnitt.
 
 Vor der Änderung wurden Belegung, Startnummer, Einlage und Scheiben im Kern,
 in Tablet und API geprüft. Bisher konnte nur eine Startnummernzuordnung belegen;
@@ -692,7 +726,7 @@ neuen Belegen erhalten. Kein generischer Kompatibilitätsadapter oder zweiter Ke
 Nach neuen Ereignissen ist Downgrade auf PR #9 unsicher, selbst wenn ältere Leser
 den Marker ignorieren. Auswirkungen und Sicherungsgrenzen stehen in API.md.
 
-Prüfungen: **119 Python-Tests erfolgreich**, ausgehend von 107; zwölf neue Prüfungen
+Lokale Prüfung: **119 Python-Tests erfolgreich**, ausgehend von 107; zwölf neue Prüfungen
 betreffen u. a. drei Sportler ohne Kamera/Quellenwahl, null/eine/mehrere gefallene
 Scheiben, Einzelkorrektur ohne Einlagengrenze, volle statt teilweiser Rückstellung,
 direkte manuelle Weiterarbeit und Wiederverbindung, echte gegenüber künstlichen
@@ -714,6 +748,16 @@ JavaScript-/Shell-Syntax, `pip check` und `git diff --check` sind fehlerfrei.
 Die erste CI-Prüfung zeigte ein Rennen bei der Browser-Layoutmessung während
 einer Live-Aktualisierung. Die Prüfung misst die Hauptaktion jetzt atomar relativ
 zur Kachel; sie hängt damit weder an einem ersetzten DOM-Element noch am Scrollstand.
+
+Abgeschlossen durch [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10),
+gemergt am 18.10.2026 als `56a56b9` nach erfolgreichen Python- und Browserprüfungen
+für den letzten PR-Commit `805dd34`. Auch die anschließende
+[CI auf main](https://github.com/richtertoralf/biathlon-target-vision/actions/runs/39141859274)
+war erfolgreich: Python meldet `Ran 119 tests`, `OK (skipped=1)`; der optionale
+RTSP-Test wurde mangels externer Testwerkzeuge übersprungen. Alle sieben
+CI-Browserprüfungen bestanden. Der RTSP-Python- und -Browsertest wurden zuvor lokal
+ausgeführt, wie oben dokumentiert. `main` wurde lokal synchronisiert; es wurde
+kein neuer Versions-Tag erstellt.
 
 Die optische Validierung bleibt synthetisch. Reale Schießstandbilder, Schnee,
 Lichtwechsel, Handschuhe, physische Tablets und WLAN unter Veranstaltungsbedingungen
