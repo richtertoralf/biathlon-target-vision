@@ -92,7 +92,7 @@ Integrations- oder Kompatibilitätsnachweis.
 
 ## Ablauf für Kampfrichter am Schießstand
 
-![Srceenshot Stand 18.10.2026](Bildschirmfoto vom 2026-10-18 20-52-46.png)
+![Screenshot Stand 18.10.2026](<Bildschirmfoto vom 2026-10-18 20-52-46.png>)
 
 Die Kamera erfasst ausschließlich Scheibenzustände und zuverlässig beobachtete
 vollständige Rückstellungen. Betreten, Startnummer, Beaufsichtigung und Verlassen
