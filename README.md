@@ -22,7 +22,7 @@ Open-Source-System für Vereine, Veranstalter, Kampfrichter und Zeitnahmeunterne
 Bereits **ohne Kameras und Sensoren** lässt sich ein Schießstand manuell erfassen:
 Kampfrichter geben Startnummern und die Zustände der fünf Klappscheiben am Tablet
 ein. Mehrere Tablets arbeiten synchronisiert zusammen und können dieselben oder
-unterschiedliche Schießbahnen betreuen. Dafür ist kein Simulationsmodus erforderlich.
+unterschiedliche Schießbahnen betreuen.
 
 Eine vorhandene, kalibrierte Kamera übernimmt die laufende Erfassung im Hintergrund.
 Kampfrichter sehen die Beobachtungen unmittelbar und können jede Scheibe durch
