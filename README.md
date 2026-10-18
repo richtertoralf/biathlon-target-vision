@@ -1,5 +1,15 @@
 # Biathlon Target Vision
 
+![Development](https://img.shields.io/badge/Status-Active_Development-orange)
+![Production](https://img.shields.io/badge/Production-Not_Ready-red)
+
+> [!WARNING]
+> **Under active development – Not production-ready**
+>
+> Biathlon Target Vision is undergoing rapid development and has not yet been validated under real competition conditions.
+>
+> **Do not use it for official competitions or safety-critical decisions.** Features, interfaces, and data formats may change without notice.
+
 **Manuelle Schießstanderfassung am Tablet und automatische Kameraerfassung mit
 Vorrang für die Entscheidungen der Kampfrichter.**
 
