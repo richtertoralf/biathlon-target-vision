@@ -5,24 +5,25 @@
   function render(state) {
     lanes.replaceChildren();
     for (const lane of Object.values(state.lanes)) {
-      const current = state.bouts[lane.current_bout_id], occupied = state.bouts[lane.occupied_bout_id];
+      const occupied = state.bouts[lane.occupied_bout_id];
       const card = document.createElement('section'); card.className = 'lane'; card.dataset.status = lane.status; card.id = `lane-${lane.lane_id}`;
-      const title = document.createElement('h2'); title.textContent = `Bahn ${lane.lane_id} · ${{occupied:'belegt',ready:'frei – bereit',reset_required:'frei – Rückstellung ausstehend'}[lane.status]}`;
+      const title = document.createElement('h2'); title.textContent = `Bahn ${lane.lane_id}`;
+      const badge = document.createElement('span'); badge.className = 'status';
+      badge.textContent = {occupied:'Belegt',ready:'Frei – bereit',reset_required:'Frei – Rückstellung ausstehend'}[lane.status]; title.append(badge);
       const bib = document.createElement('p');
-      bib.textContent = `Startnummer: ${current?.bib ?? (occupied && !current ? occupied.bib : null) ?? '–'}`;
-      if (occupied && current && occupied.bout_id !== current.bout_id) bib.textContent += ` · vorherige Belegung: ${occupied.bib ?? '–'}`;
+      bib.textContent = `Startnummer: ${occupied?.bib ?? '–'}`;
       const targets = document.createElement('div'); targets.className = 'targets';
       lane.targets.forEach((value, index) => {
         const target = document.createElement('span'); target.className = `target ${value}`;
-        target.dataset.state = value; target.textContent = value === 'unknown' ? '?' : value === 'fallen' ? '✓' : '○';
+        target.dataset.state = value; target.textContent = value === 'unknown' ? '?' : value === 'fallen' ? '✓' : '';
         target.title = `Scheibe ${index + 1}: ${{standing:'aufgerichtet', fallen:'gefallen', unknown:'unbekannt'}[value]}`;
         targets.append(target);
       });
-      const count = document.createElement('p'); count.className = 'fallen-count';
-      count.textContent = `Gefallen in aktueller Einlage: ${current?.fallen_target_ids.length ?? 0}/5`;
-      const effective = document.createElement('p'); effective.className = 'effective-count';
-      effective.textContent = `Wirksamer Zustand: ${lane.targets.filter(value => value === 'fallen').length}/5 gefallen · ${{manual:'Manuell',automatic:'Automatisch',mixed:'Mischbetrieb'}[lane.mode]}`;
-      card.append(title, bib, targets, count, effective); lanes.append(card);
+      const warning = document.createElement('p'); warning.className = 'capture-status';
+      const camera = state.capture?.cameras.find(item => item.lane_ids.includes(lane.lane_id));
+      if (lane.mode !== 'manual' && camera && (!state.capture.running || !camera.connected || lane.automatic_targets.includes('unknown')))
+        warning.textContent = 'Scheiben manuell prüfen';
+      card.append(title, bib, targets, warning); lanes.append(card);
     }
   }
   function connect() {
@@ -35,7 +36,7 @@
       if (socket !== current) return;
       const state = JSON.parse(event.data); if (state.type !== 'state') return;
       lastMessage = Date.now(); render(state);
-      connection.textContent = state.health === 'error' ? 'Erfassung gestört – letzter Stand' : 'Live';
+      connection.textContent = state.health === 'error' ? 'Erfassung gestört' : 'Live';
       connection.className = state.health === 'error' ? 'offline' : '';
     };
     current.onclose = () => {

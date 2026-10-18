@@ -27,12 +27,12 @@ jobs:
           .venv/bin/python -m pip install -r requirements-dev.txt
           npm install --prefix "$RUNNER_TEMP/btv-playwright" @playwright/test@1.62.1
           "$RUNNER_TEMP/btv-playwright/node_modules/.bin/playwright" install --with-deps chromium
-      - name: Tablet, Betriebsarten, Monitor und synthetische Kamerabilder
+      - name: Tablet, Erfassung, Monitor und synthetische Kamerabilder
         run: |
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/btv-playwright/node_modules/@playwright/test"
           node tests/translation_browser.cjs
           node tests/tablet_browser.cjs
-          node tests/modes_browser.cjs
+          node tests/capture_browser.cjs
           node tests/workflow_browser.cjs
           node tests/monitor_browser.cjs
           node tests/browser_smoke.cjs

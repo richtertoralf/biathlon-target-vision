@@ -82,18 +82,15 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     def snapshot():
         state = app.state.store.snapshot()
         cameras = camera_list()
-        if app.state.vision_task.done():
-            for lane in state["lanes"].values():
-                if lane["mode"] != "manual" and lane["status"] == "ready":
-                    lane["status"] = "reset_required"
-        # Kamerastatus kann sich ohne Journalereignis ändern. Auch im kurzen
-        # Abstand vor der nächsten unknown-Beobachtung niemals bereit anzeigen.
-        for camera in cameras["cameras"]:
-            if not camera["connected"]:
-                for lane_id in camera["lane_ids"]:
-                    lane = state["lanes"][str(lane_id)]
-                    if lane["mode"] != "manual" and lane["status"] == "ready":
-                        lane["status"] = "reset_required"
+        # Technischer Ausfall widerlegt keine ausdrückliche menschliche
+        # Vorbereitung. Nur ausschließlich kameragestützte Werte veralten.
+        unavailable = {n for camera in cameras["cameras"] if not camera["connected"] for n in camera["lane_ids"]}
+        for lane in state["lanes"].values():
+            if (lane["mode"] != "manual" and lane["status"] == "ready"
+                    and (app.state.vision_task.done() or lane["lane_id"] in unavailable)
+                    and any(manual is None and not pending for manual, pending in
+                            zip(lane["manual_targets"], lane["automatic_baseline_pending"]))):
+                lane["status"] = "reset_required"
         return {**state, **api_identity(), "simulation": simulation,
                 "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
                     **cameras, "calibration_errors": dict(app.state.vision.errors)}}
@@ -116,7 +113,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     def publish(command):
         duplicate = command.event_id in app.state.store.by_id
         event = app.state.store.apply(command)
-        if isinstance(command, ManualTarget) and not duplicate and event["manual_input"]["mode"] == "mixed":
+        if isinstance(command, ManualTarget) and not duplicate:
             save_correction_image(command, event)
         message = {"type": "state", **snapshot()}
         wake_subscribers()
@@ -276,42 +273,36 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.put("/api/lanes/{lane_id}/bib")
     async def assign(lane_id: int, command: Assignment):
-        if lane_id != command.lane_id:
-            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
-        return publish(command)
+        return publish_lane(lane_id, command)
 
     @app.post("/api/lanes/{lane_id}/occupy")
     async def occupy(lane_id: int, command: Occupy):
-        if lane_id != command.lane_id:
-            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
-        return publish(command)
+        return publish_lane(lane_id, command)
 
     @app.post("/api/lanes/{lane_id}/release")
     async def release(lane_id: int, command: Release):
-        if lane_id != command.lane_id:
-            raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
-        return publish(command)
+        return publish_lane(lane_id, command)
 
-    def lane_control(lane_id, command):
+    def publish_lane(lane_id, command):
         if lane_id != command.lane_id:
             raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
         return publish(command)
 
     @app.put("/api/lanes/{lane_id}/mode")
     async def set_mode(lane_id: int, command: ModeChange):
-        return lane_control(lane_id, command)
+        return publish_lane(lane_id, command)
 
     @app.post("/api/lanes/{lane_id}/manual-target")
     async def manual_target(lane_id: int, command: ManualTarget):
-        return lane_control(lane_id, command)
+        return publish_lane(lane_id, command)
 
     @app.post("/api/lanes/{lane_id}/override-release")
     async def override_release(lane_id: int, command: OverrideRelease):
-        return lane_control(lane_id, command)
+        return publish_lane(lane_id, command)
 
     @app.post("/api/lanes/{lane_id}/reset")
     async def manual_reset(lane_id: int, command: ManualReset):
-        return lane_control(lane_id, command)
+        return publish_lane(lane_id, command)
 
     @app.websocket("/ws")
     async def websocket(socket: WebSocket):

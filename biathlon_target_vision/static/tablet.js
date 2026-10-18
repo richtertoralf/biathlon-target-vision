@@ -85,7 +85,7 @@
     $('offline-banner').hidden = connected;
     $('simulation-banner').hidden = !state?.simulation;
     $('choose-lanes').disabled = !state;
-    if (notice) notify(notice.key, notice.error);
+    if (notice) $('notice').textContent = t(notice.key);
     if (!state) return;
     const lanes = Object.values(state.lanes);
     const shown = lanes.filter(lane => selection === null || selection.includes(lane.lane_id));
@@ -112,39 +112,23 @@
     const optionsOpen = card?.querySelector('.lane-options')?.open || false;
     const targets = lane.targets.map((value, index) => {
       const label = `${t('target', {n: index + 1})}: ${t(value)}`;
-      const manual = lane.mode !== 'manual' && lane.manual_targets[index] !== null;
-      const automatic = lane.automatic_targets[index];
-      const content = `<span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span><span>${index + 1}${manual ? ' · M' : ''}</span>`;
-      const action = lane.mode !== 'automatic' ? 'manual-target' : state.simulation ? 'target' : null;
-      const target = action
-        ? `<button class="target" data-action="${action}" data-target="${index + 1}" data-state="${value}" aria-label="${escape(label)}" ${disabled}>${content}</button>`
-        : `<span class="target" data-state="${value}" role="img" aria-label="${escape(label)}">${content}</span>`;
-      const autoLabel = `<small class="source-detail" data-automatic-state="${automatic}" title="${escape(t('autoValue') + ': ' + t(automatic))}">${t('autoValue')} <span class="auto-disc ${automatic}" aria-label="${escape(t(automatic))}">${automatic === 'unknown' ? '?' : ''}</span></small>`;
-      const compare = lane.mode === 'manual' ? '' : `<div class="target-comparison">${manual
-        ? `<button class="return-auto" data-action="override-release" data-target="${index + 1}" aria-label="${escape(t('returnTargetAuto', {n:index + 1}))}" ${disabled}>${autoLabel}<span aria-hidden="true">↩</span></button>`
-        : autoLabel}</div>`;
-      return `<div class="target-control ${manual ? 'overridden' : ''}" data-target-control="${index + 1}">${target}${compare}</div>`;
+      const content = `<span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span><span>${index + 1}</span>`;
+      return `<button class="target" data-action="${state.simulation ? 'target' : 'manual-target'}" data-target="${index + 1}" data-state="${value}" aria-label="${escape(label)}" ${disabled}>${content}</button>`;
     }).join('');
     const mainAction = occupied ? button('release', t('leaveLane'), 'primary lane-main')
-      : lane.status === 'ready' ? button('occupy', t('occupyLane'), 'primary lane-main')
-      : button('manual-reset', t('allStanding'), 'primary lane-main');
+      : button('occupy', t('occupyLane'), 'primary lane-main');
     const context = previous ? t('previousOccupied', {bib:occupied.bib ?? '—'})
       : chosen ? `${boutName(chosen)} · ${t(chosen.closed ? 'closed' : 'active')}` : t('noBout');
     const content = `<div class="lane-heading"><h2>${t('lane', {n:lane.lane_id})}</h2><span class="badge">${t({ready:'laneReady',occupied:'occupied',reset_required:'laneResetRequired'}[lane.status])}</span></div>
       <div class="bib-line"><span>${t('bib')}</span>${button('bib', occupied?.bib ?? t('enterNumber'), `bib ${occupied?.bib == null ? 'bib-entry' : ''}`, `${previous ? 'disabled' : ''} aria-label="${escape(t(occupied?.bib == null ? 'enterBib' : 'correctBib'))}"`)}</div>
-      <div class="targets ${lane.mode === 'manual' ? 'manual-targets' : 'automatic-targets'}">${targets}</div>
+      <div class="targets">${targets}</div>
       ${mainAction}
-      <p class="capture-status">${escape(captureStatus(lane))}</p>
+      ${button('manual-reset', t('allStanding'), 'lane-reset')}
       <div class="lane-drafts"></div>
-      <details class="lane-options" ${optionsOpen ? 'open' : ''}><summary>${t(lane.mode)} · ${t('laneOptions')}</summary>
+      <details class="lane-options" ${optionsOpen ? 'open' : ''}><summary>${t('laneOptions')} <span class="capture-status">${escape(captureStatus(lane))}</span></summary>
         <div class="options-body">
-          <label class="mode-label">${t('mode')} <select class="lane-mode" aria-label="${escape(t('mode'))}" ${disabled}>${['manual','automatic','mixed'].map(mode => `<option value="${mode}" ${lane.mode === mode ? 'selected' : ''}>${t(mode)}</option>`).join('')}</select></label>
           <p class="bout-line">${escape(context)}</p>
           ${button('history', t('history', {n:boutsFor(lane.lane_id).length}), 'history')}
-          ${occupied || lane.status === 'ready' ? button('manual-reset', t('allStanding')) : ''}
-          ${!occupied && lane.status !== 'ready' ? button('occupy', t('occupyLane')) : ''}
-          ${!occupied && current ? button('release', t('closeBout')) : ''}
-          ${lane.mode !== 'automatic' ? button('unknown-menu', t('unknownTarget')) : ''}
           ${state.simulation ? button('reset', t('reset'), 'simulate-reset') : ''}
         </div>
       </details>`;
@@ -161,11 +145,11 @@
   }
 
   function captureStatus(lane) {
-    if (lane.mode === 'manual') return t('manualSource');
+    if (lane.mode === 'manual') return '';
     const camera = state.capture?.cameras.find(item => item.lane_ids.includes(lane.lane_id));
-    if (!camera) return t('noCamera');
-    if (!camera.connected) return t('cameraOffline');
-    return `${camera.name} · ${t(lane.automatic_targets.includes('unknown') ? 'cameraUncertain' : 'cameraOnline')}`;
+    if (!camera) return '';
+    return !state.capture.running || !camera.connected || lane.automatic_targets.includes('unknown')
+      ? t('checkTargets') : '';
   }
 
   function invalidate(key) {
@@ -246,12 +230,7 @@
     if (value.drafts !== undefined) drafts = value.drafts;
     if (freshConnection) connected = true;
     if (edit?.action === 'bib') reconcileBib();
-    else if (edit?.action === 'release') {
-      const lane = state.lanes[String(edit.laneId)];
-      if (lane.occupied_bout_id !== edit.baseOccupancy || state.bouts[edit.boutId]?.bib !== edit.baseBib
-        || ![lane.occupied_bout_id, lane.current_bout_id].includes(edit.boutId)) invalidate('assignmentConflict');
-      else if (!edit.stale) { edit.revision = lane.revision; edit.assignmentRevision = lane.assignment_revision; }
-    } else if (edit?.action === 'unknown-menu') {
+    else if (edit?.action === 'target' && !state.simulation) {
       if (state.lanes[String(edit.laneId)].control_revision !== edit.controlRevision) invalidate('stale');
     } else if (edit?.action === 'history' && changed) openHistory(edit.laneId);
     else if (edit?.laneId && edit.action !== 'history' && state.lanes[String(edit.laneId)]?.revision !== edit.revision) invalidate('stale');
@@ -326,9 +305,8 @@
   $('review-edit').onclick = () => {
     if (!connected || busy || !edit) return;
     if (edit.action === 'target') { openTarget(edit.laneId, edit.targetId); return; }
-    if (edit.action === 'reset' || edit.action === 'release') { openConfirmation(edit.action, edit.laneId); return; }
+    if (edit.action === 'reset') { openResetSimulation(edit.laneId); return; }
     if (edit.action === 'history') { openHistory(edit.laneId); return; }
-    if (edit.action === 'unknown-menu') { dialog.close(); return; }
     if (edit.action !== 'bib') return;
     const lane = state.lanes[String(edit.laneId)];
     edit.baseBib = state.bouts[edit.boutId]?.bib ?? null;
@@ -400,28 +378,26 @@
     };
   }
 
-  function openConfirmation(action, laneId) {
-    const lane = state.lanes[String(laneId)];
-    const bout = state.bouts[lane.occupied_bout_id || lane.current_bout_id];
-    if (action === 'release' && !bout) { dialog.close(); return; }
-    openDialog(action, laneId, t('lane', {n: laneId}), action === 'reset' ? t('resetHelp') : t('releaseHelp', {bout: boutName(bout), bib: bout.bib ?? '—'}));
-    edit.boutId = bout?.bout_id;
-    edit.baseBib = bout?.bib;
-    edit.baseOccupancy = lane.occupied_bout_id;
-    edit.assignmentRevision = lane.assignment_revision;
-    $('dialog-body').innerHTML = `<button id="confirm-action" class="${action === 'reset' ? 'simulate-reset' : 'primary'} wide">${t(action === 'reset' ? 'reset' : 'release')}</button>`;
-    $('confirm-action').onclick = () => action === 'reset' ? simulate(laneId, null, null) : submit(`/api/lanes/${laneId}/release`, 'POST', {
-      bout_id: bout.bout_id, expected_revision: edit.revision, expected_assignment_revision: edit.assignmentRevision});
+  function openResetSimulation(laneId) {
+    openDialog('reset', laneId, t('lane', {n: laneId}), t('resetHelp'));
+    $('dialog-body').innerHTML = `<button id="confirm-action" class="simulate-reset wide">${t('reset')}</button>`;
+    $('confirm-action').onclick = () => simulate(laneId, null, null);
   }
 
   function openTarget(laneId, targetId) {
-    if (!state.simulation) return;
-    openDialog('target', laneId, t('simulate', {target: `${t('lane', {n: laneId})} · ${t('target', {n: targetId})}`}), t('simulationHint'));
+    const target = `${t('lane', {n: laneId})} · ${t('target', {n: targetId})}`;
+    openDialog('target', laneId, state.simulation ? t('simulate', {target}) : target,
+      t(state.simulation ? 'simulationHint' : 'confirmTarget'));
     edit.targetId = targetId;
-    $('dialog-body').innerHTML = `<div class="choices">${['standing','fallen','unknown'].map(value => `<button data-target-state="${value}"><span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span> ${t(value)}</button>`).join('')}</div>`;
+    edit.controlRevision = state.lanes[String(laneId)].control_revision;
+    const values = state.simulation ? ['standing','fallen','unknown'] : ['standing','fallen'];
+    $('dialog-body').innerHTML = `<div class="choices">${values.map(value => `<button data-target-state="${value}"><span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span> ${t(value)}</button>`).join('')}</div>`;
     $('dialog-body').onclick = event => {
       const value = event.target.closest('[data-target-state]')?.dataset.targetState;
-      if (value) simulate(laneId, targetId, value);
+      if (!value) return;
+      if (state.simulation) simulate(laneId, targetId, value);
+      else submit(`/api/lanes/${laneId}/manual-target`, 'POST', {target_id: targetId, state: value,
+        start_bout: false, expected_control_revision: edit.controlRevision});
     };
   }
 
@@ -435,9 +411,8 @@
     submit('/api/observations', 'POST', body, {'X-Lane-Revision': String(edit.revision)});
   }
 
-  async function submit(url, method, fields, headers = {}) {
-    if (!connected || busy || !edit || edit.stale) return;
-    const context = edit;
+  async function submit(url, method, fields, headers = {}, context = edit) {
+    if (!connected || busy || !context || context.stale) return;
     clearDraft();
     busy = true; render();
     $('close-dialog').disabled = true;
@@ -456,7 +431,7 @@
         // Bei einem Revisionsrennen entscheidet der neue Zustand, ob die
         // betroffene Einlage tatsächlich widersprüchlich geändert wurde.
         if (context.action === 'bib' && result.detail === 'Bahn wurde zwischenzeitlich geändert. Zustand neu laden.') context.error = key;
-        else invalidate(key);
+        else if (context === edit) invalidate(key);
         notify(key, true);
         // Nach einer Ablehnung ausschließlich den Zustand erneuern, nie den Befehl.
         const fresh = await fetch('/api/state', {cache: 'no-store', signal: AbortSignal.timeout(5000)});
@@ -464,7 +439,7 @@
         acceptState(await fresh.json());
       } else {
         acceptState(result.state);
-        dialog.close();
+        if (context === edit) dialog.close();
         notify('saved');
       }
     } catch {
@@ -479,35 +454,13 @@
     }
   }
 
-  async function control(laneId, endpoint, fields = {}, method = 'POST') {
-    if (!connected || busy) return;
+  function control(laneId, endpoint, fields = {}) {
     const lane = state.lanes[String(laneId)];
-    const revision = lane.control_revision;
     const expected = ['occupy','release'].includes(endpoint)
       ? {expected_revision: lane.revision, expected_assignment_revision: lane.assignment_revision}
-      : {expected_control_revision: revision};
-    busy = true; render();
-    try {
-      const response = await fetch(`/api/lanes/${laneId}/${endpoint}`, {method,
-        headers: {'Content-Type': 'application/json'}, signal: AbortSignal.timeout(8000),
-        body: JSON.stringify({event_id: eventId(), lane_id: laneId,
-          ...expected, ...fields})});
-      const result = await response.json();
-      if (response.ok) { acceptState(result.state); notify('saved'); }
-      else {
-        notify(response.status === 409 ? 'conflict' : response.status === 503 ? 'storageError' : 'invalidRequest', true);
-        const fresh = await fetch('/api/state', {cache: 'no-store', signal: AbortSignal.timeout(5000)});
-        if (!fresh.ok) throw new Error('state unavailable');
-        acceptState(await fresh.json());
-      }
-    } catch { notify('uncertain', true); connect(); }
-    finally { busy = false; render(); }
+      : {expected_control_revision: lane.control_revision};
+    return submit(`/api/lanes/${laneId}/${endpoint}`, 'POST', {...expected, ...fields}, {}, {laneId});
   }
-
-  $('lanes').onchange = event => {
-    if (!event.target.matches('.lane-mode')) return;
-    control(Number(event.target.closest('[data-lane]').dataset.lane), 'mode', {mode: event.target.value}, 'PUT');
-  };
 
   $('lanes').onclick = event => {
     const button = event.target.closest('button[data-action]');
@@ -515,35 +468,24 @@
     const laneId = Number(button.closest('[data-lane]').dataset.lane);
     const lane = state.lanes[String(laneId)];
     $('dialog-body').onclick = null;
-    if (['manual-target','manual-unknown'].includes(button.dataset.action)) {
-      const targetId = Number(button.dataset.target);
-      control(laneId, 'manual-target', {target_id: targetId, start_bout: false, state: button.dataset.action === 'manual-unknown' ? 'unknown' : lane.targets[targetId - 1] === 'fallen' ? 'standing' : 'fallen'});
-    } else if (button.dataset.action === 'override-release') {
-      control(laneId, 'override-release', {target_id: Number(button.dataset.target)});
+    if (button.dataset.action === 'manual-target') {
+      const targetId = Number(button.dataset.target), value = lane.targets[targetId - 1];
+      if (value === 'unknown') openTarget(laneId, targetId);
+      else control(laneId, 'manual-target', {target_id: targetId, start_bout: false,
+        state: value === 'fallen' ? 'standing' : 'fallen'});
     } else if (button.dataset.action === 'manual-reset') {
       control(laneId, 'reset');
     } else if (button.dataset.action === 'occupy') {
       control(laneId, 'occupy');
     } else if (button.dataset.action === 'release') {
       control(laneId, 'release', {bout_id:lane.occupied_bout_id || lane.current_bout_id});
-    } else if (button.dataset.action === 'unknown-menu') {
-      openDialog('unknown-menu', laneId, t('unknownTarget'), t('unknownHelp'));
-      edit.controlRevision = lane.control_revision;
-      $('dialog-body').innerHTML = `<div class="choices">${[1,2,3,4,5].map(n => `<button data-unknown-target="${n}">${t('setUnknown', {n})}</button>`).join('')}</div>`;
-      $('dialog-body').onclick = async event => {
-        const targetId = Number(event.target.closest('[data-unknown-target]')?.dataset.unknownTarget);
-        if (!targetId || edit.stale) return;
-        const revision = edit.controlRevision;
-        dialog.close();
-        await control(laneId, 'manual-target', {target_id:targetId, state:'unknown', start_bout:false, expected_control_revision:revision});
-      };
     } else if (button.dataset.action === 'bib') {
       const boutId = lane.current_bout_id || lane.occupied_bout_id;
       if (!boutId && boutsFor(laneId).some(bout => bout.bib === null)) openHistory(laneId);
       else openBib(laneId, boutId);
     } else if (button.dataset.action === 'history') openHistory(laneId);
     else if (button.dataset.action === 'target') openTarget(laneId, Number(button.dataset.target));
-    else openConfirmation(button.dataset.action, laneId);
+    else if (button.dataset.action === 'reset') openResetSimulation(laneId);
   };
 
   $('choose-lanes').onclick = () => {

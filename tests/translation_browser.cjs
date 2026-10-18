@@ -45,8 +45,6 @@ const assert=require('node:assert/strict');
   });assert.equal(valid,true);
   // Sichtbare Belegung ohne Kamera; die folgenden Sprachwechsel dürfen nichts buchen.
   await page.locator('#lane-1 summary').click();
-  await page.locator('#lane-1 .lane-mode').selectOption('manual');
-  await expect(page.locator('#lane-1 .lane-mode')).toBeEnabled();
   await page.locator('#lane-1 [data-action="bib"]').click();
   await page.locator('[data-key="4"]').click();await page.locator('[data-key="2"]').click();
   await page.locator('#confirm-bib').click();await expect(page.locator('#editor')).not.toBeVisible();
@@ -62,13 +60,16 @@ const assert=require('node:assert/strict');
    await expect(page.locator('#lane-1 .bout-line')).toContainText(text.bout);
    await expect(page.locator('#lane-1 .target').first()).toHaveAttribute('aria-label',text.target+': '+text.states[2]);
    await expect(page.locator('.legend [data-i18n]')).toHaveText(text.states);
-   for(const action of ['bib','history','unknown-menu']){
-    await page.locator(`#lane-1 [data-action="${action}"]`).click();
+   for(const action of ['bib','history','manual-target']){
+    await page.locator(`#lane-1 [data-action="${action}"]`).first().click();
     await expect(page.locator('#editor')).toBeVisible();
     const body=await page.locator('#editor').innerText();
     assert.doesNotMatch(body,/Fahrspuren|Strecke\s+\d+|Errichtet|Bevorzugt/i);
     const dictionary=await page.evaluate(language=>window.BTV_I18N[language],language);
-    if(action==='unknown-menu')await expect(page.locator('#dialog-context')).toHaveText(dictionary.unknownHelp);
+    if(action==='manual-target'){
+     await expect(page.locator('#dialog-context')).toHaveText(dictionary.confirmTarget);
+     await expect(page.locator('[data-target-state]')).toContainText(text.states.slice(0,2));
+    }
     await page.locator('#close-dialog').click();await expect(page.locator('#editor')).not.toBeVisible();
    }
    const dictionary=await page.evaluate(language=>window.BTV_I18N[language],language);

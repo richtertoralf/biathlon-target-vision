@@ -16,7 +16,7 @@ implementiert. Sensoradapter folgen.
 | `PUT /api/lanes/{lane_id}/bib` | Startnummer zuordnen oder ausdrücklich korrigieren |
 | `POST /api/lanes/{lane_id}/release` | Verlassen bestätigen, bestimmte Belegung freigeben |
 | `POST /api/lanes/{lane_id}/occupy` | Bahn ohne bekannte Startnummer belegen |
-| `PUT /api/lanes/{lane_id}/mode` | Betriebsart dieser Bahn wählen |
+| `PUT /api/lanes/{lane_id}/mode` | Automatische Quelle administrativ zulassen/sperren (kompatibler Altbefehl) |
 | `POST /api/lanes/{lane_id}/manual-target` | Ziel manuell erfassen/korrigieren |
 | `POST /api/lanes/{lane_id}/override-release` | Ziel wieder automatisch steuern |
 | `POST /api/lanes/{lane_id}/reset` | Physische vollständige Rückstellung bestätigen |
@@ -58,8 +58,9 @@ verschluckt. Es gibt keine automatische Ableitung von `shot`, `hit` oder `miss`.
 
 Eine bestätigte vollständige Rückstellung verwendet `kind: "reset"` und lässt
 `target_id` sowie `state` weg. Sie setzt alle fünf Zustände auf `standing`.
-Eine einzelne Rückkehr von bekannt `fallen` zu `standing` beendet ebenfalls die
-aktuelle Einlage, verändert aber ausschließlich dieses Ziel.
+Eine einzelne Rückkehr von bekannt `fallen` zu `standing` verändert zunächst nur dieses
+Ziel. Die Einlage endet erst bei vollständiger bestätigter Rückstellung: tatsächlicher
+Übergang nach oben und alle fünf automatischen Stellungen bekannt `standing`.
 
 Quellen senden bestätigte Zustandsbeobachtungen, keine Videoframes oder geschätzten
 Schusszeitpunkte. Die Beobachtungszeit braucht eine Zeitzone. Sie muss pro Bahn
@@ -105,8 +106,8 @@ Zielbeobachtung `kind: target, state: fallen`, kein `shot`/`miss`-Ereignis.
 Rückstellungen werden als bestätigte Rückkehr nach oben über dieselbe Logik
 verarbeitet. Verbindungsabbrüche liefern unbekannte Stellungen; nach Wiederkehr
 folgen neue Grundbeobachtungen. Während der Unterbrechung liegende Übergänge oder
-Einlagengrenzen werden nicht rekonstruiert. Der Monitor zählt ausschließlich
-eindeutige beobachtete Fälle innerhalb seiner aktuellen Einlage.
+Einlagengrenzen werden nicht rekonstruiert. Die API-Liste `fallen_target_ids` enthält ausschließlich eindeutige automatisch
+wirksame Fälle innerhalb der Einlage; der Monitor zeigt alle fünf aktuellen Ziele.
 
 ### Simulator für die Kommandozeile
 
@@ -123,7 +124,7 @@ Bei laufendem Server mit `--simulation` in einem zweiten Terminal ausführen:
 keine Zielnummer; die anderen Aktionen benötigen eine Nummer von 1 bis 5.
 `--url http://127.0.0.1:8092` wählt einen anderen Server.
 
-## Betriebsart, manuelle Werte und Übersteuerungen
+## Quellen, manuelle Werte und Übersteuerungen
 
 Diese Ergänzungen bleiben im additiven API-Vertrag 1. Bestehende lesende Clients
 verwenden weiterhin **`lanes["N"].targets` als verbindlichen Live-Zustand**.
@@ -133,56 +134,63 @@ Schusszählung aus Zustandseingaben konstruieren.
 
 | Bahnfeld | Bedeutung |
 |---|---|
-| `mode` | `manual`, `automatic` (Voreinstellung), `mixed` |
+| `mode` | Kompatibles Quellenfeld: `manual` sperrt automatische Wirksamkeit; `automatic` (Voreinstellung) und `mixed` erlauben beide manuelle Priorität |
 | `targets` | Fünf wirksame Zustände, einschließlich manueller Priorität |
 | `automatic_targets` | Fünf letzte automatische Beobachtungen; auch bei Übersteuerung aktuell |
-| `manual_targets` | Fünf Werte oder `null`; im manuellen Modus Eingaben, sonst aktive Übersteuerungen |
+| `manual_targets` | Fünf manuelle Übersteuerungen oder `null`; automatische Beobachtungen verdrängen sie nicht |
 | `observed_at`, `last_observed_at` | Zeit der automatischen Beobachtungen; keine Zeit manueller Eingaben |
 | `last_known_targets` | Letzte bekannte wirksame Stellung; ersetzt aktuell `unknown` nicht |
 | `automatic_last_known` | Letzte bekannte automatische Stellung, für Rückstellungserkennung |
 | `control_revision` | Vergleichszähler für manuelle Ziel-/Modus-/Rückstellbefehle und Einlagengrenzen |
 | `automatic_generation`, `automatic_baseline_pending` | Erfassungsinterne Wiederaufnahme; nicht von Clients setzen |
 
-Ein manueller Wert, auch `unknown`, hat Vorrang. Im manuellen Modus werden die
-beim Wechsel wirksamen Zustände übernommen. Automatische Beobachtungen ändern
-dann nur die Vergleichsdaten. Rückwechsel aus Manuell behält alle manuellen Werte
-als Übersteuerungen, bis sie ausdrücklich freigegeben werden. Das gilt auch beim
-Wechsel nach Automatisch; neue Korrekturen benötigen Manuell oder Mischbetrieb.
-Eine einzelne Korrektur nach oben beendet keine Einlage. Eine bestätigte vollständige
-Rückstellung oder ausdrücklich neue Einlage entfernt alte Kameraübersteuerungen.
-Rein manuelle Stellungen benötigen eine ausdrücklich bestätigte physische
-Rückstellung; ein Moduswechsel behauptet keine solche Rückstellung.
+Ein manueller Wert, auch `unknown`, hat in jeder Quelleneinstellung Vorrang.
+Ohne Kamera sind dieselben Befehle unmittelbar nutzbar. Kein Wechsel zu `manual`
+ist dafür nötig. Die Tablet-Oberfläche bietet keine Moduswahl und keine Eingabe
+von `unknown`; bei unsicherem Zustand wählt der Kampfrichter ausdrücklich
+`standing` oder `fallen`. Die API akzeptiert `unknown` weiterhin.
 
-Jeder neue Bedienbefehl enthält `lane_id`, optional `event_id` und zwingend den
-zuletzt gesehenen `expected_control_revision`. Beispiel bei Revision 0:
+Jeder Ziel-/Quellen-/Rückstellbefehl enthält `lane_id`, optional `event_id` und
+zwingend den zuletzt gesehenen `expected_control_revision`. Beispiel für
+`POST /api/lanes/1/manual-target` bei Revision 0:
 
 ```json
-{"lane_id":1,"mode":"mixed","expected_control_revision":0}
+{"lane_id":1,"target_id":3,"state":"fallen","start_bout":false,"expected_control_revision":0}
 ```
 
-An `PUT /api/lanes/1/mode` senden. Die folgenden Beispiele verwenden jeweils
-die **aktuell zurückgelieferte** Revision, hier beispielhaft 1:
-
-```json
-{"lane_id":1,"target_id":3,"state":"fallen","expected_control_revision":1}
-```
-
-An `POST /api/lanes/1/manual-target` senden. Alle drei Zustände sind zulässig.
-Die Korrektur gilt sofort, ohne zweiten Bestätigungsschritt. Im manuellen Betrieb
-ist dies reguläre Erfassung ohne `--simulation` und ohne Kamera. Für
-`POST /api/lanes/1/override-release` die Felder `lane_id`, `target_id` und
-`expected_control_revision` senden. Die letzte automatische Beobachtung wird
-sofort wirksam, auch wenn sie `unknown` ist. Es entsteht kein nachträglicher Fall.
-Im Modus Manuell ist die Freigabe unzulässig (409).
+Die Korrektur gilt sofort. Einzelkorrekturen schließen niemals eine Einlage;
+`start_bout: false` verhindert auch einen impliziten Beginn. Die übrigen Ziele
+bleiben automatisch gesteuert, sofern eine Quelle zugelassen ist. Korrekturen
+enden mit bestätigter vollständiger Rückstellung oder neuer Einlage. Beim
+Sportlerwechsel ohne vorherige Rückstellung werden zuvor korrigierte Ziele
+unbekannt, bis neue Beobachtungen vorliegen; alte Vergleichswerte werden nicht
+ungeprüft wirksam. Keine Korrektur erzeugt beobachtete Fälle oder Schussmeldungen.
 
 `POST /api/lanes/1/reset` nimmt `lane_id` und `expected_control_revision`. Nur nach
-physisch überprüfter Rückstellung verwenden: Alle Ziele gelten unmittelbar als
-aufgerichtet, die Einlage wird geschlossen, die Belegung bleibt bestehen. Alte
-Übersteuerungen enden. Die nächste bekannte automatische Beobachtung je Ziel
-ist eine Grundbeobachtung, auch wenn ein REST-Adapter `baseline` nicht setzt.
-Ein Kameraausfall beziehungsweise `unknown` verbraucht diese Markierung nicht.
-Der vorhandene Kameraadapter beginnt beim Rückwechsel zusätzlich seine zeitliche
-Stabilisierung neu und verwirft noch laufende Auswertungen des alten Betriebs.
+physisch überprüfter vollständiger Rückstellung verwenden: Alle effektiven Ziele
+sind unmittelbar `standing`, auch ohne Kamera. Die Einlage endet, die Belegung
+bleibt bestehen. Alte Übersteuerungen enden. Bis zur ersten bekannten neuen
+Beobachtung je Ziel bleibt die bestätigte Stellung wirksam; dadurch kann
+`targets` bei `manual_targets: null` vorübergehend von `automatic_targets: unknown`
+abweichen. Clients verwenden stets `targets` und berechnen es nicht selbst.
+Die erste bekannte Beobachtung ist eine Grundbeobachtung, auch wenn der Adapter
+`baseline` nicht setzt. Sie kann die angezeigte Stellung ändern, erzeugt aber
+keine rückwirkenden Fälle oder Rückstellungen. Aktive spätere Einzelkorrekturen
+bleiben geschützt. Der Generationszähler verwirft laufende alte Bildauswertungen.
+
+Die bisherigen administrativen Befehle bleiben erreichbar:
+
+- `PUT /api/lanes/1/mode` mit `mode: "manual"` lässt die wirksamen Stellungen
+  unverändert und speichert neue automatische Daten nur noch zum Vergleich.
+  Die Sperre erzeugt keine manuellen Übersteuerungen.
+  `automatic` und `mixed` lassen automatische Daten wieder zu. Bestehende
+  Korrekturen bleiben erhalten, erste neue Werte sind Grundbeobachtungen.
+  `/admin` verwendet eine Checkbox für diesen Befehl; Quellenwahl ist kein
+  notwendiger Teil des Kampfrichterablaufs. Alte gespeicherte Sperren bleiben aktiv.
+- `POST /api/lanes/1/override-release` mit `target_id` hebt eine Einzelkorrektur
+  ausdrücklich auf und übernimmt den letzten automatischen Wert, auch `unknown`,
+  ohne Fallereignis. Bei administrativ gesperrter Automatik bleibt dies unzulässig
+  (409). Das Tablet benötigt diese technische Freigabe nicht.
 
 Konkurrierende Bedienung oder Einlagengrenzen ergeben 409. Gewöhnliche automatische
 Beobachtungen erhöhen `revision`, aber nicht `control_revision`; dadurch ist
@@ -193,7 +201,7 @@ Startnummern- und Freigabebefehle verwenden unverändert ihre bisherigen Modelle
 
 ### Journal und Vergleichsbelege
 
-Neue Befehlsarten: `mode`, `manual_target`, `override_release`, `manual_reset`.
+Seit 0.7 vorhandene Befehlsarten: `mode`, `manual_target`, `override_release`, `manual_reset`.
 Zeitpunkt ist `accepted_at` des Servers; Bahn/Ziel und manueller Wert stehen im
 Befehl. `manual_input` enthält für manuelle Zielbefehle `mode`, `automatic_state`,
 `automatic_observed_at`, `previous_effective_state` und `manual_state`.
@@ -213,13 +221,25 @@ stabilisierten Beobachtung gehörenden Bild. Ohne aktuelles Bild oder gültige
 Kalibrierung wird nur das Journal geschrieben. Dateien mit Betriebssystemrechten
 des Diensts wie andere persistente Daten behandeln.
 
-Alte Journale werden ohne Migration gelesen. Neue 0.7-Bedienbefehle sind älteren
-Programmständen unbekannt; nach ihrer Nutzung kein Downgrade auf dem laufenden
-Journal. Die vor dem Upgrade erstellte Datensicherung bleibt separat erhalten.
+Neue Ereignisse kennzeichnen die angepasste Verarbeitung mit **`rules_version: 2`**
+neben `command`. Fehlendes Feld bedeutet die bisherigen Regeln (`1`). Beim Replay
+bleiben alte Einlagengrenzen, Revisionen und effektive Zustände erhalten, auch
+wenn damals bereits Teilrückstellungen eine Einlage beendet haben. Neue Befehle
+verwenden die aktuellen Regeln. Es werden keine vorhandenen Zeilen umgeschrieben;
+unbekannte Regelversionen verhindern den Start mit sichtbarem Fehler.
+
+Die öffentlichen Befehlsformen und API-Version 1 bleiben erhalten. Journalleser
+müssen den Regelmarker berücksichtigen oder die ausgegebenen `effective_targets`
+bzw. vollständigen Zustände verwenden. **Nach ersten Ereignissen mit Regelversion 2
+ist ein Downgrade auf PR #9 oder ältere Stände mit diesem Journal unsicher**, auch
+wenn ein älterer Leser das Feld stillschweigend ignorieren würde: Er berechnet
+andere Einlagen/Revisionen. Nur eine bewusste Rückkehr zur Datensicherung vor dem
+Upgrade ist möglich und verliert neuere Eingaben. Kein automatisches Zurückspielen.
+Neue `occupy`-/`start_bout`-Befehle bleiben dem älteren Tag `v0.7.0` zudem unbekannt.
 
 ## Bahn belegen, verlassen und vorbereiten
 
-Alle Betriebsarten verwenden denselben Ablauf. `POST /api/lanes/1/occupy` nimmt
+Alle Erfassungsquellen verwenden denselben Kampfrichterablauf. `POST /api/lanes/1/occupy` nimmt
 beispielsweise:
 
 ```json
@@ -233,7 +253,7 @@ Eine vorhandene aktive, noch unbelegte Einlage wird übernommen; andernfalls
 entsteht eine neue Einlage mit `bib: null`. `occupied_bout_id` wird sofort gesetzt.
 Eine belegte Bahn ergibt 409. Dieselbe Ereigniskennung bleibt idempotent.
 Auch bei noch ungeklärter Vorbereitung darf ein tatsächliches Betreten erfasst
-werden; die Oberfläche bietet dies unter Optionen an.
+werden; „Bahn belegen“ ist auf freien Bahnen immer sichtbar.
 
 Die Belegung ist allein an **`occupied_bout_id != null`** erkennbar, nicht daran,
 ob schon eine BIB vorhanden ist. Bestehende Startnummern-/Freigabeendpunkte bleiben
@@ -251,28 +271,26 @@ Zusätzliche Bahnfelder in REST-/WebSocket-Zuständen:
 
 `occupied` hat Vorrang, unabhängig von Scheibenstellungen und Rückstellung.
 `ready` benötigt bestätigte Vorbereitung und fünf wirksam aufgerichtete Scheiben.
-Im automatischen/Mischbetrieb müssen auch alle fünf automatischen Beobachtungen
-aufgerichtet sein. Eine zugeordnete, nicht verbundene Kamera oder beendete optische
-Auswertung verhindert dort die Bereitmeldung auch vor der nächsten
-`unknown`-Beobachtung. Kamerastatus kann `status` ohne neue Journalnummer ändern.
-Manuelle Bahnen benötigen keine Kamera.
+Eine zugeordnete, getrennte Kamera oder beendete optische Auswertung verhindert
+kameragestützte Bereitmeldung bereits vor der nächsten `unknown`-Beobachtung.
+Eine ausdrückliche menschliche Vorbereitung bleibt auch dann gültig, solange
+keine neue wirksame Beobachtung widerspricht. Kamerastatus kann `status` ohne
+neue Journalnummer ändern. Ohne Kamera ist keine Quelleneinstellung nötig.
 
 Belegung verbraucht die vorherige Vorbereitung. Einzelne Zustandskorrekturen
 bestätigen keine neue Rückstellung. Deshalb bleibt eine Bahn nach Verlassen
 zunächst grau, auch wenn alle fünf Scheiben während der Einlage unverändert
 aufgerichtet waren. `POST /api/lanes/1/reset` bleibt die ausdrückliche Bestätigung
 **nach** tatsächlichem Aufrichten; es beendet die Einlage, nicht die Belegung.
-Im manuellen Betrieb wird die Bahn sofort bereit, sofern niemand mehr auf ihr ist.
-Automatisch/Mischbetrieb wird die Bestätigung mit neuen Grundbeobachtungen
-abgeglichen; bei fehlender Kamera auf Manuell wechseln.
+Die Bahn wird sofort bereit, sofern niemand mehr auf ihr ist. Aufgerichtete
+Grundbeobachtungen nach Kameraneustart bestätigen hingegen keine neue Rückstellung.
 
-Die bisherige Einlagengrenze bei einer tatsächlich beobachteten einzelnen Rückkehr
-nach oben bleibt erhalten. Zur vollständigen Vorbereitung und zum automatischen
-Beenden alter Übersteuerungen müssen anschließend alle fünf automatischen
-Scheibenstellungen zuverlässig aufgerichtet sein. Eine Grundbeobachtung allein
-bestätigt keine Rückstellung; eine Unterbrechung der Beobachtungskette verwirft
-eine noch unvollständige Rückstellung. Explizites `kind: reset` bezeichnet wie
-bisher eine bereits bestätigte vollständige automatische Rückstellung.
+Eine Teilrückstellung verändert die betroffene Scheibe und merkt einen möglichen
+Rückstellvorgang vor. Erst alle fünf verlässlich aufgerichteten automatischen
+Stellungen schließen die Einlage und beenden alte Übersteuerungen. Baseline,
+Unklarheit oder erneut gefallene Scheiben verwerfen eine noch unvollständige
+Bestätigung. Explizites `kind: reset` bezeichnet weiterhin eine bereits bestätigte
+vollständige automatische Rückstellung.
 
 `manual_target` erhält optional `start_bout` (Standard `true` für alte Clients und
 Journale). Das Tablet sendet **`start_bout: false`**: Zustandskorrekturen eröffnen
@@ -280,12 +298,6 @@ keine Einlage, auch nicht nach Rückstellung oder Bahnverlassen. Die Einlage wir
 im regulären Ablauf über `occupy` begonnen. Bestehende automatische Beobachtungen
 und ältere manuelle Clients behalten ihren bisherigen impliziten Einlagenbeginn.
 Keine Korrektur wird als beobachteter Schuss oder zusätzlicher Fall gezählt.
-
-Neue `occupy`-Befehle sowie das Feld `start_bout` benötigen beim Journal-Replay
-diesen Entwicklungsstand; der ältere Tag `v0.7.0` kann sie nicht lesen. Alte
-Journale bleiben ohne Migration lesbar. Vor einem Downgrade Sicherungsstand und
-möglichen Verlust neuerer Ereignisse bewusst prüfen; kein automatisches
-Zurückspielen produktiver Daten.
 
 ## Startnummern und Freigabe
 
@@ -481,7 +493,7 @@ Zusätzlich enthalten vollständige Zustände:
 | Feld | Bedeutung |
 |---|---|
 | `sequence` | Letztes dauerhaft akzeptiertes Ereignis, keine Bild- oder Schussnummer |
-| `health` | `ok` oder `error`; bei Fehler sind sichtbare Werte nur der letzte gespeicherte Stand |
+| `health` | `ok` oder `error`; Fehler bei Erfassung oder Speicherung, siehe `capture.running` und Befehlsantworten |
 | `capture.running` | Optische Auswertungsaufgabe läuft; bedeutet nicht, dass jede Kamera verbunden/kalibriert ist |
 | `capture.cameras` | Dieselbe bereinigte Liste wie `/api/cameras`, einschließlich `connected` und letzter Bildempfangszeit |
 | `capture.calibration_errors` | Aktuell vom Erfassungskern gemeldete beschädigte Kalibrierungen je Bahn |
@@ -507,8 +519,8 @@ und technische Verfügbarkeit stehen getrennt im Kamerastatus.
   Deren Startnummer darf nicht auf die neue Einlage übertragen werden.
 - `bouts[id].fallen_target_ids` enthält eindeutige Positionen, deren Fall in dieser
   Einlage automatisch wirksam beobachtet wurde. Manuelle Korrekturen verändern
-  diese historische Liste nicht. Der Monitor zählt sie für `current_bout_id`; ohne
-  aktuelle Einlage null. Das ist keine Zahl abgegebener Schüsse und kein Ergebnis.
+  diese historische Liste nicht. Sie ist keine Zahl abgegebener Schüsse und kein
+  Ergebnis; der Monitor zeigt ausschließlich aktuelle Scheibenstellungen.
   Erste Bilder nach einem Ausfall können mehr gefallene Ziele zeigen als diese Liste.
 - WebSocket-`drafts` sind unbestätigt und für externe fachliche Anzeigen zu ignorieren.
   `editor_id` ist eine flüchtige Bedienplatznummer, keine Sportler-/Quellenkennung.
@@ -524,8 +536,10 @@ Einzel-Schussquellen unterscheiden; KES-/HORA-Parser und Runner bleiben unverän
 Nach zwölf Sekunden ohne WebSocket-Zustand Verbindung erneuern und die Anzeige
 als unterbrochen kennzeichnen. Dafür lokale Empfangszeit verwenden, keine
 Synchronität zwischen Client- und Serveruhr voraussetzen. Bei `health: error`
-Werte als letzten Stand behandeln. Kameraausfälle erscheinen zusätzlich als
-unbekannte Ziele und getrennte Kamerastatus. Eine Wiederverbindung liefert die
+den Erfassungs-/Speicherfehler kenntlich machen. Ausgefallene Optik verhindert
+keine manuelle Weiterarbeit; neue erfolgreiche Bedienbefehle bleiben verbindlich.
+Bei Speicherfehlern werden dagegen keine weiteren Befehle angenommen. Kameraausfälle
+erscheinen als unbekannte unübersteuerte Ziele und getrennte Kamerastatus. Eine Wiederverbindung liefert die
 aktuelle Wahrheit; physische Übergänge während der Unterbrechung sind nicht
 rekonstruierbar und werden nicht erfunden.
 
@@ -560,8 +574,8 @@ async def watch():
                     if state.get("api_version") != 1:
                         raise RuntimeError("Nicht unterstützte BTV-API-Version")
                     for lane in state["lanes"].values():
-                        bout = state["bouts"].get(lane["current_bout_id"])
-                        targets = lane["targets"] if state["health"] == "ok" else ["unknown"] * 5
+                        bout = state["bouts"].get(lane["occupied_bout_id"])
+                        targets = lane["targets"]
                         print(lane["lane_id"], bout["bib"] if bout else None, targets)
         except (OSError, TimeoutError, ConnectionClosed):
             print("BTV-Verbindung unterbrochen; aktuellen Zustand neu laden")

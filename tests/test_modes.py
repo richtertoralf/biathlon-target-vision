@@ -124,7 +124,8 @@ class ModeTests(unittest.TestCase):
         self.control(ManualTarget,target_id=3,state='fallen')
         self.control(ModeChange,mode='automatic'); self.observe(3,'standing')
         self.assertEqual(self.lane()['targets'][2],'fallen')
-        with self.assertRaises(Conflict): self.control(ManualTarget,target_id=3,state='standing')
+        self.control(ManualTarget,target_id=3,state='standing')
+        self.assertEqual(self.lane()['targets'][2],'standing')
         self.control(OverrideRelease,target_id=3)
         self.assertEqual(self.lane()['targets'][2],'standing')
 
@@ -256,7 +257,6 @@ class ModeApiTests(unittest.TestCase):
             with patch('biathlon_target_vision.app.CameraManager') as manager:
                 manager.return_value.snapshot.return_value=capture
                 with TestClient(create_app(directory,1)) as client:
-                    client.put('/api/lanes/1/mode',json={'lane_id':1,'mode':'mixed','expected_control_revision':0})
                     state=client.get('/api/state').json()['lanes']['1']
                     result=client.post('/api/lanes/1/manual-target',json={'lane_id':1,'target_id':3,'state':'fallen','expected_control_revision':state['control_revision']})
                     self.assertEqual(result.status_code,200)

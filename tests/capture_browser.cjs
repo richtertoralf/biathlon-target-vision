@@ -31,12 +31,6 @@ async function scenario(browser, manualOnly) {
     const monitor=await contexts[1].newPage();await monitor.goto(url+'/monitor');
     const card=(page,lane=1)=>page.locator(`#lane-${lane}`);
     const target=(page,n)=>card(page).locator('.target').nth(n-1);
-    const choose=async mode=>{
-      if (!await card(first).locator('.lane-options').evaluate(node=>node.open)) await card(first).locator('summary').click();
-      await card(first).locator('.lane-mode').selectOption(mode);
-      for(const page of pages) await expect(card(page).locator('.lane-mode')).toHaveValue(mode);
-      await expect(card(first).locator('.lane-mode')).toBeEnabled();
-    };
     const state=async()=> (await (await fetch(url+'/api/state')).json());
     const assign=async bib=>{
       await card(first).locator('[data-action="bib"]').click();
@@ -51,27 +45,21 @@ async function scenario(browser, manualOnly) {
       if (!await button.isVisible()) await card(first).locator('summary').click();
       await button.click();
       await expect(first.locator('#editor')).not.toBeVisible();
-      await expect(card(first).locator('.lane-mode')).toBeEnabled();
+      await expect(card(first).locator('.bib')).toBeEnabled();
     };
     const write=data=>{fs.writeFileSync(control+'.new',JSON.stringify(data));fs.renameSync(control+'.new',control);};
     assert.equal((await state()).simulation,false);
     if(manualOnly) {
       assert.equal((await state()).capture.cameras.length,0);
-      await choose('manual'); await reset(); await assign(42);
+      await reset(); await assign(42);
       for(const n of [1,3,5]) {
         await target(first,n).tap();
         await expect(target(second,n)).toHaveAttribute('data-state','fallen');
         await expect(first.locator('#editor')).not.toBeVisible();
       }
       await expect(monitor.locator('#lane-1 .fallen')).toHaveCount(3);
-      await expect(monitor.locator('#lane-1 .effective-count')).toContainText('3/5');
       fs.mkdirSync('.test-artifacts',{recursive:true});
       await first.screenshot({path:'.test-artifacts/v07-manual.png',fullPage:true});
-      // Unbekannt bleibt ausdrücklich möglich, kein erfundener Fehlschuss.
-      await card(second).locator('summary').click();
-      await card(second).locator('[data-action="unknown-menu"]').tap();
-      await second.locator('[data-unknown-target="5"]').tap();
-      await expect(target(first,5)).toHaveAttribute('data-state','unknown');
       await reset();
       await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5);
       await card(first).locator('[data-action="release"]').click();
@@ -79,18 +67,16 @@ async function scenario(browser, manualOnly) {
       await assign(43); await target(second,2).tap();
       await expect(target(first,2)).toHaveAttribute('data-state','fallen');
       await first.reload();
-      await expect(card(first).locator('.lane-mode')).toHaveValue('manual');
+      await expect(card(first).locator('.lane-mode')).toHaveCount(0);
       await expect(target(first,2)).toHaveAttribute('data-state','fallen');
     } else {
       await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5,{timeout:10000});
-      await choose('mixed'); await assign(52);
+      await assign(52);
       write({camera1:{mask:9},camera2:{mask:4}});
       await expect(target(second,1)).toHaveAttribute('data-state','fallen');
       await expect(target(second,4)).toHaveAttribute('data-state','fallen');
       await target(first,3).tap();
       await expect(target(second,3)).toHaveAttribute('data-state','fallen');
-      await expect(card(second).locator('[data-target-control="3"]')).toHaveClass(/overridden/);
-      await expect(card(second).locator('[data-target-control="3"] .source-detail')).toHaveAttribute('data-automatic-state','standing');
       // Viele unveränderte Bilder und weitere echte Zieländerungen dürfen die Korrektur nicht verdrängen.
       write({camera1:{mask:25},camera2:{mask:12}});
       await expect(target(first,5)).toHaveAttribute('data-state','fallen');
@@ -99,35 +85,41 @@ async function scenario(browser, manualOnly) {
       await expect(monitor.locator('#lane-1 .fallen')).toHaveCount(4);
       fs.mkdirSync('.test-artifacts',{recursive:true});
       await second.screenshot({path:'.test-artifacts/v07-mixed.png',fullPage:true});
-      await card(second).locator('[data-action="override-release"][data-target="3"]').tap();
+      await target(second,3).tap();
       await expect(target(first,3)).toHaveAttribute('data-state','standing');
       await target(first,3).tap();
       const before=(await state()); const bout=before.lanes['1'].current_bout_id;
       write({camera1:{connected:false},camera2:{mask:28}});
-      await expect(card(first).locator('.capture-status')).toContainText('disconnected');
+      await expect(card(first).locator('.capture-status')).toContainText('Check targets');
       await expect(target(second,1)).toHaveAttribute('data-state','unknown');
       await expect(target(second,3)).toHaveAttribute('data-state','fallen');
-      await choose('manual');
-      for(const n of [1,4,5]) {await target(first,n).tap(); await expect(target(second,n)).toHaveAttribute('data-state','fallen');}
+      for(const n of [1,4,5]) {await target(first,n).tap(); await first.locator('[data-target-state=fallen]').tap(); await expect(target(second,n)).toHaveAttribute('data-state','fallen');}
       await expect(monitor.locator('#lane-2 .fallen')).toHaveCount(3);
       let after=await state();assert.equal(after.lanes['1'].current_bout_id,bout);assert.equal(after.bouts[bout].bib,52);
       assert.deepEqual(after.bouts[bout].fallen_target_ids,before.bouts[bout].fallen_target_ids);
       write({camera1:{mask:9},camera2:{mask:28}});
-      await choose('mixed');
-      await expect(card(first).locator('.capture-status')).toContainText('connected');
-      await expect(card(first).locator('[data-target-control="5"] .source-detail')).toHaveAttribute('data-automatic-state','standing');
+      await expect(card(first).locator('.capture-status')).toHaveText('');
       await expect(target(second,5)).toHaveAttribute('data-state','fallen');
       after=await state();assert.deepEqual(after.bouts[bout].fallen_target_ids,before.bouts[bout].fallen_target_ids);
-      await card(first).locator('[data-action="override-release"][data-target="5"]').tap();
+      await target(first,5).tap();
       await expect(target(second,5)).toHaveAttribute('data-state','standing');
       // Eine echte Rückstellung beendet sämtliche alten Übersteuerungen.
       write({camera1:{mask:0},camera2:{mask:28}});
-      await expect(card(first).locator('.overridden')).toHaveCount(0);
+      await expect.poll(async()=> (await state()).lanes['1'].manual_targets).toEqual([null,null,null,null,null]);
       await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5);
       const events=(await (await fetch(url+'/api/events')).json()).events;
       assert(events.some(event=>event.manual_input?.automatic_state==='standing' && event.manual_input.manual_state==='fallen'));
       assert(events.every(event=>!['shot','hit','miss'].includes(event.command.kind)));
     }
+    // Quellenwahl ist administrativ; die laufende Kachel bleibt unverändert bedienbar.
+    const admin=await contexts[0].newPage();await admin.goto(url+'/admin');
+    const source=admin.locator('[data-source-lane="1"]');await expect(source).toBeChecked();
+    await source.uncheck();await expect.poll(async()=> (await state()).lanes['1'].mode).toBe('manual');
+    await expect(card(first).locator('.target').first()).toBeEnabled();
+    await expect(source).toBeEnabled();await source.check();
+    await expect.poll(async()=> (await state()).lanes['1'].mode).toBe('automatic');
+    await expect(card(first).locator('.lane-mode')).toHaveCount(0);
+    await admin.screenshot({path:'.test-artifacts/unified-admin.png',fullPage:true});
     for(const page of pages) assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   } finally {
     for(const context of contexts) await context.close();
@@ -137,6 +129,6 @@ async function scenario(browser, manualOnly) {
 (async()=>{
   const browser=await chromium.launch({headless:true});
   try {await scenario(browser,true);await scenario(browser,false);
-    console.log('Betriebsarten-Browserprüfung erfolgreich: manuell ohne Kamera/Simulation, zwei Tablets, Mischpriorität, Freigabe, Ausfall, Ersatzbetrieb, Rückwechsel und Rückstellung.');
+    console.log('Erfassungs-Browserprüfung erfolgreich: manuell ohne Kamera/Simulation, zwei Tablets, Priorität, Korrektur, Ausfall, direkte Weiterarbeit, Wiederverbindung und Rückstellung.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

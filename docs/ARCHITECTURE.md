@@ -70,100 +70,90 @@ Schreibfehler verhindern weitere Ereignisse bis zum Neustart. Ein beschädigtes
 Journal wird beim Start mit Fehler abgewiesen, nicht automatisch gekürzt.
 Betriebshinweise stehen in [API.md](API.md#speicherung-und-fehlerbehandlung).
 
-## Betriebsarten und Zielpriorität
+## Quellen und menschliche Priorität
 
-Jede Bahn startet kompatibel im Modus `automatic`. `manual` und `mixed` werden
-wie Zielkorrekturen im vorhandenen JSONL-Journal gespeichert; es gibt keine zweite
-Konfigurationshoheit oder Prioritäts-Engine. Der Kern führt je Ziel die
-`automatic_targets` und nullable `manual_targets` getrennt. `targets` bleibt der
-maßgebliche Live-Zustand: Ein vorhandener manueller Wert gewinnt, andernfalls
-gilt die automatische Beobachtung. Im manuellen Modus werden alle fünf
-wirksamen Werte beim Wechsel übernommen, einschließlich unbekannter Zustände.
-Automatische Bilder werden weiter verarbeitet und journalisiert, ändern aber
-weder manuelle Werte noch Einlagengrenzen des manuellen Betriebs.
+Die Tablet-Bedienung hat keine Betriebsartwahl. Jede Scheibe ist immer manuell
+korrigierbar. `automatic_targets` enthält tatsächliche Beobachtungen,
+`manual_targets` die aktiven Korrekturen, `targets` den verbindlichen Zustand.
+Automatische Einzelereignisse aktualisieren nur ihr Ziel; so können sie weder
+andere Korrekturen noch manuell bestätigte Vorbereitung überschreiben. Unbekannte
+Werte bleiben sichtbar. Es entstehen keine Schuss-/Fehlschussmeldungen.
 
-Beim Wechsel zurück zur Automatik bleiben diese Werte als einzelne
-Übersteuerungen erhalten, auch im Modus `automatic`. Die ausdrückliche Freigabe
-je Ziel übernimmt dessen letzte automatische Beobachtung ohne neues Fallereignis.
-Ein Generationszähler verwirft noch laufende Bildauswertungen nach Rückwechsel
-oder bestätigter Rückstellung. Der vorhandene Tracker beginnt erneut mit
-Grundbeobachtungen. Auch REST-Beobachtungen werden nach Rückwechsel je Ziel bis
-zum ersten bekannten Zustand als Grundbeobachtung behandelt.
+Das bisherige API-Feld `mode` bleibt für bestehende Clients und Journale erhalten.
+`automatic` und `mixed` erlauben beide automatische Beobachtungen mit manueller
+Priorität. `manual` sperrt deren Wirksamkeit administrativ; Beobachtungen werden
+weiter gespeichert. Eine Quellensperre erzeugt keine künstlichen manuellen
+Übersteuerungen. Nur echte Einzelkorrekturen bleiben nach erneuter Zulassung
+vorrangig; andere Ziele folgen wieder der Quelle. `/admin` verwendet den bestehenden Modusbefehl mit einer
+Checkbox. Die Voreinstellung benötigt weder Kamera noch Änderung. Bereits
+vorhandene Quellensperren werden beim Upgrade nicht ungefragt aufgehoben.
 
-Eine bestätigte vollständige automatische Rückstellung im automatischen/Mischbetrieb oder
-eine ausdrücklich neue Einlage beendet alte Übersteuerungen. Die Erkennung
-vergleicht dafür ausschließlich die zugrunde liegenden automatischen Werte;
-ein manuell von gefallen auf aufgerichtet korrigiertes Ziel ist keine Rückstellung.
-Im rein manuellen Betrieb bestätigt der Kampfrichter die physische Rückstellung
-aller Ziele ausdrücklich. Keine Rückstellung und kein Sportlerwechsel werden aus
-Zeitabständen oder einzelnen Korrekturen erraten. Ältere manuelle API-Clients können mit dem
-bisherigen Standardwert `start_bout: true` bei der ersten gefallenen Scheibe eine
-noch unzugeordnete Einlage eröffnen; das Tablet verwendet die ausdrückliche
-Belegung. Beides erzeugt kein automatisch beobachtetes Fallereignis.
+Eine bestätigte Rückstellung beendet alte Korrekturen, setzt alle effektiven
+Stellungen auf aufgerichtet und startet eine neue Beobachtungsgrundlage.
+Der vorhandene `automatic_baseline_pending`-Marker genügt dabei auch als Hinweis:
+Solange noch keine bekannte neue Kamerabeobachtung vorliegt, bleibt die
+menschlich bestätigte Stellung wirksam. Eine fehlende Kamera kann die Vorbereitung
+somit nicht verhindern. Bekannte Grundbeobachtungen übernehmen wieder die
+nicht korrigierten Ziele, ohne rückwirkende Fälle oder Rückstellungen auszulösen.
+Aktive Einzelkorrekturen bleiben auch nach Wiederverbindung vorrangig.
 
-Ein eigener kleiner Bedienzähler schützt Ziel-/Modusbefehle gegen konkurrierende
-Bediener und Einlagenwechsel. Unabhängige Kamerabilder machen eine unmittelbare
-Korrektur nicht ungültig. Startnummern behalten ihren bestehenden Belegungszähler.
-Journal-Replay verwendet dieselben Regeln; optionale Felder alter Befehle bleiben
-lesbar. Manuelle Ereignisse enthalten den Vergleich zur Automatik und den
-vorherigen wirksamen Wert, alle neuen Ereignisse den anschließenden wirksamen
-Zustand. API-Felder und Befehle stehen ausschließlich in [API.md](API.md).
+Bei einer neuen Einlage enden alte Übersteuerungen. Ohne zwischenzeitliche
+Rückstellung werden zuvor korrigierte Ziele zunächst unbekannt; ein alter
+Kamerawert wird nicht als neuer Beleg eingesetzt. Der vorhandene Generationszähler
+fordert frische Grundbeobachtungen an und verwirft noch laufende Bildauswertungen.
+Es gibt keine zusätzliche Prioritäts-Engine und keine neue Zustandsliste.
+Die ausdrückliche Freigabe eines einzelnen Ziels bleibt als API-Befehl erhalten;
+im regulären Tablet-Ablauf ist sie nicht erforderlich.
 
-Bei einer Korrektur im Mischbetrieb speichert `app.py` nach erfolgreicher
-Journalbuchung nach Möglichkeit den Gesamt-ROI aus dem vorhandenen letzten
-Kamerabild unter `corrections/SEQUENZ.jpg` samt kleiner JSON-Begleitdatei. Es wird
-kein weiterer Bildpuffer angelegt. Das Bild kann von der letzten zeitlich
-stabilisierten Beobachtung abweichen; seine Empfangszeit wird angegeben. Fehlende
-Kamera/Kalibrierung ergibt keinen Bildbeleg, Schreib-/Kodierungsfehler werden
-protokolliert und nehmen die bestätigte Korrektur nicht zurück. Bildbelege liegen
-im persistenten Datenordner und werden bei Upgrades erhalten; keine automatische
-Archivbereinigung oder Analyseplattform.
-
-Manuelle Erfassung und Kamera sind implementierte Quellen. Sensorhardware und
-Sensoradapter bleiben geplant. Ihre späteren Beobachtungen können denselben
-Eingang und dieselbe Priorität verwenden; kein zusätzlicher Dienst ist vorgesehen.
+Manuelle Korrekturen enthalten im Journal den automatischen Vergleichswert,
+Beobachtungszeit und vorherigen effektiven Zustand. Nach Möglichkeit speichert
+`app.py` den Gesamt-ROI des vorhandenen aktuellen Bildpuffers unter
+`corrections/SEQUENZ.jpg` mit JSON-Begleitdatei. Deren Bildempfangszeit ist nicht
+zwingend die Zeit der letzten stabilisierten Beobachtung. Fehlende Bilder verhindern
+keine Eingabe; Speicher-/Kodierungsfehler werden protokolliert. Kein weiterer
+Bildpuffer, Training oder Analysedienst. Manuelle Erfassung und Kamera sind
+implementiert; Sensorhardware und Sensoradapter bleiben geplant.
 
 ## Einheitlicher Schießstandablauf
 
-Belegung kann mit einem zusätzlichen `occupy`-Befehl ohne bekannte Startnummer
-bestätigt werden. Er verwendet den vorhandenen Belegungszähler, beginnt oder
-übernimmt die aktive Einlage und setzt `occupied_bout_id`; `bib` bleibt zunächst
-`null`. Die bisherigen Zuordnungs-/Freigabebefehle und Regeln für verspätete BIBs
-bleiben erhalten. Kamera und spätere Sensoren entscheiden nicht über Belegung.
+`occupy` belegt auch ohne BIB und beginnt oder übernimmt die aktuelle Einlage.
+`assign` kann aus Kompatibilitätsgründen weiterhin direkt belegen. Der getrennte
+Belegungszähler erhält verspätete BIBs und schützt vor konkurrierenden Zuordnungen.
+`release` beendet die Belegung; Rückstellung und Zielkorrektur geben sie nicht frei.
+Tablet-Korrekturen senden `start_bout: false` und erzeugen keine Einlagengrenzen.
+Ältere Clients können weiterhin durch einen ersten manuellen Fall eine Einlage
+beginnen; das ist kein automatisch beobachteter Fall.
 
-Ein einfaches Vorbereitungsmerkmal je Bahn ergänzt die vorhandene Trennung von
-Belegung, Einlage und Scheibenstellungen. Es wird bei Betreten verbraucht und
-entsteht erst durch ausdrückliche Vorbereitung oder zuverlässig beobachtete
-vollständige Rückstellung. Die erste tatsächliche Rückkehr einer gefallenen
-Scheibe begrenzt die Einlage wie bisher. Eine noch unvollständige Rückstellung
-bestätigt aber weder Bereitschaft noch das Ende manueller Übersteuerungen.
-Grundbeobachtungen/Unterbrechungen erzeugen keine neue Rückstellung. Fünf
-unverändert aufgerichtete Scheiben nach Betreten und Verlassen reichen deshalb
-nicht für erneute Vorbereitung.
+Ein tatsächlicher automatischer Fall kann wie bisher eine unzugeordnete Einlage
+beginnen. Nach vollständiger Rückstellung und neuem Fall bleibt sie ausdrücklich
+ohne BIB, selbst wenn die vorherige Belegung verspätet freigegeben wird. Diese
+Trennung schützt vor Zuordnung zum falschen Sportler. Eine Teilrückstellung
+beendet die Einlage dagegen nicht mehr. Erst ein Übergang nach oben und fünf
+bekannt aufgerichtete automatische Ziele bestätigen die vollständige Rückstellung.
+Grundbeobachtungen und Unterbrechungen verwerfen eine unvollständige Bestätigung;
+fünf unverändert aufgerichtete Scheiben reichen nicht. Explizites `reset` bezeichnet
+wie bisher eine bereits bestätigte vollständige Rückstellung.
 
-Die drei Anzeigestände werden aus diesen vorhandenen Daten abgeleitet, ohne
-eigene Workflow-Plattform: belegt hat Vorrang; frei und bestätigt vorbereitet
-ist bereit; übrige freie Bahnen benötigen Rückstellung. Automatisch/Mischbetrieb
-verlangen zusätzlich zuverlässige automatische Stellungen. Der gemeinsame
-API-Snapshot berücksichtigt einen unmittelbaren Kameraausfall und eine beendete
-Erfassung, bevor die nächsten unbekannten Zielbeobachtungen eintreffen. Das
-Vorbereitungsmerkmal und eine begonnene automatische Rückstellung werden aus
-demselben Journal wiederhergestellt.
+Belegung verbraucht die Vorbereitung. `status` wird abgeleitet: Belegung hat
+Vorrang (gelb); unbelegt, bestätigt vorbereitet und fünf wirksam aufgerichtete
+Scheiben sind bereit (grün); die übrigen freien Bahnen benötigen Rückstellung
+(grau). Der API-Snapshot berücksichtigt Kamera-/Erfassungsausfälle sofort für
+kameragestützte Bereitschaft. Eine ausdrückliche menschliche Vorbereitung bleibt
+ohne Kameranachweis gültig. Die Darstellung enthält stets auch Statuswörter.
 
-Tablet-Korrekturen setzen den optionalen Befehlsschalter `start_bout: false`.
-Dadurch eröffnen weder ein Antippen noch dessen Rücknahme eine neue Einlage.
-Der Standardwert erhält das Verhalten alter API-Clients und Journale. Der neue
-Belegungsbefehl und dieses Befehlsfeld benötigen für Replay mindestens diesen
-Entwicklungsstand; ein Downgrade auf Tag `v0.7.0` mit neuen Befehlen ist nicht
-möglich. Es werden weder neue Datenbestände noch Schussereignisse angelegt.
+Große Scheiben, Belegen/Verlassen und Rückstellbestätigung haben feste Positionen.
+Bei unbekannter Stellung bietet ein Tipp zwei beschriftete Auswahlflächen;
+bekannte Stellungen lassen sich direkt umschalten. Optionen enthalten die
+Einlagenhistorie, keine Moduswahl, Vergleichsreihen oder Unbekannt-Eingabe.
+Ein Bedienzähler schützt Korrekturen gegen andere Bediener und Einlagengrenzen,
+ohne jedes Kamerabild als Konflikt zu behandeln. Auch Freigabe nach bereits
+geschlossener Einlage macht eine noch offene Zielauswahl ungültig.
 
-Die ganze Tablet-Kachel ist grün, gelb oder grau mit zusätzlicher Statusbeschriftung.
-Große schwarze/weiße Scheiben und die Hauptaktion behalten in allen Betriebsarten
-ihre Position. Kleine automatische Vergleichssymbole und ein `M` kennzeichnen
-Übersteuerungen; ihre Rückgabe an die Automatik passt an dieselbe Stelle.
-Betriebsart, Historie und Unbekannt-Sonderfunktion liegen unter Optionen.
-Reguläres Betreten, Verlassen, einzelne Korrekturen und die ausdrücklich beschriftete
-Vorbereitungsbestätigung benötigen keinen weiteren Bestätigungsdialog.
+Neue Journalereignisse tragen `rules_version: 2`. Fehlendes Feld bedeutet die
+historischen Regeln. Kleine Kompatibilitätszweige im selben Reducer erhalten bei
+alten Ereignissen insbesondere Teilrückstellungen, Revisionen und Zielwerte.
+Das Journal wird weder migriert noch umgeschrieben. Nach Wiederherstellung gelten
+für neue Befehle die neuen Regeln. Details und Downgrade-Grenzen: [API.md](API.md).
 
 ## Tablet-Bedienung und Mehrbenutzerbetrieb
 
@@ -195,7 +185,7 @@ von Befehlen und keine dauerhaft gespeicherten Offline-Eingaben.
 Protokoll, Zeitgrenzen und Wiederverbindung beschreibt
 [API.md](API.md#synchronisierung).
 
-`--simulation` aktiviert die Zielbedienelemente und die reservierte Quelle
+`--simulation` aktiviert zusätzliche Übungsdialoge und die reservierte Quelle
 `simulator` am Beobachtungseingang. Der Modus wird beim Serverstart festgelegt.
 Die Zielsimulation prüft den gesehenen Zustand über die volle Bahnrevision;
 reguläre manuelle Korrekturen verwenden den Bedienzähler, Belegungsbefehle den
@@ -255,15 +245,11 @@ Ein Dateilock verhindert parallele Installationen/Upgrades.
 
 ## Kontrollmonitor
 
-`/monitor` liest vollständige Zustände über `/ws`, zeigt ausschließlich bestätigte
-Daten und besitzt keine Bedienfunktionen. Der Kern führt je Einlage die eindeutig
-automatisch wirksam gewordenen gefallenen Zielpositionen als `fallen_target_ids`; Replay berechnet
-sie auch für alte Journale. Das ist keine Anzahl abgegebener Schüsse. Eine
-Verdeckung löscht diese Beobachtungen nicht, eine neue Einlage beginnt bei null.
-Zusätzlich zeigt der Monitor die aktuell wirksame Anzahl gefallener Ziele und die
-Betriebsart. So werden manuelle Korrekturen und reine Grundbeobachtungen sichtbar,
-ohne sie als zusätzliche beobachtete Fälle zu zählen.
-
+`/monitor` liest vollständige Zustände über `/ws` und besitzt keine Bedienfunktionen.
+Er zeigt dieselben drei Kachelfarben wie das Tablet, die belegende Startnummer und
+alle fünf wirksamen Stellungen. Ein kurzer Hinweis kennzeichnet ausgefallene oder
+unklare Erfassung. Automatische Falllisten bleiben für bestehende API-Verbraucher
+erhalten; die Übersicht zeigt keine technischen Vergleichswerte oder Fallzählungen.
 
 ## RTSP-Kameras und Administration
 
@@ -320,7 +306,7 @@ unterbrechen die zeitliche Kontinuität. Eine interne Verbindungsnummer je Decod
 erkennt auch Ausfälle, die zwischen zwei Auswertungsschritten vollständig
 überbrückt wurden. Normale kurzzeitige Bildunsicherheit
 bewahrt die letzte Stellung; eine anschließend bestätigte Rückkehr nach oben
-beendet über den vorhandenen Kern die Einlage. Ein Sportlerwechsel während eines
+kann bei vollständiger Rückstellung über den Kern die Einlage beenden. Ein Sportlerwechsel während eines
 Ausfalls bleibt unbestimmt und benötigt die vorhandene ausdrückliche Bedienung.
 `observed_at` ist die serverseitige Bildempfangszeit des bestätigenden Bildes,
 kein Schusszeitpunkt. Defekte Kalibrierungen betreffen nur ihre Bahn, werden
@@ -342,7 +328,9 @@ einen zweiten Ereigniskanal oder ein Adapterframework einzuführen.
 `sequence` bleibt die Reihenfolge dauerhaft akzeptierter Befehle. Lebenszeichen
 und Kamerastatus ändern sie nicht. Langsame Empfänger erhalten aktuelle
 vollständige Zustände; das Journal kann separat gelesen werden. Der Monitor
-kennzeichnet `health: error` ausdrücklich als gestörte Erfassung mit letztem Stand.
+kennzeichnet `health: error` ausdrücklich als gestörte Erfassung. Manuelle
+Weiterarbeit bleibt bei ausgefallener Optik möglich; ein Speicherfehler verhindert
+dagegen weitere Eingaben.
 Vertrag, Wiederverbindung und Beispielclient stehen ausschließlich in [API.md](API.md#externe-integration-eigenständige-quelle-btv).
 Die spätere GFX-Integration ist in Issue #102 dokumentiert; GFX-Code wurde im
 Rahmen dieser Versionen nicht verändert.
