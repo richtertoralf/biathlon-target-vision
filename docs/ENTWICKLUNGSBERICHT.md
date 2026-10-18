@@ -711,6 +711,9 @@ werden echte Hintergrund-/Scheibenfarben, Touchflächen und Aktionspositionen.
 Tablet, unbekannte Auswahl, Monitor und Administration wurden zusätzlich anhand
 von Browserbildern visuell geprüft. Bilder bleiben unversionierte Testartefakte.
 JavaScript-/Shell-Syntax, `pip check` und `git diff --check` sind fehlerfrei.
+Die erste CI-Prüfung zeigte ein Rennen bei der Browser-Layoutmessung während
+einer Live-Aktualisierung. Die Prüfung misst die Hauptaktion jetzt atomar relativ
+zur Kachel; sie hängt damit weder an einem ersetzten DOM-Element noch am Scrollstand.
 
 Die optische Validierung bleibt synthetisch. Reale Schießstandbilder, Schnee,
 Lichtwechsel, Handschuhe, physische Tablets und WLAN unter Veranstaltungsbedingungen

@@ -19,6 +19,8 @@ async function scenario(browser,manualOnly){
   const [first,second]=pages;
   const monitor=await contexts[1].newPage();await monitor.goto(url+'/monitor');
   const card=(page,n=1)=>page.locator(`#lane-${n}`);
+  // Live-Updates können Schaltflächen ersetzen: relativ zur Kachel atomar messen.
+  const mainOffset=(page,n=1)=>card(page,n).evaluate(node=>node.querySelector('.lane-main').getBoundingClientRect().top-node.getBoundingClientRect().top);
   const snapshot=async()=> (await(await fetch(url+'/api/state')).json());
   async function options(page,n,open){
    const details=card(page,n).locator('.lane-options');
@@ -62,12 +64,12 @@ async function scenario(browser,manualOnly){
    await reset(1);await status(1,'ready');await occupy(1);
    let state=await snapshot();const bout=state.lanes['1'].occupied_bout_id;
    assert.equal(state.bouts[bout].bib,null);
-   const top=await card(first).locator('.lane-main').boundingBox();
+   const top=await mainOffset(first);
    await target(first,1,3);await expect(card(second).locator('.target').nth(2)).toHaveAttribute('data-state','fallen');
    await target(second,1,3);await expect(card(first).locator('.target').nth(2)).toHaveAttribute('data-state','standing');
    assert.equal((await snapshot()).lanes['1'].current_bout_id,bout);
    assert.equal((await snapshot()).sequence>state.sequence,true);
-   const after=await card(first).locator('.lane-main').boundingBox();assert.equal(top.y,after.y);
+   assert.equal(await mainOffset(first),top);
    await target(first,1,1);await bib(1,42);await bib(1,43);await status(1,'occupied');
    for(const language of ['en','de','cs']){
     for(const page of pages)await page.locator('#language').selectOption(language);
@@ -113,10 +115,10 @@ async function scenario(browser,manualOnly){
    await occupy(1);await occupy(2);await bib(1,61);await bib(2,62);
    write({camera1:{mask:9},camera2:{mask:9}});
    for(const n of [1,2])await expect(card(second,n).locator('.target[data-state=fallen]')).toHaveCount(2);
-   const before=await card(first,2).locator('.lane-main').boundingBox();
+   const before=await mainOffset(first,2);
    await target(first,2,3);await expect(card(second,2).locator('.target').nth(2)).toHaveAttribute('data-state','fallen');
    assert.equal((await snapshot()).lanes['2'].manual_targets[2],'fallen');
-   const after=await card(first,2).locator('.lane-main').boundingBox();assert.equal(before.y,after.y);
+   assert.equal(await mainOffset(first,2),before);
    write({camera1:{mask:25},camera2:{mask:25}});
    await expect(card(first,2).locator('.target[data-state=fallen]')).toHaveCount(4);
    await screenshot('workflow-camera-mixed');
