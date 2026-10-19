@@ -3,14 +3,25 @@
 ![Development](https://img.shields.io/badge/Status-Active_Development-orange)
 ![Production](https://img.shields.io/badge/Production-Not_Ready-red)
 
+
+
 > [!WARNING]
 > **Under active development – Not production-ready**
->
 > Biathlon Target Vision is undergoing rapid development and has not yet been validated under real competition conditions.
->
 > **Do not use it for official competitions or safety-critical decisions.** Features, interfaces, and data formats may change without notice.
 
-**Manuelle Schießstanderfassung am Tablet und automatische Kameraerfassung mit
+## Mitarbeit / Contributing / Spolupráce
+
+Biathlon Target Vision ist ein offenes Projekt. Entwickler, Zeitnehmer, Kampfrichter und Biathlonvereine sind eingeladen, sich an der Weiterentwicklung zu beteiligen.
+
+**Beiträge und GitHub-Issues sind auf Deutsch, Englisch oder Tschechisch willkommen.**
+
+**[Contributing Guide – How to participate / Jak se zapojit](CONTRIBUTING.md)**
+
+
+## Was ist BTV? 
+
+**Manuelle Schießstanderfassung und automatische Kameraerfassung mit
 Vorrang für die Entscheidungen der Kampfrichter.**
 
 **[Produktkonzept und Weiterentwicklung](docs/PRODUKTKONZEPT.md):** Nutzen für
