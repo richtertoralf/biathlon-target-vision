@@ -71,7 +71,9 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
    mit je 4 Mbit/s benötigen rund 11 GB pro Stunde.
 7. **Messung vorbereiten:** CPU und RAM mit Betriebssystemmitteln protokollieren,
    etwa `pidstat -h -u -r -t -C 'python|mediamtx' 10` (Paket `sysstat`) in eine
-   Datei. Vorab die Grundlast von MediaMTX allein messen.
+   Datei. Vorab die Grundlast von MediaMTX allein messen und die synthetische
+   Zeitmessung `python -m tests.benchmark_vision` auf `mediamtx18` wiederholen,
+   mit und ohne `OPENCV_FOR_THREADS_NUM=1`.
 8. **Testprotokoll vorbereiten:** Je Durchgang Uhrzeit, Bahn, Kamera, tatsächliche
    Scheibenstellungen, BTV-Anzeige, manuelle Korrekturen und Bemerkungen zu Licht,
    Wetter und Verdeckung. Außerdem Softwarestand, Anlagentyp, Kameramodelle,
@@ -137,11 +139,14 @@ In dieser Reihenfolge, damit bei Zeitmangel die Kernfragen beantwortet sind:
   Die zulässige Nachführung ist auf 24 px und 20 % des Scheibenabstands begrenzt;
   kleine Scheiben reagieren deshalb empfindlicher auf Mastbewegung.
 - **Rechenzeit und Latenz:** BTV dekodiert jeden Stream vollständig in Software
-  und wertet alle Bahnen nacheinander aus, mit 100 ms Pause je Durchlauf.
-  Synthetisch dauerte ein 1080p-Bild etwa 13 ms je Bahn (Entwicklungsrechner,
-  nicht `mediamtx18`). Die Rechenzeit wächst mit der Zahl ellipsenähnlicher
-  Konturen in der ROI. Ein dauerhaft ausgelasteter Auswertungsthread
-  (`pidstat -t`) zeigt, dass die Bahnzahl die Reaktionszeit begrenzt.
+  und wertet alle Bahnen nacheinander aus, mit einer Pause von 100 ms je
+  vollständigem Durchlauf. Eine synthetische Messung auf einem Entwicklungsrechner
+  ergab von Bildwechsel bis WebSocket im Median 0,5 s bei 4 Bahnen und 1,6 s bei
+  20 Bahnen; die Stabilisierung dauert praktisch zwei Durchläufe. Kamera, Netz und
+  RTSP kommen hinzu. Ein ungenutzter OpenCV-Threadpool kostete ein bis zwei Kerne.
+  Details und Messskript stehen im
+  [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md) (PR #35). Die Rechenzeit wächst
+  zusätzlich mit der Zahl ellipsenähnlicher Konturen in der ROI.
 - **Kompatibilität der Streams:** Codec, Auflösung und Schlüsselbildabstand der
   realen Kameras über MediaMTX sind ungeprüft.
 
