@@ -39,3 +39,4 @@ jobs:
           node tests/vision_browser.cjs
           node tests/sessions_browser.cjs
           node tests/administration_browser.cjs
+          node tests/shell_browser.cjs

@@ -25,6 +25,7 @@ Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 | `sessions.py` | Getrennte Aufzeichnungssitzungen, atomarer aktiver Verweis und Archivzugriff |
 | `core.py` | Gemeinsamer Bahnzustand, Einlagen, Konfliktprüfung, Ereignisjournal und Wiederherstellung |
 | `simulator.py` | Zielbeobachtungen über denselben öffentlichen Eingang wie künftige Erfassungsadapter |
+| `static/theme.css`, `static/core.css`, `static/shell.js` | Gemeinsames Designsystem und Seitenrahmen aller Ansichten |
 | `static/tablet.*`, `static/translations.js` | Tablet-Bedienung und zentrale Übersetzungen |
 | `calibration.py`, `static/calibration.*` | Gemeinsame Standbild-/Kamerakalibrierung und Nachführung |
 | `config.py`, `cameras.py`, `static/admin.*` | Persistente Kamerakonfiguration, RTSP-Eingang, Administration |
@@ -221,6 +222,45 @@ Teilrückstellungen, Revisionen, Zielwerte und die frühere Bereinigung beim
 Einlagenbeginn. Regel `3` übernimmt ungebundene manuelle Eingaben beim Beginn.
 Das Journal wird weder migriert noch umgeschrieben. Nach Wiederherstellung gelten
 für neue Befehle die neuen Regeln. Details und Downgrade-Grenzen: [API.md](API.md).
+
+## Gemeinsamer Seitenrahmen und Designsystem
+
+Alle vier Ansichten binden `theme.css` (ausschließlich Designvariablen: Farben,
+Statusfarben, Rahmen, Rundungen, Schriftgrößen, Abstände, Bedienelementgrößen),
+`core.css` (Grundlagen, Kopf-/Fußzeile, Arbeitsbereich, Buttons, Formulare,
+Karten, Meldungen, Fokus, responsive Grundregeln) und danach ihre eigene CSS-Datei
+ein. Die Seitendateien enthalten nur noch funktionsspezifische Regeln. Kein
+Präprozessor, Buildsystem oder Framework.
+
+`shell.js` erzeugt Kopf- und Fußzeile einmalig für alle Seiten. Es enthält keine
+fachliche Logik und keine eigene WebSocket-Verbindung.
+
+- *Kopfzeile:* Produktname, Betriebsuhr und Verbindungsstatus, 48 px hoch und
+  fixiert. Tablet, Monitor und Administration melden den Zustand ihrer vorhandenen
+  Verbindung (WebSocket bzw. Abruf) über `BTVShell.connection()`. Nur die
+  Kalibrierung ohne eigene Verbindung nutzt den Zeitabgleich als
+  Erreichbarkeitsprüfung. Zustände: verbunden, verbinde, Störung gemeldet,
+  unterbrochen – stets mit Text und Farbe.
+- *Betriebsuhr:* Sie ist keine Zeitnahme. Alle 15 Sekunden sowie bei
+  Wiederverbindung liest sie `server_time` aus `/api/health` und setzt die halbe
+  Antwortzeit als Laufzeit an. Antworten über zwei Sekunden werden verworfen.
+  Dazwischen zählt sie mit der monotonen Browseruhr weiter; Systemzeit und
+  Zeitzone des Browsers wirken sich daher nicht aus. Die Anzeige erfolgt in
+  ganzen Sekunden in `Europe/Berlin` (MEZ/MESZ, auch für tschechische
+  Veranstaltungsorte). Die Genauigkeit ist etwa die halbe Antwortzeit zuzüglich
+  der Genauigkeit der Serveruhr (NTP). Bei unterbrochener Verbindung, einem
+  fehlgeschlagenen Abgleich oder einem Abgleich, der älter als 40 Sekunden ist,
+  läuft die Uhr weiter und wird mit „≈“ und Warnfarbe als nicht synchronisiert
+  gekennzeichnet. Der Markierungsplatz ist fest reserviert, damit die Kopfzeile
+  nicht springt.
+- *Fußzeile:* Version und kurzer Commit aus `/api/health` sowie Navigation zu
+  Bediener, Monitor, Administration und Kalibrierung mit markierter aktueller
+  Seite. Sie steht im normalen Seitenfluss und überdeckt nichts. Den Commit liefert
+  `build.py`: Der Installer kopiert per `git archive`, und `.gitattributes`
+  (`export-subst`) setzt dort den tatsächlichen Commit ein. In einem
+  Entwicklungs-Checkout kommt er aus `git rev-parse`.
+- Texte von Kopf- und Fußzeile stehen in `translations.js`. Sie folgen auf dem
+  Tablet der gewählten Sprache, sonst `lang="de"`.
 
 ## Tablet-Bedienung und Mehrbenutzerbetrieb
 

@@ -1,37 +1,40 @@
 <!doctype html>
-<!-- Standbildwerkzeug: ausschließlich Gesamt-ROI markieren und Scheibenbereiche prüfen. -->
+<!-- Still-image tool: mark only the overall ROI and check the detected target areas. -->
 <html lang="de" translate="no" class="notranslate">
 <head>
   <meta charset="utf-8">
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Biathlon Target Vision – Kalibrierung</title>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/core.css">
   <link rel="stylesheet" href="/static/calibration.css">
+  <script defer src="/static/translations.js"></script>
+  <script defer src="/static/shell.js"></script>
+  <script defer src="/static/calibration.js"></script>
 </head>
-<body>
+<body data-page="calibration">
 <main>
-  <header><span>BIATHLON TARGET VISION</span><a href="/admin">Kameras</a><a href="/docs">REST-API</a></header>
   <h1>Scheibenbereich kalibrieren</h1>
   <p>Ein Standbild laden und vier Ecken um den gesamten Scheibenbereich markieren:
     oben links → oben rechts → unten rechts → unten links. Die fünf Scheiben werden automatisch gesucht.</p>
   <div class="controls">
     <label>Schießbahn <select id="lane" aria-label="Schießbahn"></select></label>
     <label>Standbild <input id="file" type="file" accept="image/png,image/jpeg,image/webp"></label>
+    <button id="capture" disabled>Aktuelles Kamerabild übernehmen</button>
   </div>
-  <button id="capture" disabled>Aktuelles Kamerabild übernehmen</button>
   <div class="image-area"><canvas id="image" aria-label="Standbild: vier ROI-Ecken durch Antippen auswählen"></canvas>
     <p id="placeholder">Zum Beginnen ein Standbild auswählen.</p></div>
   <div class="controls">
     <button id="clear" disabled>ROI neu markieren</button>
-    <button id="detect" disabled>Fünf Scheiben erkennen und speichern</button>
+    <button id="detect" class="primary" disabled>Fünf Scheiben erkennen und speichern</button>
     <button id="align" disabled>Bildverschiebung prüfen</button>
   </div>
-  <p id="status" role="status" aria-live="polite">Noch kein Bild geladen.</p>
-  <p id="saved"></p>
-  <p class="note">Scheiben 1–5 zählen im Bild von links nach rechts. Grüne Umrisse kontrollieren.
+  <p id="status" class="message" role="status" aria-live="polite">Noch kein Bild geladen.</p>
+  <p id="saved" class="hint"></p>
+  <p class="hint">Scheiben 1–5 zählen im Bild von links nach rechts. Grüne Umrisse kontrollieren.
     Die Verschiebungsprüfung vergleicht das geladene Bild mit der gespeicherten Grundkalibrierung.
     Sie ersetzt diese nicht. Die Erkennung ist bislang nur mit synthetischen Bildern geprüft.</p>
 </main>
-<script src="/static/calibration.js"></script>
 </body>
 </html>

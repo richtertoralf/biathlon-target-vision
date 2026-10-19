@@ -11,7 +11,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
  try {
   for(let i=0;i<100;i++){try{if((await fetch(url+'/api/health')).ok)break;}catch{} await new Promise(r=>setTimeout(r,100));}
   browser=await chromium.launch({headless:true}); const page=await browser.newPage(); await page.goto(url+'/monitor');
-  await expect(page.locator('#connection')).toHaveText('Live'); await expect(page.locator('.lane')).toHaveCount(2);
+  await expect(page.locator('#connection')).toHaveAttribute('data-status','online'); await expect(page.locator('.lane')).toHaveCount(2);
   await expect(page.locator('button,input,select')).toHaveCount(0);
   await fetch(url+'/api/observations',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':(await(await fetch(url+'/api/state')).json()).session_id},body:JSON.stringify({kind:'target',lane_id:1,target_id:5,state:'fallen',source:'test',observed_at:'2026-10-17T12:00:00Z'})});
   await expect(page.locator('#lane-1 .target').nth(4)).toHaveAttribute('data-state','fallen');

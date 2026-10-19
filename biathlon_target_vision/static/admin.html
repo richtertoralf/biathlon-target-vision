@@ -6,14 +6,14 @@
   <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>BTV – Administration</title>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/core.css">
   <link rel="stylesheet" href="/static/admin.css">
+  <script defer src="/static/translations.js"></script>
+  <script defer src="/static/shell.js"></script>
+  <script defer src="/static/admin.js"></script>
 </head>
-<body>
-<header class="topbar">
-  <span class="brand">BIATHLON TARGET VISION</span>
-  <nav class="links" aria-label="Weitere Ansichten"><a href="/">Tablet</a><a href="/monitor">Kontrollmonitor</a><a href="/calibration">Kalibrierung</a></nav>
-  <span id="server" data-status="connecting" role="status">Verbinde …</span>
-</header>
+<body data-page="admin">
 <main>
   <h1>Administration</h1>
   <nav class="tabs" aria-label="Bereiche">
@@ -25,11 +25,11 @@
   <section id="cameras" class="area" aria-labelledby="cameras-heading">
     <h2 id="cameras-heading">Kameras</h2>
     <div class="columns">
-      <div class="panel">
+      <div class="card">
         <ul id="camera-list" class="camera-list"></ul>
         <button id="new-camera" type="button">Neue Kamera anlegen</button>
       </div>
-      <form id="camera-form" class="panel" novalidate>
+      <form id="camera-form" class="card" novalidate>
         <h3 id="camera-form-title">Neue Kamera</h3>
         <label class="field">Name <input id="camera-name" required maxlength="128" autocomplete="off" placeholder="z. B. Kamera Bahnen 1–4"></label>
         <label class="field">Kennung <input id="camera-id" required pattern="[a-zA-Z0-9_\-]{1,64}" autocomplete="off" spellcheck="false"></label>
@@ -41,8 +41,8 @@
         <div class="actions"><button type="submit" class="primary">Speichern</button><button id="remove" type="button" class="danger" disabled>Entfernen</button></div>
         <p id="status" class="message" role="status"></p>
       </form>
-      <div id="camera-live" class="panel" hidden>
-        <p id="connection" class="badge"></p>
+      <div id="camera-live" class="card" hidden>
+        <p id="camera-connection" class="badge"></p>
         <img id="preview" alt="Aktuelles Kamerabild" hidden>
         <div id="calibrations" class="link-row"></div>
       </div>
@@ -53,20 +53,20 @@
     <h2 id="lanes-heading">Bahnen</h2>
     <p class="legend"><span data-capture="active">Automatik aktiv</span><span data-capture="uncertain">Erkennung läuft / unsicher</span><span data-capture="unavailable">Nur manuell</span><span data-capture="fault">Störung</span></p>
     <div id="lane-grid" class="lane-grid"></div>
-    <div id="lane-detail" class="panel" hidden></div>
+    <div id="lane-detail" class="card" hidden></div>
     <p id="lane-status" class="message" role="status"></p>
   </section>
 
   <section id="sessions" class="area" aria-labelledby="sessions-heading" hidden>
     <h2 id="sessions-heading">Aufzeichnungssitzung</h2>
     <div class="columns">
-      <div class="panel">
+      <div class="card">
         <h3>Aktuelle Sitzung</h3>
         <p id="current-session"></p>
         <p id="session-warning"></p>
         <form id="rename-session"><label class="field">Name der aktuellen Sitzung <input id="session-name" required maxlength="128"></label><button>Namen speichern</button></form>
       </div>
-      <form id="start-session" class="panel">
+      <form id="start-session" class="card">
         <h3>Sitzung abschließen und neu beginnen</h3>
         <label class="field">Name der neuen Sitzung <input id="new-session-name" required maxlength="128" autocomplete="off"></label>
         <p class="hint">Journal und Korrekturbelege bleiben im Archiv. Die neue Sitzung beginnt ohne Startnummern und Belegungen; die Bahnen müssen erneut vorbereitet werden. Kameras und Kalibrierungen bleiben erhalten.</p>
@@ -75,9 +75,8 @@
       </form>
     </div>
     <p id="session-status" class="message" role="status"></p>
-    <details class="panel"><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
+    <details class="card"><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
   </section>
 </main>
-<script src="/static/admin.js"></script>
 </body>
 </html>

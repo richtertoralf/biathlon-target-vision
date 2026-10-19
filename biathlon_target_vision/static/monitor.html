@@ -1,7 +1,22 @@
 <!doctype html>
-<!-- Schreibgeschützter Schießstandmonitor; ausschließlich bestätigte Daten. -->
-<html lang="de" translate="no" class="notranslate"><meta charset="utf-8">
-  <meta name="google" content="notranslate"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BTV – Kontrollmonitor</title><link rel="stylesheet" href="/static/monitor.css">
-<header><div><h1>Schießstand</h1><p id="session-name"></p></div><p id="connection" role="status">Verbinden …</p></header>
-<main id="lanes"></main><script src="/static/monitor.js"></script></html>
+<!-- Read-only range monitor; confirmed data only. -->
+<html lang="de" translate="no" class="notranslate">
+<head>
+  <meta charset="utf-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BTV – Kontrollmonitor</title>
+  <link rel="stylesheet" href="/static/theme.css">
+  <link rel="stylesheet" href="/static/core.css">
+  <link rel="stylesheet" href="/static/monitor.css">
+  <script defer src="/static/translations.js"></script>
+  <script defer src="/static/shell.js"></script>
+  <script defer src="/static/monitor.js"></script>
+</head>
+<body data-page="monitor">
+  <main>
+    <div class="monitor-heading"><h1>Schießstand</h1><p id="session-name"></p></div>
+    <div id="lanes"></div>
+  </main>
+</body>
+</html>

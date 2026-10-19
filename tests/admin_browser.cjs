@@ -9,7 +9,7 @@ const {spawn}=require('node:child_process');const readline=require('node:readlin
   for(let i=0;i<100;i++){try{if((await fetch(url+'/api/health')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
   browser=await chromium.launch({headless:true});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url+'/admin');await page.locator('#camera-name').fill('Testkamera');await page.locator('#camera-id').fill('test');await page.locator('#camera-url').fill(rtsp);for(const lane of [1,2])await page.locator(`#camera-lanes [data-lane="${lane}"]`).click();await page.locator('#camera-form button[type=submit]').click();
-  await expect(page.locator('#status')).toHaveText('Kamera gespeichert.');await expect(page.locator('#connection')).toHaveText('Kamera verbunden',{timeout:20000});await expect(page.locator('#preview')).toBeVisible();
+  await expect(page.locator('#status')).toHaveText('Kamera gespeichert.');await expect(page.locator('#camera-connection')).toHaveText('Kamera verbunden',{timeout:20000});await expect(page.locator('#preview')).toBeVisible();
   await expect(page.locator('#camera-url')).toHaveValue('');
   await page.locator('#calibrations a').first().click();await expect(page.locator('#capture')).toBeEnabled();await page.locator('#capture').click();await expect(page.locator('#image')).toBeVisible();
   const canvas=page.locator('#image');const box=await canvas.boundingBox();

@@ -34,7 +34,7 @@ async function checkErgonomics(page,name){
    try{
     for(const [device,viewport] of [['desktop',{width:1366,height:900}],['tablet',{width:768,height:1024}],['phone',{width:390,height:844}]]){
      const context=await browser.newContext({viewport,hasTouch:device!=='desktop'});const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
-     await page.goto(server.url+'/admin#lanes');await expect(page.locator('#server')).toHaveAttribute('data-status','online');
+     await page.goto(server.url+'/admin#lanes');await expect(page.locator('#connection')).toHaveAttribute('data-status','online');
      await expect(page.locator('.lane-tile')).toHaveCount(lanes);
      await checkErgonomics(page,`${lanes}-lanes-${device}`);
      if(lanes===20&&device==='desktop'){
@@ -65,7 +65,7 @@ async function checkErgonomics(page,name){
    await expect(page.locator('#camera-url')).toHaveValue('');
    assert.doesNotMatch(await page.content(),/geheim/,'Zugangsdaten erscheinen nicht in der Seite');
    await expect(page.locator('#calibrations a')).toHaveCount(4);
-   await expect(page.locator('#connection')).toHaveAttribute('data-connected','false');
+   await expect(page.locator('#camera-connection')).toHaveAttribute('data-connected','false');
    // Second camera: lanes of the first camera cannot be assigned twice.
    await page.locator('#new-camera').click();await page.locator('#camera-name').fill('Kamera Bahnen 5–8');
    await expect(page.locator('#camera-lanes [data-lane="1"]')).toBeDisabled();
@@ -118,8 +118,8 @@ async function checkErgonomics(page,name){
    await page.reload();await expect(page.locator('#sessions')).toBeVisible();
    assert.equal((await json(server.url+'/api/cameras')).cameras.length,1);
    // A lost server connection is shown clearly.
-   await context.setOffline(true);await expect(page.locator('#server')).toHaveAttribute('data-status','offline');
-   await context.setOffline(false);await expect(page.locator('#server')).toHaveAttribute('data-status','online');
+   await context.setOffline(true);await expect(page.locator('#connection')).toHaveAttribute('data-status','offline');
+   await context.setOffline(false);await expect(page.locator('#connection')).toHaveAttribute('data-status','online');
    await context.close();
   }finally{await stopServer(server);}
   assert.deepEqual(errors,[]);
