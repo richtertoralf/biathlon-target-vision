@@ -24,7 +24,6 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 - Nicht offensichtliche Abläufe, Entscheidungen und technische Besonderheiten direkt im Code kommentieren.
 - Kommentare erklären vor allem **warum**, nicht bloß, was der Code ohnehin zeigt.
 - Keine überflüssigen Kommentare, generierten Dokumentationsmengen oder doppelten Erklärungen.
-- Dokumentation auf Deutsch, technische Bezeichner im Code auf Englisch. Die Sprachen der Benutzeroberflächen legt die Architektur fest.
 
 ## Sprache und internationale Zusammenarbeit
 
