@@ -2,6 +2,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import json
 import logging
 from itertools import count
@@ -18,6 +19,7 @@ import numpy as np
 from starlette.concurrency import run_in_threadpool
 
 from . import API_VERSION, __version__
+from .build import commit as build_commit
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .config import CameraSettings, Settings, display_url, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
@@ -57,6 +59,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             app.state.sessions.close()
 
     app = FastAPI(title="Biathlon Target Vision", version=__version__, lifespan=lifespan)
+    commit = build_commit()
     static = Path(__file__).with_name("static")
     app.mount("/static", StaticFiles(directory=static), name="static")
 
@@ -257,7 +260,10 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     @app.get("/api/health")
     async def health():
         status = health_status()
-        return JSONResponse({"status": status, "version": __version__, **api_identity()},
+        # Server time lets every page run the same operating clock; the commit
+        # identifies the installed program state in the footer.
+        return JSONResponse({"status": status, "version": __version__, "commit": commit,
+                             "server_time": datetime.now(timezone.utc).isoformat(timespec="milliseconds"), **api_identity()},
                             status_code=200 if status == "ok" else 503)
 
     @app.get("/monitor", include_in_schema=False)

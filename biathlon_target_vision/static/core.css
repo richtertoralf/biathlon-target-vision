@@ -1,0 +1,62 @@
+/* Shared base, page frame (header, work area, footer) and controls for all BTV pages. */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { color-scheme: light; font: var(--font-size)/1.5 var(--font); color: var(--text); background: var(--background); font-synthesis: none; }
+body { margin: 0; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+main { flex: 1; width: 100%; max-width: var(--content-width); margin: 0 auto; padding: var(--space); }
+h1 { font-size: clamp(24px, 4vw, 28px); line-height: 1.2; margin: 4px 0 12px; }
+h2 { font-size: 22px; margin: 16px 0 12px; }
+h3 { font-size: 19px; margin: 0 0 12px; }
+a { color: var(--link); }
+code { overflow-wrap: anywhere; font-size: 15px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Controls: 48 px touch targets, visible focus. */
+button, select, input { font: inherit; color: inherit; }
+button, select { min-height: var(--control-height); padding: 10px 16px; border: 2px solid var(--control-border); border-radius: var(--radius); background: var(--surface); font-weight: 650; cursor: pointer; touch-action: manipulation; }
+button:hover:not(:disabled) { background: var(--surface-hover); }
+button:disabled, select:disabled, input:disabled { opacity: .48; cursor: not-allowed; }
+button.primary { background: var(--primary); border-color: var(--primary); color: white; }
+button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+button.danger { border-color: var(--error); color: var(--error-text); }
+input:not([type]), input[type=text], input[type=file] { width: 100%; min-height: var(--control-height); padding: 8px 12px; border: 2px solid var(--control-border); border-radius: var(--radius); background: var(--surface); }
+input[type=checkbox] { width: 24px; height: 24px; accent-color: var(--primary); }
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+summary { cursor: pointer; }
+
+/* Cards and messages. */
+.card { min-width: 0; padding: var(--space); background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-card); }
+.hint { font-size: 15px; color: var(--text-muted); }
+.message:empty { display: none; }
+.message { padding: 12px; border-left: 5px solid var(--primary); background: var(--primary-soft); }
+.message[data-error] { border-color: var(--error); background: var(--error-soft); color: var(--error-text); }
+
+/* Header: product, server clock and connection state on every page. */
+.shell-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: var(--header-height); padding: 0 var(--space); background: var(--header); color: var(--header-text); }
+.shell-brand { overflow: hidden; color: var(--brand); font-size: var(--font-small); font-weight: 700; letter-spacing: .08em; white-space: nowrap; }
+.shell-brand-short { display: none; }
+.shell-state { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.shell-clock { font-size: 20px; font-weight: 750; font-variant-numeric: tabular-nums; }
+/* Fixed-width marker: an unsynchronised clock is marked without shifting the layout. */
+.shell-clock::before { content: ""; display: inline-block; width: 1.1em; }
+.shell-clock[data-synced="false"] { color: var(--warning); }
+.shell-clock[data-synced="false"]::before { content: "≈"; }
+#connection { padding: 4px 10px; border-radius: 6px; font-size: var(--font-small); font-weight: 750; background: var(--warning-soft); color: var(--warning-text); }
+#connection[data-status="online"] { background: var(--ok-soft); color: var(--ok-text); }
+#connection[data-status="offline"] { background: var(--error-soft); color: var(--error-text); }
+
+/* Footer: installed version and the four pages. */
+.shell-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 16px; padding: 0 var(--space); border-top: 1px solid var(--border); background: var(--surface); color: var(--text-muted); font-size: var(--font-small); }
+.shell-footer nav { display: flex; flex-wrap: wrap; }
+.shell-footer a { display: inline-flex; align-items: center; min-height: var(--touch-min); padding: 0 10px; }
+.shell-footer a[aria-current="page"] { color: var(--text); font-weight: 750; text-decoration: none; box-shadow: inset 0 -3px var(--primary); }
+
+@media (max-width: 600px) {
+  main { padding: 12px; }
+  .shell-header { padding: 0 12px; gap: 8px; }
+  .shell-brand-long { display: none; }
+  .shell-brand-short { display: inline; }
+  .shell-clock { font-size: 18px; }
+  .shell-footer { padding: 0 12px; }
+  .shell-footer a { padding: 0 6px; }
+}

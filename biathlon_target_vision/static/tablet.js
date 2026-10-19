@@ -79,8 +79,7 @@
     $('language').setAttribute('aria-label', t('language'));
     $('lanes').setAttribute('aria-label', t('overview'));
     document.querySelector('.legend').setAttribute('aria-label', [t('standing'), t('fallen'), t('unknown')].join(', '));
-    $('connection').textContent = t(connected ? 'connected' : 'disconnected');
-    $('connection').dataset.status = connected ? 'online' : 'offline';
+    BTVShell.connection(connected ? 'online' : 'offline', t(connected ? 'connected' : 'disconnected'));
     $('editor-label').textContent = editorId === null ? '' : t('ownTablet', {n: editorId});
     $('offline-banner').hidden = connected;
     $('simulation-banner').hidden = !state?.simulation;

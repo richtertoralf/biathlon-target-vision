@@ -1220,3 +1220,69 @@ dort nur die alte Statusfunktion. Bestehende Installationen wechseln mit
 `sudo biathlon-target-vision --upgrade`. Der Upgrade-Weg von `v0.8.1` wurde wie bei
 `v0.8.1` simuliert, nur die systemd-Aufrufe waren ersetzt. Eine Aktualisierung auf
 dem Zielserver selbst steht aus.
+
+## 2026-10-19 – Einheitliches Designsystem und gemeinsamer Seitenrahmen
+
+**Ausgangslage:** Die vier Oberflächen stammten aus verschiedenen
+Entwicklungsständen.
+
+- Tablet und Administration hatten jeweils eigene, weitgehend doppelte
+  Grundregeln für Buttons, Fokus, Kopfzeile, `[hidden]` und Farben.
+- Der Monitor nutzte ein eigenes Mini-Stylesheet mit 18 px Grundschrift, die
+  Kalibrierung ein dunkles Theme.
+- Es gab vier unterschiedliche Kopfzeilen und drei Navigationsvarianten. Die
+  Kalibrierung hatte keinen Verbindungsstatus.
+- `#connection` bezeichnete auf Tablet und Monitor die Serververbindung, in der
+  Administration dagegen eine Kameraverbindung.
+
+**Umsetzung:**
+
+- `theme.css` enthält die Designvariablen auf Basis der hellen Administration,
+  `core.css` die gemeinsamen Regeln. Die Seiten-CSS enthält nur noch
+  Funktionsspezifisches, etwa Bahnkacheln, Dialoge, Scheiben, Raster und
+  Bildfläche.
+- Entfernt wurden die doppelten Grundregeln aus `tablet.css` und `admin.css`, die
+  bisherigen Kopfzeilen und Navigationslinks aller Seiten, das dekorative
+  Scheibenlogo des Tablets, die Tablet-Fußzeile mit Kalibrierungslink, die
+  Serveranzeige `#server` der Administration und das dunkle Theme der Kalibrierung.
+  Die Bildfläche der Kalibrierung bleibt dunkel.
+- `shell.js` erzeugt Kopf- und Fußzeile. Die Seiten melden ihren vorhandenen
+  Verbindungszustand; es entsteht keine weitere WebSocket-Verbindung. Das
+  Kamera-Abzeichen der Administration heißt jetzt `#camera-connection`.
+- Die Bedienelemente der bisherigen Tablet-Kopfzeile (Sprache, Bahnauswahl,
+  Tablet-Nummer) stehen in einer Werkzeugzeile über den Bahnen. Abläufe, Dialoge
+  und Zustandslogik sind unverändert.
+- Server: additive Felder `commit` und `server_time` in `/api/health`, dazu
+  `build.py` und `.gitattributes`. Ereigniskern, Erkennung, Journal und Sitzungen
+  sind unverändert.
+
+**Entscheidungen:**
+
+- Die Uhr synchronisiert alle 15 Sekunden statt sekündlich und zählt dazwischen
+  monoton. Unsicherheit wird gekennzeichnet statt verschwiegen.
+- Die Anzeigezeitzone ist fest `Europe/Berlin`, unabhängig von der Zeitzone des
+  Servers, die auf Linux-Servern oft UTC ist.
+- Die Fußzeile steht im Seitenfluss statt fixiert, damit sie keine Touch-Ziele
+  überdeckt.
+- Version und Commit stammen aus dem installierten Programmstand: per
+  `export-subst` beim `git archive` des Installers, nicht aus HTML.
+
+**Tests:** Die neue CI-Browserprüfung `shell_browser.cjs` prüft alle vier
+Ansichten bei 1920×1080, 1366×768, 1024×768, 768×1024 und 390×844.
+
+- Rahmen: Kopfzeile 44–48 px ohne Überdeckung des Arbeitsbereichs, Fußzeile ohne
+  Überdeckung, Version und Commit, vier Navigationsziele mit markierter Seite.
+- Ergonomie: Grundschrift ab 16 px, Bedienelemente ab 44 px, kein horizontales
+  Scrollen.
+- Uhr: Serverzeit bei um 5:17:23 h verstellter Browseruhr und Browser-Zeitzone
+  New York, laufende Sekunden, konstante Breite.
+- Unterbrechung und Wiederverbindung auf der Administration (eigene
+  Verbindungslogik) und der Kalibrierung (Zeitabgleich): Die Uhr läuft weiter, ist
+  als nicht synchronisiert markiert und wird nach Wiederverbindung neu abgeglichen.
+- Sprachwechsel auf dem Tablet für Status und Fußzeile, Breite der
+  Kalibrierungsbildfläche.
+
+`test_build.py` prüft Version, Commit und Serverzeit in `/api/health` sowie den
+Commit im Installationsarchiv. Alle bisherigen Browserprüfungen bestehen nach
+Anpassung der Selektoren für Monitorstatus, Serverstatus und das umbenannte
+Kamera-Abzeichen. Bildschirmfotos aller Ansichten wurden visuell kontrolliert.

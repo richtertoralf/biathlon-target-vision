@@ -1,0 +1,48 @@
+/* Central design tokens for all BTV pages: light, high-contrast colours and touch sizes. */
+:root {
+  --font: system-ui, sans-serif;
+  --font-size: 16px;
+  --font-small: 14px;
+
+  --text: #172b3b;
+  --text-muted: #466376;
+  --background: #edf1f3;
+  --surface: #ffffff;
+  --surface-hover: #e5eef3;
+  --header: #173143;
+  --header-text: #ffffff;
+  --brand: #95e3c8;
+  --image-background: #0c1821;
+
+  --primary: #17624f;
+  --primary-hover: #11503f;
+  --primary-soft: #e3f2ec;
+  --link: #165c86;
+  --focus: #df9d00;
+
+  --ok: #2b9a6a;
+  --ok-soft: #c4f2df;
+  --ok-text: #144734;
+  --warning: #df9d00;
+  --warning-soft: #ffe1af;
+  --warning-text: #542f00;
+  --error: #a5392b;
+  --error-soft: #ffd2cb;
+  --error-text: #7a1d10;
+  --neutral: #9aa9b3;
+  --neutral-soft: #e0e6ea;
+
+  --border: #bac8d0;
+  --control-border: #8396a2;
+  --radius: 8px;
+  --radius-card: 10px;
+
+  --space-xs: 4px;
+  --space-s: 8px;
+  --space: 16px;
+
+  --control-height: 48px;
+  --touch-min: 44px;
+  --header-height: 48px;
+  --content-width: 1400px;
+}

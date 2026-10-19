@@ -571,7 +571,7 @@ Endpunkte bleiben erhalten; für externe Live-Anzeigen ist kein Schreibzugriff n
 | `GET /api/state` | Vollständige Momentaufnahme, ohne Eingabeentwürfe |
 | `WS /ws` | Vollständiger Anfangszustand, danach Aktualisierungen und spätestens alle fünf Sekunden ein Zustand |
 | `GET /api/events?after=N&limit=1000` | Optionales Journal, zum Nachvollziehen akzeptierter Beobachtungen/Befehle |
-| `GET /api/health` | HTTP 200 bei betriebsfähigem Kern/Auswertung, sonst 503; `status`, Anwendungsversion und API-Identität |
+| `GET /api/health` | HTTP 200 bei betriebsfähigem Kern/Auswertung, sonst 503; `status`, Anwendungsversion `version`, kurzer Git-Commit `commit` (oder `null`), Serverzeit `server_time` (UTC, ISO 8601 mit Millisekunden) und API-Identität |
 
 REST-Zustand, WebSocket-Zustände und Journalantworten enthalten `api_version`,
 `instance_id` und `session_id`. Die Instanzkennung wechselt bei jedem Serverstart, auch wenn das

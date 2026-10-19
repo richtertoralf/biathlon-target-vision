@@ -76,8 +76,8 @@
     el('camera-live').hidden = !camera;
     if (!camera) return;
     const connected = state?.capture.cameras.find(item => item.id === camera.id)?.connected ?? camera.connected;
-    el('connection').textContent = connected ? 'Kamera verbunden' : 'Kein aktuelles Kamerabild – Verbindung wird erneut versucht';
-    el('connection').dataset.connected = String(connected);
+    el('camera-connection').textContent = connected ? 'Kamera verbunden' : 'Kein aktuelles Kamerabild – Verbindung wird erneut versucht';
+    el('camera-connection').dataset.connected = String(connected);
     const links = camera.lane_ids.map(lane => h('a', {href: `/calibration?lane=${lane}`, text: `Bahn ${lane} kalibrieren`}));
     const key = camera.lane_ids.join(',');
     if (el('calibrations').dataset.key !== key) { el('calibrations').replaceChildren(...links); el('calibrations').dataset.key = key; }
@@ -308,16 +308,13 @@
     finally { sessionBusy = false; el('start-session-button').disabled = false; await refresh(); await loadArchives().catch(() => {}); }
   };
 
-  // ---- Polling: one state request keeps all areas and the server badge current ----
+  // ---- Polling: one state request keeps all areas and the shared connection state current ----
   async function refresh() {
     try {
       state = await request('/api/state');
-      el('server').dataset.status = 'online';
-      el('server').textContent = state.health === 'error' ? 'Verbunden – Störung gemeldet' : 'Server verbunden';
-      if (state.health === 'error') el('server').dataset.status = 'offline';
+      BTVShell.connection(state.health === 'error' ? 'fault' : 'online');
     } catch {
-      el('server').dataset.status = 'offline';
-      el('server').textContent = 'Server nicht erreichbar';
+      BTVShell.connection('offline');
       return;
     }
     // A camera change by another administrator also updates this page.

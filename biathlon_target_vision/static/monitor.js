@@ -1,6 +1,6 @@
-// Vollständige Zustände lesen, niemals Befehle oder Eingabeentwürfe senden.
+// Read complete states only; never send commands or input drafts.
 (() => {
-  const lanes = document.getElementById('lanes'), connection = document.getElementById('connection');
+  const lanes = document.getElementById('lanes');
   let socket, timer, retry, lastMessage = 0;
   function render(state) {
     document.getElementById('session-name').textContent = state.session?.name || '';
@@ -29,19 +29,19 @@
   }
   function connect() {
     clearTimeout(retry); clearInterval(timer);
+    // Only the first attempt is "connecting"; retries keep the interrupted state visible.
+    if (!socket) BTVShell.connection('connecting');
     if (socket) { socket.onclose = null; socket.close(); }
-    connection.textContent = 'Verbinden …'; connection.className = 'offline';
     const current = socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws`);
     lastMessage = Date.now();
     current.onmessage = event => {
       if (socket !== current) return;
       const state = JSON.parse(event.data); if (state.type !== 'state') return;
       lastMessage = Date.now(); render(state);
-      connection.textContent = state.health === 'error' ? 'Erfassung gestört' : 'Live';
-      connection.className = state.health === 'error' ? 'offline' : '';
+      BTVShell.connection(state.health === 'error' ? 'fault' : 'online');
     };
     current.onclose = () => {
-      clearInterval(timer); connection.textContent = 'Verbindung unterbrochen – letzter Stand'; connection.className = 'offline';
+      clearInterval(timer); BTVShell.connection('offline', '○ Unterbrochen – letzter Stand');
       retry = setTimeout(connect, 1000);
     };
     timer = setInterval(() => { if (Date.now() - lastMessage > 12000) current.close(); }, 1000);
