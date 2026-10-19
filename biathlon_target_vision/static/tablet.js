@@ -35,23 +35,23 @@
     $('notice').hidden = false;
     $('notice').textContent = t(key);
     $('notice').classList.toggle('error', error);
-    if (key === 'saved') {
+    if (key === 'saved' || key === 'sessionChanged') {
       const savedNotice = notice;
       setTimeout(() => {
         if (notice === savedNotice) { notice = null; $('notice').hidden = true; }
-      }, 2000);
+      }, key === 'sessionChanged' ? 5000 : 2000);
     }
   }
 
   function clearDraft() {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({type: 'draft_clear'}));
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({type: 'draft_clear', session_id: state?.session_id}));
   }
 
   function sendDraft() {
     if (!connected || busy || edit?.action !== 'bib' || socket?.readyState !== WebSocket.OPEN) return;
     const input = $('bib-input');
     if (!input || !/^\d{0,15}$/.test(input.value)) { clearDraft(); return; }
-    socket.send(JSON.stringify({type: 'draft', lane_id: edit.laneId, bout_id: edit.boutId, value: input.value}));
+    socket.send(JSON.stringify({type: 'draft', session_id: state.session_id, lane_id: edit.laneId, bout_id: edit.boutId, value: input.value}));
   }
 
   function draftsHTML(laneId) {
@@ -219,13 +219,20 @@
     updateBibControls();
   }
 
-  function acceptState(value, freshConnection = false) {
+  function acceptState(value, freshConnection = false, authoritative = false) {
     if (value.type && value.type !== 'state') return;
+    const sessionChanged = state && value.session_id !== state.session_id;
+    if (sessionChanged && !authoritative) return;
+    if (sessionChanged) {
+      dialog.close(); edit = null; drafts = [];
+      notify('sessionChanged');
+    }
     // Eine verspätete HTTP-Antwort darf einen neueren WebSocket-Stand nie ersetzen.
-    if (!freshConnection && state && value.sequence < state.sequence) return;
-    const changed = !state || value.sequence !== state.sequence || value.simulation !== state.simulation || !connected
+    if (!freshConnection && !sessionChanged && state && value.sequence < state.sequence) return;
+    const changed = !state || sessionChanged || value.session?.name !== state.session?.name || value.sequence !== state.sequence || value.simulation !== state.simulation || !connected
       || JSON.stringify(value.capture) !== JSON.stringify(state?.capture);
     state = value;
+    $('session-name').textContent = value.session?.name || '';
     if (value.editor_id !== undefined) editorId = value.editor_id;
     if (value.drafts !== undefined) drafts = value.drafts;
     if (freshConnection) connected = true;
@@ -262,7 +269,7 @@
         if (value.type !== 'state') return;
         lastMessage = performance.now();
         retryDelay = 500;
-        acceptState(value, first);
+        acceptState(value, first, true);
         first = false;
       } catch { ws.close(); }
     };
@@ -413,14 +420,16 @@
 
   async function submit(url, method, fields, headers = {}, context = edit) {
     if (!connected || busy || !context || context.stale) return;
+    const sessionId = state.session_id;
     clearDraft();
     busy = true; render();
     $('close-dialog').disabled = true;
     $('dialog-body').querySelectorAll('button, input').forEach(node => { node.disabled = true; });
     try {
-      const response = await fetch(url, {method, headers: {'Content-Type': 'application/json', ...headers},
+      const response = await fetch(url, {method, headers: {'Content-Type': 'application/json', 'X-Session-ID': sessionId, ...headers},
         body: JSON.stringify({event_id: eventId(), lane_id: context.laneId, ...fields}), signal: AbortSignal.timeout(8000)});
       const result = await response.json();
+      if (state.session_id !== sessionId) return;
       if (!response.ok) {
         const messages = {
           'Startnummer belegt bereits eine andere Bahn.': 'duplicateBib',
@@ -436,15 +445,15 @@
         // Nach einer Ablehnung ausschließlich den Zustand erneuern, nie den Befehl.
         const fresh = await fetch('/api/state', {cache: 'no-store', signal: AbortSignal.timeout(5000)});
         if (!fresh.ok) throw new Error('state unavailable');
-        acceptState(await fresh.json());
+        const value = await fresh.json();
+        if (state.session_id === sessionId) acceptState(value, false, true);
       } else {
         acceptState(result.state);
         if (context === edit) dialog.close();
         notify('saved');
       }
     } catch {
-      notify('uncertain', true);
-      connect();
+      if (state.session_id === sessionId) { notify('uncertain', true); connect(); }
     } finally {
       busy = false;
       $('close-dialog').disabled = false;

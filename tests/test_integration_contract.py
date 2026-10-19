@@ -21,6 +21,7 @@ class IntegrationContractTests(unittest.TestCase):
     def setUp(self):
         self.temporary=tempfile.TemporaryDirectory(); self.path=Path(self.temporary.name)
         self.client=TestClient(create_app(self.path,2));self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
     def tearDown(self):
         self.client.__exit__(None,None,None);self.temporary.cleanup()
     def observe(self, target, state, number, baseline=False):
@@ -92,6 +93,7 @@ class IntegrationContractTests(unittest.TestCase):
         self.client.__exit__(None,None,None)
         with patch('biathlon_target_vision.app.CameraManager',FakeCameras):
             self.client=TestClient(create_app(self.path));self.client.__enter__()
+            self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
             response=self.client.post('/api/cameras',json={'id':'test','name':'Test','url':'rtsp://user:PRIVATE_PASSWORD@localhost/test','lane_ids':[1,2]})
             self.assertEqual(response.status_code,200)
             with self.client.websocket_connect('/ws') as socket:

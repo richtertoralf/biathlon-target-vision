@@ -166,6 +166,7 @@ class UnifiedTests(unittest.TestCase):
         save_settings(directory,Settings(cameras=[CameraSettings(id='test',name='Test',url='rtsp://localhost/test',lane_ids=[1])]))
         with patch('biathlon_target_vision.app.CameraManager',FakeCameras), patch('biathlon_target_vision.vision.VisionService.run',idle):
             with TestClient(create_app(directory,1)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 async def stop():
                     client.app.state.vision_task.cancel()
                     await asyncio.gather(client.app.state.vision_task,return_exceptions=True)

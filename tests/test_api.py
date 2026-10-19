@@ -19,6 +19,7 @@ class ApiTests(unittest.TestCase):
         self.directory = Path(self.temp.name)
         self.client = TestClient(create_app(self.directory, 2))
         self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
 
     def tearDown(self):
         self.client.__exit__(None, None, None)
@@ -96,6 +97,7 @@ class ApiTests(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.client = TestClient(create_app(self.directory))
         self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
         restored = self.client.get("/api/state").json()
         self.assertNotEqual(restored.pop("instance_id"), before.pop("instance_id"))
         self.assertEqual(restored, before)
@@ -121,6 +123,7 @@ class ApiTests(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.client = TestClient(create_app(self.directory))
         self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
         self.assertEqual(self.client.get("/api/lanes/1/calibration").json(), saved)
 
     def test_invalid_images_and_roi(self):
@@ -150,6 +153,7 @@ class ApiTests(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.client = TestClient(create_app(self.directory, simulation=True))
         self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
         self.assertTrue(self.client.get("/api/state").json()["simulation"])
         command = self.observation(source="simulator")
         headers = {"X-Lane-Revision": "0"}
@@ -174,11 +178,11 @@ class ApiTests(unittest.TestCase):
         with self.client.websocket_connect("/ws") as first, self.client.websocket_connect("/ws") as second:
             first_id = first.receive_json()["editor_id"]
             second_id = second.receive_json()["editor_id"]
-            first.send_json({"type": "draft", "lane_id": 1, "value": "12"})
+            first.send_json({"session_id": self.client.headers["X-Session-ID"], "type": "draft", "lane_id": 1, "value": "12"})
             for connection in (first, second):
                 message = connection.receive_json()
                 self.assertEqual(message["drafts"], [{"editor_id": first_id, "lane_id": 1, "bout_id": None, "value": "12"}])
-            second.send_json({"type": "draft", "lane_id": 1, "value": "34", "editor_id": first_id})
+            second.send_json({"session_id": self.client.headers["X-Session-ID"], "type": "draft", "lane_id": 1, "value": "34", "editor_id": first_id})
             for connection in (first, second):
                 by_editor = {draft["editor_id"]: draft["value"] for draft in connection.receive_json()["drafts"]}
                 self.assertEqual(by_editor, {first_id: "12", second_id: "34"})
@@ -189,7 +193,7 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             for connection in (first, second):
                 self.assertEqual(connection.receive_json()["sequence"], 1)
-            first.send_json({"type": "draft_clear"})
+            first.send_json({"session_id": self.client.headers["X-Session-ID"], "type": "draft_clear"})
             for connection in (first, second):
                 remaining = connection.receive_json()["drafts"]
                 self.assertEqual([draft["editor_id"] for draft in remaining], [second_id])
@@ -202,7 +206,7 @@ class ApiTests(unittest.TestCase):
     def test_abandoned_draft_expires_without_journal_event(self):
         with self.client.websocket_connect("/ws") as socket:
             socket.receive_json()
-            socket.send_json({"type": "draft", "lane_id": 1, "value": "77"})
+            socket.send_json({"session_id": self.client.headers["X-Session-ID"], "type": "draft", "lane_id": 1, "value": "77"})
             self.assertEqual(len(socket.receive_json()["drafts"]), 1)
             with patch("biathlon_target_vision.app.monotonic", return_value=10**20):
                 self.assertEqual(socket.receive_json()["drafts"], [])
@@ -211,6 +215,6 @@ class ApiTests(unittest.TestCase):
     def test_invalid_draft_is_rejected_without_event(self):
         with self.client.websocket_connect("/ws") as socket:
             socket.receive_json()
-            socket.send_json({"type": "draft", "lane_id": 1, "value": "not-a-number"})
+            socket.send_json({"session_id": self.client.headers["X-Session-ID"], "type": "draft", "lane_id": 1, "value": "not-a-number"})
             self.assertEqual(socket.receive()["code"], 1008)
         self.assertEqual(self.client.get("/api/state").json()["sequence"], 0)

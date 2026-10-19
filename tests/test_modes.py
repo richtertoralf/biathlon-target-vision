@@ -221,6 +221,7 @@ class ModeApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             app=create_app(Path(temporary),2)
             with TestClient(app) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 with client.websocket_connect('/ws') as first, client.websocket_connect('/ws') as second:
                     self.assertFalse(first.receive_json()['simulation']);second.receive_json()
                     result=client.put('/api/lanes/1/mode',json={'lane_id':1,'mode':'manual','expected_control_revision':0})
@@ -239,6 +240,7 @@ class ModeApiTests(unittest.TestCase):
                     self.assertEqual(client.post('/api/lanes/1/manual-target',json=body).status_code,409)
                     self.assertEqual(client.get('/api/health').status_code,200)
             with TestClient(create_app(Path(temporary))) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 self.assertEqual(client.get('/api/state').json()['lanes']['1'],expected)
                 self.assertEqual(client.get('/api/events').json()['events'][-1]['manual_input']['manual_state'],'fallen')
 
@@ -257,10 +259,11 @@ class ModeApiTests(unittest.TestCase):
             with patch('biathlon_target_vision.app.CameraManager') as manager:
                 manager.return_value.snapshot.return_value=capture
                 with TestClient(create_app(directory,1)) as client:
+                    client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                     state=client.get('/api/state').json()['lanes']['1']
                     result=client.post('/api/lanes/1/manual-target',json={'lane_id':1,'target_id':3,'state':'fallen','expected_control_revision':state['control_revision']})
                     self.assertEqual(result.status_code,200)
-                    event=result.json()['event'];stem=directory/'corrections'/str(event['sequence'])
+                    event=result.json()['event'];stem=directory/'sessions'/result.json()['state']['session_id']/'corrections'/str(event['sequence'])
                     self.assertTrue(stem.with_suffix('.jpg').is_file());self.assertTrue(stem.with_suffix('.json').is_file())
                     with patch('biathlon_target_vision.app.cv2.imencode',side_effect=ValueError('encoder failed')):
                         with self.assertLogs(level='ERROR'):

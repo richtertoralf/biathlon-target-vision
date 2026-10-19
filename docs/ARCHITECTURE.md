@@ -11,7 +11,7 @@ Ein zentraler Python-Prozess mit FastAPI und Uvicorn hält den gemeinsamen Zusta
 aller Schießbahnen. Die Anwendung läuft lokal unter Linux ohne Cloud und benötigt
 im Betrieb keinen Internetzugang. HTML, CSS und JavaScript werden ohne
 Frontend-Buildsystem ausgeliefert. Es gibt keine zusätzliche Datenbank, verteilten
-Dienste oder Sitzungsverwaltung. Die technische Orientierung an
+Dienste oder Wettkampfverwaltung. Die technische Orientierung an
 [LiveScore](https://github.com/richtertoralf/LiveScore) beschränkt sich auf benötigte
 Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 
@@ -22,6 +22,7 @@ Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 | `__main__.py` | Serverstart, Bahnanzahl, Datenordner und Simulationsmodus |
 | `app.py` | REST-API, WebSockets, statische Browserseiten und flüchtige Eingabeentwürfe |
 | `models.py` | Validierung der Beobachtungs-, Zuordnungs- und Freigabebefehle |
+| `sessions.py` | Getrennte Aufzeichnungssitzungen, atomarer aktiver Verweis und Archivzugriff |
 | `core.py` | Gemeinsamer Bahnzustand, Einlagen, Konfliktprüfung, Ereignisjournal und Wiederherstellung |
 | `simulator.py` | Zielbeobachtungen über denselben öffentlichen Eingang wie künftige Erfassungsadapter |
 | `static/tablet.*`, `static/translations.js` | Tablet-Bedienung und zentrale Übersetzungen |
@@ -59,16 +60,53 @@ behält ihren Einlagenbezug auch über Rückstellungen hinweg; sie darf nicht
 unbemerkt auf den nächsten Sportler wechseln. Die konkreten Zähler, Kennungen
 und Auswahlregeln sind in [API.md](API.md#startnummern-und-freigabe) definiert.
 
-`data/events.jsonl` enthält einen Versions-/Konfigurationskopf mit der Bahnanzahl
+`data/sessions/SITZUNGS-ID/events.jsonl` enthält einen Versions-/Konfigurationskopf mit der Bahnanzahl
 und danach die akzeptierten Befehle in ihrer Reihenfolge. Vor der Veröffentlichung
 wird mit `fsync` dauerhaft geschrieben. Ein Dateilock verhindert zwei schreibende
 Serverprozesse im selben Datenordner; er ist keine Bahnsperre für Bediener.
 Beim Start stellt dieselbe Zustandslogik den Zustand aus dem Journal wieder her.
-Journal und Einlagen werden zusätzlich vollständig im Arbeitsspeicher gehalten.
+Nur Journal und Einlagen der aktiven Sitzung werden zusätzlich vollständig im Arbeitsspeicher gehalten.
 
 Schreibfehler verhindern weitere Ereignisse bis zum Neustart. Ein beschädigtes
 Journal wird beim Start mit Fehler abgewiesen, nicht automatisch gekürzt.
 Betriebshinweise stehen in [API.md](API.md#speicherung-und-fehlerbehandlung).
+
+## Aufzeichnungssitzungen
+
+`sessions.json` enthält die aktive UUID und die Namen sowie UTC-Start-/Endzeiten
+aller Sitzungen. Pro UUID liegt ein unverändertes JSONL-Journal mit eigenem
+Sequenzraum unter `sessions/UUID/`; dort liegen auch die Korrekturbelege. Gemeinsame
+`config.json` und `calibrations/` bleiben außerhalb. Ein datenordnerweiter
+`flock` auf `sessions.lock` ergänzt den bestehenden Journal-Lock über Wechsel hinweg.
+
+Ein Wechsel prüft zuerst den erwarteten Sitzungsbezug und verlangt bei Belegung
+oder offener Einlage eine ausdrückliche Bestätigung. Danach wird ein neuer
+Ereigniskern mit gleicher Bahnanzahl vorbereitet. Nur administrative Quellensperren
+werden durch vorhandene `mode`-Befehle übernommen; alle Sportler- und Zielzustände
+beginnen leer/unbekannt. Der zentrale Reducer bleibt unverändert.
+
+Der neue Journalstand wird synchronisiert; anschließend veröffentlicht ein
+`os.replace` mit `fsync` den vollständigen Sitzungsindex atomar. Die serverseitige
+Prüfung, Speicherung und Übernahme enthalten kein `await`. Ein Fehler am Index
+sperrt weitere Eingaben bis zum Neustart. Der gespeicherte aktive Verweis entscheidet
+beim Start. Fehlt der Index bei vorhandenen Sitzungsordnern oder fehlt das aktive
+Journal, startet der Server mit Fehler und erzeugt keinen leeren Ersatz.
+Vor Veröffentlichung abgebrochene Vorbereitungen können unreferenzierte Ordner
+hinterlassen; sie bleiben unberührt und werden nicht als Sitzungen angeboten.
+
+Der alte Auswertungstask wird abgebrochen, sein bereits gestarteter OpenCV-Thread
+kann noch fertig rechnen, aber nichts mehr veröffentlichen. Ein neuer Task mit
+leeren Trackern ignoriert Bilder von vor Sitzungsbeginn und stabilisiert neue
+Grundbeobachtungen. Jeder veröffentlichende Pfad prüft den Sitzungsbezug.
+WebSocket-Entwürfe werden geleert, vollständige Zustände sofort angekündigt.
+Archive werden ausschließlich gelesen; Belegung und Einlagen darin werden nicht
+nachträglich künstlich abgeschlossen.
+
+Es gibt keine automatische Migration alter Testinstallationen und keine
+Übergangsschnittstelle ohne Sitzungskennung. Der einmalige manuelle Schritt steht
+in der [README](../README.md#aufzeichnungssitzungen). Das ist eine bewusste
+Entscheidung für die aktive Entwicklungsphase ohne produktive Installationen.
+Systemlogs bleiben unabhängig davon in journald.
 
 ## Quellen und menschliche Priorität
 
@@ -117,7 +155,7 @@ im regulären Tablet-Ablauf ist sie nicht erforderlich.
 Manuelle Korrekturen enthalten im Journal den automatischen Vergleichswert,
 Beobachtungszeit und vorherigen effektiven Zustand. Nach Möglichkeit speichert
 `app.py` den Gesamt-ROI des vorhandenen aktuellen Bildpuffers unter
-`corrections/SEQUENZ.jpg` mit JSON-Begleitdatei. Deren Bildempfangszeit ist nicht
+`sessions/SITZUNGS-ID/corrections/SEQUENZ.jpg` mit JSON-Begleitdatei. Deren Bildempfangszeit ist nicht
 zwingend die Zeit der letzten stabilisierten Beobachtung. Fehlende Bilder verhindern
 keine Eingabe; Speicher-/Kodierungsfehler werden protokolliert. Kein weiterer
 Bildpuffer, Training oder Analysedienst. Manuelle Erfassung und Kamera sind
@@ -244,14 +282,11 @@ Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner un
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
 Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
 vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
-Alte Journale bleiben unter 0.7 lesbar. Der automatische Rückwechsel bei einem
-Startfehler bleibt möglich, solange keine neuen 0.7-Bedienbefehle angenommen
-wurden. Nach produktiver Nutzung dieser Befehle können ältere Versionen das
-Journal nicht mehr lesen. Ein solcher Downgrade benötigt bewusst die Sicherung
-vor dem Upgrade und würde neuere Eingaben verlieren; er geschieht niemals
-automatisch. Grundbeobachtungen verwenden weiterhin die seit 0.5 vorhandenen
-zusätzlichen Ereignismetadaten. Sicherungen
-und alte Programmstände werden bewusst nicht automatisch gelöscht.
+ein Rückwechsel setzt einen zum Datenformat passenden Programmstand voraus.
+Für den Wechsel vom bisherigen Testdatenordner zur Sitzungsablage ist der
+manuelle Schritt aus der README erforderlich. Eine Rückwärtskompatibilität zu
+älteren Entwicklungsversionen wird nicht zugesichert. Sicherungen und alte
+Programmstände werden nicht automatisch gelöscht.
 Ein Dateilock verhindert parallele Installationen/Upgrades.
 
 ## Kontrollmonitor
@@ -327,11 +362,11 @@ Auswertungstask oder gesperrter Ereignisspeicher macht `/api/health` fehlerhaft.
 
 ## Externer Datenvertrag
 
-Version 0.6 stabilisiert die vorhandenen REST-/WebSocket-Schnittstellen als
-API-Version 1. Kein KES-Emulator und kein zusätzlicher Port: externe Anzeigen
+Die REST-/WebSocket-Schnittstellen verwenden API-Version 2 mit verpflichtendem
+Sitzungsbezug für Erfassungsbefehle. Kein KES-Emulator und kein zusätzlicher Port: externe Anzeigen
 verwenden dieselben vollständigen Zustände wie die Browser. `api_version` trennt
 den Integrationsvertrag von der Anwendungsversion; `instance_id` kennzeichnet
-einen Serverstart. Technischer Erfassungsstatus und bereinigte Kameradaten stehen
+einen Serverstart, `session_id` eine über Neustarts fortgesetzte Aufzeichnung. Technischer Erfassungsstatus und bereinigte Kameradaten stehen
 im vorhandenen Zustand, weil eine unveränderte Zielstellung allein keine Aussage
 zur Verfügbarkeit erlaubt. Das ergänzt konkret fehlende Integrationsdaten, ohne
 einen zweiten Ereigniskanal oder ein Adapterframework einzuführen.

@@ -98,9 +98,10 @@ class LaneTracker:
 
 
 class VisionService:
-    def __init__(self, settings, cameras, calibrations, store, publish):
+    def __init__(self, settings, cameras, calibrations, store, publish, not_before=None):
         self.settings, self.cameras, self.calibrations = settings, cameras, calibrations
         self.store, self.publish = store, publish
+        self.not_before = datetime.fromisoformat(not_before) if not_before else None
         self.trackers = {}
         self.frames = {}
         self.errors = {}
@@ -129,6 +130,9 @@ class VisionService:
         configured = set()
         for camera in list(self.settings().cameras):
             capture = self.cameras.snapshot(camera.id)
+            # Ein noch gepuffertes Bild gehört nicht zur neu begonnenen Sitzung.
+            if self.not_before and capture["captured_at"] and capture["captured_at"] < self.not_before:
+                continue
             for lane_id in camera.lane_ids:
                 configured.add(lane_id)
                 calibration = self.calibration(lane_id)

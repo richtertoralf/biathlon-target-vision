@@ -6,7 +6,8 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
 Der letzte Versionstag bleibt `v0.7.0`; die nachfolgenden Änderungen sind darin
-noch nicht enthalten. Der jüngste Abschnitt beschreibt die Korrektur und ihre Prüfungen.
+noch nicht enthalten. Der jüngste Abschnitt beschreibt die Sitzungsverwaltung
+für Issue #29 und ihre Prüfungen.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
@@ -830,3 +831,65 @@ Browserprüfungen einschließlich RTSP-Kameraadministration bestanden; `pip chec
 JavaScript-Syntax und `git diff --check` sind fehlerfrei. Die Änderung
 validiert Zuordnung und Datenhaltung; reale Kameraerkennung und Schießstandbetrieb
 bleiben Gegenstand des geplanten Praxistests.
+
+
+## 2026-10-19 – Issue #29: Aufzeichnungssitzungen
+
+**Umfang:** Die Administration bietet Namen, Abschluss und direkten Beginn einer
+neuen Sitzung. Belegte Bahnen und offene Einlagen werden vor der ausdrücklichen
+Bestätigung genannt. Der alte Stand bleibt unverändert archiviert, die neue
+Sitzung beginnt ohne Sportlerdaten und ohne bestätigte Vorbereitung. Kamera- und
+Bahnzuordnung, Kalibrierungen sowie administrative Quellensperren bleiben erhalten.
+Tablets und Kontrollmonitor wechseln sofort; alte Eingabedialoge werden geschlossen.
+
+**Entscheidung nach Klarstellung des Auftraggebers:** Es gibt keine produktiven
+Installationen und derzeit keine Rückwärtskompatibilitätsanforderung. Die zunächst
+untersuchte automatische Datenübernahme und eine Übergangsregel für fehlende
+Sitzungskennungen wurden deshalb verworfen. Alte Testdaten werden nicht verändert;
+der erste Start verlangt ihren manuellen Archivierungsschritt aus der README.
+Gemeinsame Konfiguration/Kalibrierungen können kopiert werden. Bestehende interne
+Replay-Regeln des Ereigniskerns wurden nicht umgebaut.
+
+**Technik:** Je UUID ein JSONL-Journal samt Korrekturbelegen; ein atomar gespeicherter
+Index bestimmt die aktive Sitzung. Der zentrale Reducer bleibt unverändert.
+Quellensperren werden mit vorhandenen Befehlen übernommen. API-Version 2 verlangt
+für Erfassungsbefehle die zuvor gelesene Sitzungskennung. Einlagenbelegung und
+mechanische Rückstellung werden beim Abschluss nicht künstlich verändert.
+Ein datenordnerweiter Lock verhindert mehrere Server über einen Journalwechsel
+hinweg. Bei unklarem Index-Schreibergebnis stoppen weitere Eingaben; beim Neustart
+entscheidet der gespeicherte Verweis. Keine automatische Löschung von Archiven oder
+abgebrochenen Vorbereitungen.
+
+Laufende Kameraauswertung wird abgebrochen und mit neuen Trackern gestartet.
+Ein bereits rechnender Thread darf fertig werden, sein Ergebnis wird verworfen.
+Gepufferte Bilder vor Sitzungsbeginn werden übersprungen. Neue Grundbeobachtungen
+erzeugen keine rückwirkenden Fälle oder Rückstellungen. Entwürfe sind flüchtig und
+sitzungsgebunden; verspätete HTTP-Antworten ersetzen keinen neueren Sitzungsstand.
+
+**Abgrenzung:** Offene Issues wurden erneut geprüft. #14 (Journalansicht/Export)
+kann den sitzungsbezogenen Journalzugriff nutzen; seine Oberfläche ist nicht
+enthalten. #15 (Konfigurationsprotokoll) bleibt getrennt. Zugriffsschutz #24,
+Navigation #25, vollständige Sprachumschaltung #28 und Erfassungsstatus #30 werden
+hier nicht umgesetzt. Die Administration bleibt deutsch und ohne Anmeldung im
+vertrauenswürdigen Netz; die neue Tablet-Meldung ist EN/DE/CS vorhanden. Keine
+Ergebnisverwaltung, keine GFX-Änderungen, kein Versions-Tag.
+
+**Prüfungen:** Alle **139 Python-Tests** bestehen, darunter 14 neue gezielte
+Sitzungstests. Geprüft sind getrennte BIB-Historien, identische Sequenzen bei
+getrennten Bildbelegen, Quellensperren, offene Einlagen ohne Belegung, zwei Tablets,
+konkurrierende Administratoren, Wiederholungen, Archiv-Paginierung, alte/falsch
+zugeordnete Befehle und Entwürfe, Locks, fehlende Dateien und Schreibfehler vor
+bzw. nach Indexveröffentlichung. Ein laufender Klassifizierungs-Thread und ein
+vorheriges Pufferbild erzeugen keine Ereignisse in der neuen Sitzung. Der echte
+Serverstarttest prüft Upgrade und fehlgeschlagenen Programmstart mit Rückwechsel
+zwischen Ständen desselben Sitzungsformats; aktive Sitzung und Archivdateien
+bleiben erhalten. Die optionalen lokalen RTSP-Tests bestanden ebenfalls.
+
+Alle **neun lokalen Browserprüfungen** bestehen. Die neue Prüfung umfasst die
+Administration, zwei Touch-Tablets, Monitor, drei Tablet-Sprachen, Hoch-/Querformat,
+eine absichtlich zurückgehaltene Befehlsantwort und Wiederverbindung nach einem
+Sitzungswechsel. Die tatsächlichen Browserbilder wurden visuell geprüft. Der neue
+Browsercheck läuft auch in CI; die lokale RTSP-Administration benötigt weiterhin
+die optionale Teststream-Umgebung. `pip check`, JavaScript-Syntax und
+`git diff --check` sind fehlerfrei. Reale Schießstandaufnahmen und Stromausfalltests
+auf der vorgesehenen Hardware stehen weiterhin aus.

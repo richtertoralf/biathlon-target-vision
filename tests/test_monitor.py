@@ -31,6 +31,7 @@ class MonitorTests(unittest.TestCase):
     def test_new_bout_does_not_count_old_fallen_targets(self):
         with tempfile.TemporaryDirectory() as temporary:
             with TestClient(create_app(Path(temporary), 1)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 self.assertEqual(client.get('/monitor').status_code, 200)
                 self.assertEqual(client.get('/api/health').json()['status'], 'ok')
                 first = client.post('/api/observations', json={'lane_id':1,'kind':'target','target_id':5,'state':'fallen','source':'test','observed_at':'2026-10-17T12:00:00Z'}).json()['state']

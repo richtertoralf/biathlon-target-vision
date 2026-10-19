@@ -62,6 +62,7 @@ der Verbindung zum BTV-Server können Tablets dagegen keine Eingaben bestätigen
 - Manuelle Scheibenerfassung und unmittelbare Korrekturen mit Vorrang gegenüber der Kamera; Tablet-Bedienung in Englisch, Deutsch und Tschechisch. Administration, Kalibrierung und Monitor sind derzeit deutsch.
 - Optische Auswertung von RTSP-IP-Kameras über OpenCV, mit Kamera-/Bahnzuordnung und browserbasierter Kalibrierung. Bisher synthetisch getestet; reale Zielanlagen stehen noch zur Validierung aus.
 - Zentraler, schreibgeschützter Schießstandmonitor; gleichzeitige Tablet-Bedienplätze; Startnummern- und Bahnbelegungserfassung.
+- Getrennte Aufzeichnungssitzungen: über die Administration abschließen und neu beginnen, Journale und Korrekturbelege erhalten; gemeinsame Kamerakonfiguration und Kalibrierungen bleiben bestehen. Keine Wettkampfplanung.
 - Dauerhaftes JSONL-Ereignisjournal mit serverseitigen Annahmezeiten und vorhandenen Beobachtungszeitpunkten; Wiederherstellung nach Neustart und Abruf über die API. Noch keine zeitbezogene Journaloberfläche oder formatierten Berichte.
 - Aktuelle Kamera-/Bahnzuordnung in der persistenten Konfiguration und Administration. Mehrere Bahnen können eine Kamera nutzen; je Bahn ist höchstens eine Kamera zuständig. Eine Änderungshistorie dieser Zuordnung fehlt noch.
 - Protokollierte manuelle Korrekturen mit automatischem Vergleichswert; nach Möglichkeit ein Kameraausschnitt als Vergleichsbeleg. Keine durchgehende Videoaufzeichnung.
