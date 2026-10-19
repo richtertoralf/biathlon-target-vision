@@ -181,13 +181,16 @@ auf. Technische Vergleichswerte und Quellenverwaltung stehen unter `/admin`.
 ## Unter Debian/Ubuntu installieren
 
 Voraussetzung: Debian/Ubuntu mit Python 3.11 oder neuer, systemd und Internet
-für die Installation. Installation des aktuellen Stands auf `main`:
+für die Installation. Installation eines veröffentlichten Versionstags, hier des
+Entwicklungsreleases `v0.8.0` für den Praxistest:
 
 ```bash
-git clone https://github.com/richtertoralf/biathlon-target-vision.git
+git clone --branch v0.8.0 https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
 ./install.sh
 ```
+
+Ohne `--branch` wird der aktuelle, ungetaggte Stand von `main` installiert.
 
 Der Installer nutzt bei Bedarf sudo. Der Dienst startet automatisch als Benutzer
 `btv`. Tablet: `http://SERVER-IP:8091/`, Monitor: `http://SERVER-IP:8091/monitor`.

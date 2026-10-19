@@ -5,9 +5,8 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag bleibt `v0.7.0`; die nachfolgenden Änderungen sind darin
-noch nicht enthalten. Die jüngsten Abschnitte beschreiben den Tablet-Erfassungsstatus
-für Issue #30 und das gemessene Zeitverhalten der optischen Erfassung.
+Der letzte Versionstag ist `v0.8.0` (Arber Field Test – Development Release);
+der letzte Abschnitt fasst seinen Umfang seit `v0.7.0` zusammen.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
@@ -1089,3 +1088,25 @@ Zustand weiter, statt nur genau eine Nachricht zu lesen. Unter künstlicher
 Status auf: mit alter Bedingung 4 von 96 Läufen, mit Korrektur 5 von 96. Er ist
 also vorbestehend, unabhängig von der Korrektur und harmlos. Alle 143
 Python-Tests und alle neun lokalen Browserprüfungen einschließlich RTSP bestehen.
+
+## 2026-10-19 – Version 0.8.0: Arber Field Test – Development Release
+
+Entwicklungsrelease für den ersten Praxistest am 21.10.2026 im Hohenzollern-Skistadion
+am Arber. **Nicht für produktiven Wettkampfbetrieb freigegeben**; die optische
+Erkennung ist weiterhin nur synthetisch geprüft. Die API-Version bleibt `2`.
+Keine neuen Abhängigkeiten. Umfang seit `v0.7.0`, Einzelheiten in den
+vorstehenden Abschnitten:
+
+- Einheitlicher Kampfrichterablauf ohne Betriebsartwahl, ergonomische Bahnkacheln
+  und Schutz vor Browserübersetzung (PR #7, #9, #10).
+- #21: Manuelle Scheibenwerte bleiben bei nachträglicher BIB-Eingabe erhalten (PR #27).
+- #29: Aufzeichnungssitzungen abschließen und neu starten; API-Version 2 verlangt
+  dafür die Sitzungskennung bei Erfassungsbefehlen (PR #31). Alte Testdatenordner
+  benötigen den einmaligen manuellen Schritt aus der README.
+- #30: Erfassungsstatus je Bahn am Tablet (PR #32), korrigiert um eine verpasste
+  Statusaktualisierung (PR #36).
+- Roadmap für den Praxistest (PR #33, #34) und synthetische Zeitmessung der
+  optischen Erfassung mit `tests/benchmark_vision.py` (PR #35).
+
+Installation des Tags: `git clone --branch v0.8.0 …` und `./install.sh` gemäß README.
+`--upgrade` wechselt bestehende Installationen auf den höchsten Versionstag.
