@@ -161,7 +161,7 @@ class UnifiedTests(unittest.TestCase):
         from biathlon_target_vision.app import create_app
         from biathlon_target_vision.config import Settings, CameraSettings, save_settings
         from tests.test_cameras import FakeCameras
-        async def idle(service): await asyncio.Event().wait()
+        async def idle(service, status_changed): await asyncio.Event().wait()
         directory = self.directory/'api'
         save_settings(directory,Settings(cameras=[CameraSettings(id='test',name='Test',url='rtsp://localhost/test',lane_ids=[1])]))
         with patch('biathlon_target_vision.app.CameraManager',FakeCameras), patch('biathlon_target_vision.vision.VisionService.run',idle):

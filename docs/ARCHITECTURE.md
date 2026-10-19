@@ -158,9 +158,12 @@ Tracker-Generation und bestätigte bekannte Werte aller fünf Ziele. Noch unbest
 oder unsichere Klassifikationen ergeben keinen aktiven Status; bekannte Journalwerte
 nach Neustart ebenfalls nicht. Zwei Bahnen derselben Kamera können unterschiedliche
 Status haben. `capture.lanes` transportiert diese flüchtige Ableitung im vorhandenen
-REST-/WebSocket-Zustand. Statusänderungen ohne Journalereignis kommen spätestens mit
-dem vorhandenen WebSocket-Lebenszeichen. Es gibt keine zusätzlichen Zeitgrenzen,
-persistierten Zustände oder Eingriffe in die Klassifikation. Die Kachel zeigt aktive
+REST-/WebSocket-Zustand. Die vorhandene Erfassungsschleife vergleicht die Status
+nach jedem Auswertungsschritt mit dem vorherigen Stand. Nur bei Änderungen weckt
+sie die bestehenden WebSocket-Empfänger; das Ende der Auswertungsaufgabe meldet
+deren Ausfall ebenfalls unmittelbar. Statuswechsel warten somit nicht auf das
+Fünf-Sekunden-Lebenszeichen. Es gibt keine zusätzliche Schleife, Bildraten-Pushes,
+Zeitgrenzen, persistierten Zustände oder Eingriffe in die Klassifikation. Die Kachel zeigt aktive
 Einzelkorrekturen aus `manual_targets` unabhängig vom Erfassungsstatus an.
 
 Manuelle Korrekturen enthalten im Journal den automatischen Vergleichswert,

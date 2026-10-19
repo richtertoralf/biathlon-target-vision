@@ -55,8 +55,14 @@ async function scenario(browser, manualOnly) {
       cs:{active:'Automatické rozpoznávání aktivní',uncertain:'Rozpoznávání probíhá / nejisté',unavailable:'Pouze ruční zadávání',marker:'Ručně',correction:'Ruční oprava'},
     };
     async function captureStatus(lane,status) {
-      // Reine Konfigurationsänderungen kommen mit dem Fünf-Sekunden-Lebenszeichen.
-      for(const page of pages)await expect(capture(page,lane)).toHaveAttribute('data-status',status,{timeout:10000});
+      // Status changes must arrive before the five-second heartbeat.
+      try {
+        for(const page of pages)await expect(capture(page,lane)).toHaveAttribute('data-status',status,{timeout:2000});
+      } catch(error) {
+        const current=await state();
+        console.error('Capture status failure',JSON.stringify({expected:status,capture:current.capture,lane:current.lanes[String(lane)]}));
+        throw error;
+      }
     }
     assert.equal((await state()).simulation,false);
     if(manualOnly) {
@@ -88,11 +94,21 @@ async function scenario(browser, manualOnly) {
       await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5,{timeout:10000});
       await captureStatus(1,'active');await captureStatus(2,'active');await captureStatus(3,'unavailable');
       // Dieselbe Kamera liefert Bilder für zwei Bahnen, nur eine ist kalibriert.
+      const beforeAssignment=await state();
+      const targetButtons=await Promise.all(pages.map(page=>card(page,3).locator('.target').first().elementHandle()));
       const configured=await fetch(url+'/api/cameras/camera1',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'camera1',name:'Kamera 1',url:'',lane_ids:[1,3]})});
       assert.equal(configured.status,200);
-      await captureStatus(1,'active');await captureStatus(3,'uncertain');
-      const shared=(await state()).capture.cameras.find(camera=>camera.id==='camera1');
+      const assigned=await state();
+      assert.equal(assigned.capture.lanes['3'],'uncertain');
+      assert.equal(assigned.sequence,beforeAssignment.sequence);
+      const shared=assigned.capture.cameras.find(camera=>camera.id==='camera1');
       assert.deepEqual(shared.lane_ids,[1,3]);assert.equal(shared.connected,true);
+      await captureStatus(3,'uncertain');await captureStatus(1,'active');
+      assert.equal((await state()).sequence,beforeAssignment.sequence);
+      for(const handle of targetButtons) {
+        assert.equal(await handle.evaluate(node=>node.isConnected),true,'Capture-only updates must preserve touch targets');
+        await handle.dispose();
+      }
       await assign(52);
       write({camera1:{mask:9},camera2:{mask:4}});
       await expect(target(second,1)).toHaveAttribute('data-state','fallen');
@@ -138,7 +154,11 @@ async function scenario(browser, manualOnly) {
       await captureStatus(1,'unavailable');await captureStatus(3,'unavailable');await captureStatus(2,'active');
       await expect(target(second,1)).toHaveAttribute('data-state','unknown');
       await expect(target(second,3)).toHaveAttribute('data-state','fallen');
-      for(const n of [1,4,5]) {await target(first,n).tap(); await first.locator('[data-target-state=fallen]').tap(); await expect(target(second,n)).toHaveAttribute('data-state','fallen');}
+      for(const n of [1,4,5]) {
+        await expect(target(first,n)).toHaveAttribute('data-state','unknown');
+        await target(first,n).tap(); await first.locator('[data-target-state=fallen]').tap();
+        await expect(target(second,n)).toHaveAttribute('data-state','fallen');
+      }
       await expect(monitor.locator('#lane-2 .fallen')).toHaveCount(3);
       let after=await state();assert.equal(after.lanes['1'].current_bout_id,bout);assert.equal(after.bouts[bout].bib,52);
       assert.deepEqual(after.bouts[bout].fallen_target_ids,before.bouts[bout].fallen_target_ids);

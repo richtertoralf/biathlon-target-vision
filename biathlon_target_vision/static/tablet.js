@@ -122,7 +122,7 @@
       : chosen ? `${boutName(chosen)} · ${t(chosen.closed ? 'closed' : 'active')}` : t('noBout');
     const capture = connected ? state.capture.lanes[String(lane.lane_id)] : 'offline';
     const content = `<div class="lane-heading"><h2>${t('lane', {n:lane.lane_id})}</h2><span class="badge">${t({ready:'laneReady',occupied:'occupied',reset_required:'laneResetRequired'}[lane.status])}</span></div>
-      <p class="capture-status" data-status="${capture}">${t({active:'captureActive',uncertain:'captureUncertain',unavailable:'captureManual',offline:'captureOffline'}[capture])}</p>
+      <p class="capture-status"></p>
       <div class="bib-line"><span>${t('bib')}</span>${button('bib', occupied?.bib ?? t('enterNumber'), `bib ${occupied?.bib == null ? 'bib-entry' : ''}`, `${previous ? 'disabled' : ''} aria-label="${escape(t(occupied?.bib == null ? 'enterBib' : 'correctBib'))}"`)}</div>
       <div class="targets">${targets}</div>
       ${mainAction}
@@ -145,6 +145,10 @@
     card.dataset.status = lane.status;
     // Unveränderte Karten behalten Fokus und Touch-Ziel auch bei anderen Bahnen.
     if (card._content !== content) { card.innerHTML = content; card._content = content; }
+    // A capture-only update must preserve any target button currently being touched.
+    const captureLabel = card.querySelector('.capture-status');
+    captureLabel.dataset.status = capture;
+    captureLabel.textContent = t({active:'captureActive',uncertain:'captureUncertain',unavailable:'captureManual',offline:'captureOffline'}[capture]);
   }
 
   function invalidate(key) {

@@ -95,9 +95,8 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return {**state, **api_identity(), "session": dict(app.state.sessions.current), "simulation": simulation,
                 "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
                     **cameras, "calibration_errors": dict(app.state.vision.errors),
-                    "lanes": {lane_id: app.state.vision.capture_status(lane["lane_id"])
-                              if not app.state.vision_task.done() else "unavailable"
-                              for lane_id, lane in state["lanes"].items()}}}
+                    "lanes": app.state.vision.capture_statuses() if not app.state.vision_task.done()
+                              else {lane_id: "unavailable" for lane_id in state["lanes"]}}}
 
     def wake_subscribers():
         for queue in subscribers:
@@ -120,7 +119,9 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             app.state.calibrations, app.state.store,
             lambda command: publish(command, session_id),
             not_before=app.state.sessions.current["started_at"])
-        app.state.vision_task = asyncio.create_task(app.state.vision.run())
+        app.state.vision_task = asyncio.create_task(app.state.vision.run(wake_subscribers))
+        # Only after task completion does the published capture.running become false.
+        app.state.vision_task.add_done_callback(lambda _: wake_subscribers())
 
     def publish(command, session_id):
         app.state.sessions.check_session(session_id)

@@ -169,6 +169,34 @@ class VisionTests(unittest.TestCase):
             finally:store.close()
         with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
 
+    def test_run_notifies_transient_uncertainty_but_not_unchanged_frames(self):
+        async def scenario(directory):
+            store=EventStore(directory,1);calibrations=CalibrationStore(directory);cameras=SequenceCameras()
+            camera=CameraSettings(id='test',name='test',url='rtsp://localhost/test',lane_ids=[1])
+            image,quad,_,_=scene();saved=calibrate(image,quad);saved.update(camera_binding(camera));calibrations.save(1,saved)
+            service=VisionService(lambda:Settings(cameras=[camera]),cameras,calibrations,store,store.apply)
+            try:
+                for number in range(1,4):
+                    cameras.set('test',image,number)
+                    with patch('biathlon_target_vision.vision.monotonic',return_value=number*.2):await service.step()
+                journal=Path(store.file.name).read_bytes()
+                statuses=[];step=service.step;number=3
+                async def next_frame():
+                    nonlocal number
+                    number+=1
+                    if number>10:
+                        raise asyncio.CancelledError
+                    cameras.set('test',scene(missing=2)[0] if number==4 else image,number)
+                    await step()
+                # One uncertain frame changes status without changing a stabilized
+                # target value. Recovery also needs no journal entry.
+                with patch.object(service,'step',next_frame), self.assertRaises(asyncio.CancelledError):
+                    await service.run(lambda:statuses.append(service.capture_statuses()))
+                self.assertEqual(statuses,[{'1':'uncertain'},{'1':'active'}])
+                self.assertEqual(Path(store.file.name).read_bytes(),journal)
+            finally:store.close()
+        with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
+
 
     def test_baseline_journal_is_readable_by_previous_release(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -910,11 +910,12 @@ Bahntracker ab. Erst fünf bestätigte bekannte Werte mit passender Quelle,
 Verbindungsgeneration und aktueller Klassifikation erlauben „aktiv“. Journalwerte
 nach Neustart, fehlende Kalibrierung und unklare neue Bilder genügen nicht. Die
 Erkennung derselben Kamera kann für verschiedene Bahnen unterschiedlich ausfallen.
-Die additive Angabe `capture.lanes` nutzt REST und bestehende WebSocket-Zustände;
-ohne weiteres Ereignis erfolgt die Übertragung mit deren Fünf-Sekunden-Lebenszeichen.
+Die additive Angabe `capture.lanes` nutzt REST und bestehende WebSocket-Zustände.
+Die anfängliche Übertragung reiner Statusänderungen erst mit dem Lebenszeichen
+wurde vor dem Merge durch die unten beschriebene Änderungsbenachrichtigung ersetzt.
 Keine neue Wartezeit, keine Änderung an Klassifikation, Ereigniskern oder Journalformat.
 
-**Prüfungen:** Alle **140 Python-Tests** und **neun lokalen Browserprüfungen**
+**Erste Prüfungen:** Alle **140 Python-Tests** und **neun lokalen Browserprüfungen**
 bestehen, einschließlich der optionalen lokalen RTSP-Tests. Ergänzt sind Prüfungen für
 Grundbeobachtung, Wiederverbindung, mehrere Bahnen derselben Kamera, Verdeckung,
 fehlende Kalibrierung, Quellensperre und manuelle Priorität; Statusabfragen erzeugen
@@ -926,8 +927,50 @@ und `git diff --check` sind fehlerfrei. Die Kameraerkennung bleibt
 synthetisch geprüft; „Automatik aktiv“ ist keine Zusage einer bereits validierten
 Praxistauglichkeit. Der Arberstadion-Test bleibt dafür erforderlich.
 
-Der erste CI-Browserlauf zeigte eine zu knappe Testfrist: Eine Konfigurationsänderung
+Der erste CI-Browserlauf zeigte zunächst eine zu knappe Testfrist: Eine Konfigurationsänderung
 ohne Journalereignis wird erst mit dem vorhandenen Lebenszeichen sichtbar; dessen
 Fünf-Sekunden-Intervall entsprach genau dem Standard-Timeout der Prüfung. Die
-zustandsbasierte Browsererwartung erlaubt nun zehn Sekunden einschließlich
-Übertragungs-/CI-Spielraum. Das Laufzeitverhalten erhält keine zusätzliche Wartezeit.
+zustandsbasierte Browsererwartung erlaubte daraufhin zehn Sekunden einschließlich
+Übertragungs-/CI-Spielraum. Diese Zwischenlösung ist durch die folgende Änderung überholt.
+
+**Nachprüfung vor dem Merge:** Auf Rückmeldung zum zu trägen Statuswechsel
+vergleicht die bereits vorhandene Erfassungsschleife nun nach jedem Auswertungsschritt
+die aktuelle Bahnstatus-Abbildung mit dem vorherigen Stand. Ausschließlich eine
+Änderung weckt die bestehenden WebSocket-Empfänger. Eine Task-Endebenachrichtigung
+meldet auch den Ausfall der Auswertung, sobald `capture.running` falsch ist. Es
+entstehen keine neue Schleife, Verbindung, Journalereignisse oder Sequenzen und
+keine zusätzlichen Meldungen für unveränderte Kamerabilder. Die Klassifikation
+und ihre zeitliche Stabilisierung bleiben unverändert.
+
+Gezielte Tests prüfen bereits den Statuswechsel bei einem einzelnen unsicheren
+Bild und seiner Rückkehr ohne Änderung der bestätigten Zielwerte, beide Tablets
+bei Ausfall/Wiederverbindung sowie das Ende der Auswertung. Journaldateien bleiben
+dabei bytegleich. Unveränderte Bilder erzeugen keine Status-Pushes. Die
+Browsererwartung verlangt Statuswechsel nun innerhalb von zwei Sekunden statt
+auf das Fünf-Sekunden-Lebenszeichen zu warten. Das ist eine Prüfgrenze für die
+synthetische Testumgebung, keine garantierte Reaktionsfrist der realen Kamera.
+
+**Ursachenprüfung des CI-Fehlers aus Lauf 39229751375:** Bahn 3 wurde korrekt
+derselben Kamera wie Bahn 1 zugewiesen und hatte Bilder, aber keine Kalibrierung;
+der API-Status war entsprechend `uncertain`. Ohne Journaländerung blieb das Tablet
+bis zum Lebenszeichen beim vorherigen `unavailable`. Der Regressionstest prüft
+Zuordnung, Kamera-Bildverfügbarkeit, sofortigen API-Status und unveränderte Sequenz
+vor der begrenzten WebSocket-/UI-Erwartung. Ein gezielter Gegenversuch mit allein
+deaktivierter Änderungsbenachrichtigung reproduzierte exakt diesen Fehler; mit
+Benachrichtigung besteht dieselbe Prüfung. Weder erhöhte Timeouts noch vorgeschaltetes
+Warten auf den API-Status sind enthalten.
+
+Die strengeren Prüfungen deckten zusätzlich zwei konkrete Punkte auf: Die
+synthetische Kamerafixture erzeugte bisher bei jedem Metadatenzugriff ein neues
+Bild. Sie hält nun wie der reale Decoder je Kamera das letzte Bild des jeweiligen
+10-Hz-Testframes; reine Statusabfragen berechnen keine zusätzlichen Bilder. Außerdem
+aktualisiert das Tablet die Statuszeile getrennt, damit ein reiner Statuswechsel
+keine laufende Berührung durch Ersetzen der Zielschaltflächen abbricht. Deren
+DOM-Identität wird ebenfalls geprüft. Zwei vorhandene Test-Doubles der gestoppten
+Erfassung wurden an den neuen Benachrichtigungsparameter angepasst.
+
+Die abschließende Python-Suite umfasst **142 erfolgreiche Tests**; alle **neun
+lokalen Browserprüfungen** einschließlich RTSP bestehen ebenfalls. JavaScript-Syntax,
+`pip check` und `git diff --check` sind fehlerfrei. Die laufende
+Schießstandvalidierung bleibt unverändert offen; Kamera-Ausfallerkennung,
+Verarbeitungsgeschwindigkeit und Netzverbindung bestimmen die reale Reaktionszeit.

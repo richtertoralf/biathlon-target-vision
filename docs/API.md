@@ -613,9 +613,13 @@ bestehende Kamera-Frischeprüfung, keine neue Wartezeit.
 Manuelle Übersteuerungen verändern diesen optischen Status nicht; maßgeblich bleiben
 `lanes["N"].targets` und die zugehörigen `manual_targets`. Der Status ist kein Nachweis
 einer realen Schießstandvalidierung. Er wird nicht journalisiert und ändert `sequence`
-nicht. Ohne anderes Ereignis erfolgt die Aktualisierung über das bestehende
-WebSocket-Lebenszeichen (spätestens nach fünf Sekunden); bei unterbrochener Verbindung
-darf ein Client den zuletzt empfangenen Status nicht als aktuell ausgeben.
+nicht. Tatsächliche Statusänderungen wecken die vorhandenen WebSocket-Empfänger
+nach dem jeweiligen Auswertungsschritt, auch ohne Journalereignis. Unveränderte
+Kamerabilder lösen keine zusätzlichen Statusmeldungen aus; das bestehende
+Fünf-Sekunden-Lebenszeichen bleibt erhalten. Maßgeblich sind weiterhin Kamera-
+Ausfallerkennung und Verarbeitungsgeschwindigkeit, keine garantierte Echtzeitfrist.
+Bei unterbrochener Verbindung darf ein Client den zuletzt empfangenen Status nicht
+als aktuell ausgeben.
 Die additive Statusangabe ändert weder Befehle noch API-Version oder Journalformat.
 
 ### Daten für einen externen BTV-Adapter
