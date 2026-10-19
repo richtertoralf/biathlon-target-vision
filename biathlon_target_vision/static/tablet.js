@@ -111,21 +111,24 @@
     let card = $(`lane-${lane.lane_id}`);
     const optionsOpen = card?.querySelector('.lane-options')?.open || false;
     const targets = lane.targets.map((value, index) => {
-      const label = `${t('target', {n: index + 1})}: ${t(value)}`;
-      const content = `<span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span><span>${index + 1}</span>`;
-      return `<button class="target" data-action="${state.simulation ? 'target' : 'manual-target'}" data-target="${index + 1}" data-state="${value}" aria-label="${escape(label)}" ${disabled}>${content}</button>`;
+      const manual = lane.manual_targets[index] !== null;
+      const label = `${t('target', {n: index + 1})}: ${t(value)}${manual ? ` · ${t('manualCorrection')}` : ''}`;
+      const content = `<span class="disc ${value}" aria-hidden="true">${targetSymbol(value)}</span><span>${index + 1}</span><span class="manual-marker" aria-hidden="true">${manual ? t('manualMarker') : ''}</span>`;
+      return `<button class="target" data-action="${state.simulation ? 'target' : 'manual-target'}" data-target="${index + 1}" data-state="${value}" data-manual="${manual}" aria-label="${escape(label)}" ${disabled}>${content}</button>`;
     }).join('');
     const mainAction = occupied ? button('release', t('leaveLane'), 'primary lane-main')
       : button('occupy', t('occupyLane'), 'primary lane-main');
     const context = previous ? t('previousOccupied', {bib:occupied.bib ?? '—'})
       : chosen ? `${boutName(chosen)} · ${t(chosen.closed ? 'closed' : 'active')}` : t('noBout');
+    const capture = connected ? state.capture.lanes[String(lane.lane_id)] : 'offline';
     const content = `<div class="lane-heading"><h2>${t('lane', {n:lane.lane_id})}</h2><span class="badge">${t({ready:'laneReady',occupied:'occupied',reset_required:'laneResetRequired'}[lane.status])}</span></div>
+      <p class="capture-status" data-status="${capture}">${t({active:'captureActive',uncertain:'captureUncertain',unavailable:'captureManual',offline:'captureOffline'}[capture])}</p>
       <div class="bib-line"><span>${t('bib')}</span>${button('bib', occupied?.bib ?? t('enterNumber'), `bib ${occupied?.bib == null ? 'bib-entry' : ''}`, `${previous ? 'disabled' : ''} aria-label="${escape(t(occupied?.bib == null ? 'enterBib' : 'correctBib'))}"`)}</div>
       <div class="targets">${targets}</div>
       ${mainAction}
       ${button('manual-reset', t('allStanding'), 'lane-reset')}
       <div class="lane-drafts"></div>
-      <details class="lane-options" ${optionsOpen ? 'open' : ''}><summary>${t('laneOptions')} <span class="capture-status">${escape(captureStatus(lane))}</span></summary>
+      <details class="lane-options" ${optionsOpen ? 'open' : ''}><summary>${t('laneOptions')}</summary>
         <div class="options-body">
           <p class="bout-line">${escape(context)}</p>
           ${button('history', t('history', {n:boutsFor(lane.lane_id).length}), 'history')}
@@ -142,14 +145,6 @@
     card.dataset.status = lane.status;
     // Unveränderte Karten behalten Fokus und Touch-Ziel auch bei anderen Bahnen.
     if (card._content !== content) { card.innerHTML = content; card._content = content; }
-  }
-
-  function captureStatus(lane) {
-    if (lane.mode === 'manual') return '';
-    const camera = state.capture?.cameras.find(item => item.lane_ids.includes(lane.lane_id));
-    if (!camera) return '';
-    return !state.capture.running || !camera.connected || lane.automatic_targets.includes('unknown')
-      ? t('checkTargets') : '';
   }
 
   function invalidate(key) {

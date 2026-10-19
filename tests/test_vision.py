@@ -18,7 +18,7 @@ from biathlon_target_vision.calibration import CalibrationError, CalibrationStor
 from biathlon_target_vision.cameras import camera_binding
 from biathlon_target_vision.config import CameraSettings, Settings
 from biathlon_target_vision.core import EventStore
-from biathlon_target_vision.models import Observation
+from biathlon_target_vision.models import ManualTarget, ModeChange, Observation
 from biathlon_target_vision.vision import classify, LaneTracker, VisionService
 from tests.synthetic import scene
 
@@ -100,10 +100,12 @@ class VisionTests(unittest.TestCase):
                     with patch('biathlon_target_vision.vision.monotonic',return_value=number*.2):await service.step()
             try:
                 cameras.set('first',double,0); cameras.set('second',base,0)
+                self.assertEqual(service.capture_status(1), 'uncertain')
                 for instant in (0,.3,.6):
                     with patch('biathlon_target_vision.vision.monotonic',return_value=instant): await service.step()
                 self.assertEqual(store.events, [], "Dasselbe Bild darf keine zeitliche Bestätigung ergeben")
                 await frames(0,0,0)
+                self.assertEqual([service.capture_status(n) for n in (1,2,3)], ['active']*3)
                 self.assertEqual(store.state['lanes']['1']['targets'],['standing']*5)
                 self.assertFalse(store.state['bouts'])
                 await frames(16,1,4)
@@ -111,19 +113,59 @@ class VisionTests(unittest.TestCase):
                 self.assertEqual([store.state['bouts'][b]['fallen_target_ids'] for b in bouts],[[5],[1],[3]])
                 await frames(18,9,4,missing=2)
                 self.assertEqual(store.state['lanes']['1']['targets'],['standing','fallen','unknown','standing','fallen'])
+                self.assertEqual([service.capture_status(n) for n in (1,2,3)], ['uncertain','active','active'])
                 cameras.frames['first']['stream_epoch'] += 1
+                self.assertEqual(service.capture_status(1), 'uncertain')
                 await frames(19,9,4)
                 self.assertEqual(store.state['bouts'][bouts[0]]['fallen_target_ids'],[5,2])
                 await frames(18,9,12,disconnected=True)
+                self.assertEqual([service.capture_status(n) for n in (1,2,3)], ['unavailable','unavailable','active'])
                 self.assertEqual(store.state['lanes']['1']['targets'],['unknown']*5)
                 self.assertEqual(store.state['bouts'][bouts[2]]['fallen_target_ids'],[3,4])
                 await frames(19,9,12)
+                self.assertEqual(service.capture_status(1), 'active')
                 self.assertEqual(store.state['bouts'][bouts[0]]['fallen_target_ids'],[5,2])
                 await frames(0,0,0)
                 self.assertTrue(all(store.state['bouts'][b]['closed'] for b in bouts))
                 count=len(store.events)
                 with patch('biathlon_target_vision.vision.monotonic',return_value=number*.2+1):await service.step()
                 self.assertEqual(len(store.events),count)
+            finally:store.close()
+        with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
+
+    def test_capture_status_is_live_not_an_effective_target_or_journal_value(self):
+        async def scenario(directory):
+            store=EventStore(directory,3);calibrations=CalibrationStore(directory);cameras=SequenceCameras()
+            camera=CameraSettings(id='test',name='test',url='rtsp://localhost/test',lane_ids=[1,2])
+            settings=Settings(cameras=[camera])
+            image,quad,_,_=scene();saved=calibrate(image,quad);saved.update(camera_binding(camera));calibrations.save(1,saved)
+            service=VisionService(lambda:settings,cameras,calibrations,store,store.apply)
+            try:
+                cameras.set('test',image,0)
+                self.assertEqual(service.capture_status(3), 'unavailable')
+                for number in range(1,4):
+                    cameras.set('test',image,number)
+                    with patch('biathlon_target_vision.vision.monotonic',return_value=number*.2):await service.step()
+                self.assertEqual(service.capture_status(1), 'active')
+                self.assertEqual(service.capture_status(2), 'uncertain', 'Eine verbundene Kamera ohne Bahnkalibrierung genügt nicht')
+                lane=store.state['lanes']['1']
+                store.apply(ManualTarget(lane_id=1,target_id=3,state='fallen',expected_control_revision=lane['control_revision'],start_bout=False))
+                lane=store.state['lanes']['1']
+                self.assertEqual(service.capture_status(1), 'active', 'Manuelle Priorität ändert nicht die Kameraqualität')
+                self.assertEqual(lane['targets'][2], 'fallen')
+                self.assertEqual(lane['automatic_targets'][2], 'standing')
+                count=len(store.events)
+                # Schon die aktuelle unsichere Klassifikation darf kein Erfolg sein,
+                # auch wenn die zeitliche Stabilisierung noch den alten Wert hält.
+                cameras.set('test',scene(missing=2)[0],4)
+                with patch('biathlon_target_vision.vision.monotonic',return_value=.8):await service.step()
+                self.assertEqual(lane['automatic_targets'], ['standing']*5)
+                self.assertEqual(service.capture_status(1), 'uncertain')
+                self.assertEqual(len(store.events), count, 'Status ist kein Journalereignis')
+                restarted=VisionService(lambda:settings,cameras,calibrations,store,store.apply)
+                self.assertEqual(restarted.capture_status(1), 'uncertain', 'Alte bekannte Werte belegen keine laufende Erkennung')
+                store.apply(ModeChange(lane_id=1,mode='manual',expected_control_revision=lane['control_revision']))
+                self.assertEqual(service.capture_status(1), 'unavailable')
             finally:store.close()
         with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
 

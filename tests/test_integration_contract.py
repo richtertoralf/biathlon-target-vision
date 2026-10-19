@@ -31,6 +31,7 @@ class IntegrationContractTests(unittest.TestCase):
         with self.client.websocket_connect('/ws') as socket:
             initial=socket.receive_json();self.assertEqual(initial['api_version'],API_VERSION)
             self.assertEqual(initial['health'],'ok');self.assertTrue(initial['capture']['running'])
+            self.assertEqual(initial['capture']['lanes'], {'1':'unavailable','2':'unavailable'})
             self.assertEqual(self.observe(5,'fallen',1,baseline=True).status_code,200)
             state=socket.receive_json();lane=state['lanes']['1']
             self.assertEqual(lane['targets'],['unknown']*4+['fallen'])
@@ -83,6 +84,7 @@ class IntegrationContractTests(unittest.TestCase):
         with self.client.websocket_connect('/ws') as socket:
             state=socket.receive_json();self.assertEqual(state['health'],'error')
             self.assertFalse(state['capture']['running']);self.assertEqual(state['sequence'],0)
+            self.assertEqual(state['capture']['lanes'], {'1':'unavailable','2':'unavailable'})
 
     def test_storage_failure_is_explicit_in_state(self):
         self.client.app.state.store.failed=True
@@ -100,3 +102,4 @@ class IntegrationContractTests(unittest.TestCase):
                 state=socket.receive_json();self.assertNotIn('PRIVATE_PASSWORD',json.dumps(state))
                 self.assertEqual(state['capture']['cameras'][0]['lane_ids'],[1,2])
                 self.assertTrue(state['capture']['cameras'][0]['connected'])
+                self.assertEqual(state['capture']['lanes'], {'1':'uncertain','2':'uncertain'})

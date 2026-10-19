@@ -151,6 +151,13 @@ bestätigen. Unsichere Kameradaten machen eine Bahn nicht automatisch bereit;
 eine menschliche Rückstellbestätigung gilt auch bei ausgefallener Kamera.
 
 Unter **„Optionen“** liegt die Einlagenhistorie für verspätete BIB-Zuordnungen.
+Jede Bahnkachel zeigt außerdem **„Automatik aktiv“**, **„Erkennung läuft / unsicher“**
+oder **„Nur manuell“**. Erst bestätigte Kamerabeobachtungen aller fünf Scheiben
+ergeben „Automatik aktiv“; eine verbundene Kamera allein genügt nicht. Bei fehlender
+oder unsicherer Erfassung nach Sicht eingeben. Einzelne manuelle Korrekturen sind
+mit **„Manuell“** an der Scheibe gekennzeichnet und behalten Vorrang. Bei getrennter
+Serververbindung ist auch der Erfassungsstatus unbekannt; Eingaben sind dann gesperrt.
+
 Je Tablet die betreuten Bahnen auswählen; Auswahlen dürfen sich überschneiden.
 Andere Tablets zeigen unbestätigte Startnummerneingaben getrennt vom verbindlichen
 Stand. Bei einem Belegungskonflikt bleibt die eigene Eingabe zur Prüfung erhalten.

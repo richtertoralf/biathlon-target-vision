@@ -6,8 +6,8 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
 Der letzte Versionstag bleibt `v0.7.0`; die nachfolgenden Änderungen sind darin
-noch nicht enthalten. Der jüngste Abschnitt beschreibt die Sitzungsverwaltung
-für Issue #29 und ihre Prüfungen.
+noch nicht enthalten. Der jüngste Abschnitt beschreibt den Tablet-Erfassungsstatus
+für Issue #30 und seine Prüfungen.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
@@ -893,3 +893,35 @@ Browsercheck läuft auch in CI; die lokale RTSP-Administration benötigt weiterh
 die optionale Teststream-Umgebung. `pip check`, JavaScript-Syntax und
 `git diff --check` sind fehlerfrei. Reale Schießstandaufnahmen und Stromausfalltests
 auf der vorgesehenen Hardware stehen weiterhin aus.
+
+## 2026-10-19 – Issue #30: Erfassungsstatus am Tablet
+
+Jede Bahnkachel zeigt direkt „Automatik aktiv“, „Erkennung läuft / unsicher“ oder
+„Nur manuell“. Eine getrennte Serververbindung macht auch den Status unbekannt.
+Aktive Einzelkorrekturen tragen die kleine Beschriftung „Manuell“ und eine
+entsprechende zugängliche Zielbeschreibung. Alle neuen Texte verwenden die
+vorhandene Übersetzungsstruktur für EN/DE/CS. Bedienung und menschliche Priorität
+bleiben unverändert; der bisherige knappe Hinweis an den Optionen entfällt.
+
+**Entscheidung:** Die bisherige Kameraantwort allein kann erfolgreiche Erkennung
+nicht belegen. Statt eine weitere Zustandsverwaltung einzuführen, leitet
+`VisionService.capture_status` den Status aus Kamera, Quellensperre und vorhandenem
+Bahntracker ab. Erst fünf bestätigte bekannte Werte mit passender Quelle,
+Verbindungsgeneration und aktueller Klassifikation erlauben „aktiv“. Journalwerte
+nach Neustart, fehlende Kalibrierung und unklare neue Bilder genügen nicht. Die
+Erkennung derselben Kamera kann für verschiedene Bahnen unterschiedlich ausfallen.
+Die additive Angabe `capture.lanes` nutzt REST und bestehende WebSocket-Zustände;
+ohne weiteres Ereignis erfolgt die Übertragung mit deren Fünf-Sekunden-Lebenszeichen.
+Keine neue Wartezeit, keine Änderung an Klassifikation, Ereigniskern oder Journalformat.
+
+**Prüfungen:** Alle **140 Python-Tests** und **neun lokalen Browserprüfungen**
+bestehen, einschließlich der optionalen lokalen RTSP-Tests. Ergänzt sind Prüfungen für
+Grundbeobachtung, Wiederverbindung, mehrere Bahnen derselben Kamera, Verdeckung,
+fehlende Kalibrierung, Quellensperre und manuelle Priorität; Statusabfragen erzeugen
+keine Journalereignisse. Der erweiterte Erfassungs-Browsercheck prüft zwei Tablets,
+alle drei Status und Sprachen, Einzelmarkierungen, Kamera-/Serverausfall sowie
+Rückstellung. Die Darstellung auf kleinen Tablets (600×960 und 960×600) wurde
+anhand tatsächlicher Browserbilder visuell geprüft. `pip check`, JavaScript-Syntax
+und `git diff --check` sind fehlerfrei. Die Kameraerkennung bleibt
+synthetisch geprüft; „Automatik aktiv“ ist keine Zusage einer bereits validierten
+Praxistauglichkeit. Der Arberstadion-Test bleibt dafür erforderlich.

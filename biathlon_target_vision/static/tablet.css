@@ -80,7 +80,12 @@ input[type="checkbox"] { width: 24px; height: 24px; accent-color: #075d45; }
 .targets .target { flex: 1; min-width: 48px; min-height: 88px; padding: 4px 1px; border: 1px solid #80918d; border-radius: 6px; background: #ffffff60; justify-content: center; }
 .lane-reset { width: 100%; min-height: 52px; height: 52px; padding: 4px 8px; margin-top: 8px; font-size: 14px; line-height: 18px; }
 .lane-main { width: 100%; height: 56px; min-height: 56px; padding: 4px 8px; line-height: 20px; }
-.capture-status { display: inline-block; vertical-align: middle; max-width: 65%; margin-left: 6px; font-size: 11px; line-height: 14px; }
+.capture-status { display: flex; align-items: center; height: 48px; margin: 2px 0; padding: 4px 6px; border-left: 4px solid #667780; background: #ffffff80; font-size: 13px; line-height: 18px; }
+.capture-status[data-status="active"] { border-color: #075d45; }
+.capture-status[data-status="uncertain"] { border-color: #9b6200; }
+.targets .target { gap: 2px; }
+.manual-marker { min-height: 14px; font-size: 10px; line-height: 14px; font-weight: 800; }
+.target[data-manual="true"] { border: 2px solid #315d8c; }
 .lane-options { margin-top: 4px; font-size: 13px; }
 .lane-options summary { min-height: 48px; padding: 14px 2px; cursor: pointer; touch-action: manipulation; }
 .lane-options summary:focus-visible { outline: 3px solid #9a6100; }

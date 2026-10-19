@@ -152,6 +152,17 @@ Es gibt keine zusätzliche Prioritäts-Engine und keine neue Zustandsliste.
 Die ausdrückliche Freigabe eines einzelnen Ziels bleibt als API-Befehl erhalten;
 im regulären Tablet-Ablauf ist sie nicht erforderlich.
 
+Der kompakte Tablet-Erfassungsstatus wird je Bahn aus dem bestehenden laufenden
+Tracker abgeleitet: aktuelle Quellenzuordnung und Freigabe, Kamera-Bildverfügbarkeit,
+Tracker-Generation und bestätigte bekannte Werte aller fünf Ziele. Noch unbestätigte
+oder unsichere Klassifikationen ergeben keinen aktiven Status; bekannte Journalwerte
+nach Neustart ebenfalls nicht. Zwei Bahnen derselben Kamera können unterschiedliche
+Status haben. `capture.lanes` transportiert diese flüchtige Ableitung im vorhandenen
+REST-/WebSocket-Zustand. Statusänderungen ohne Journalereignis kommen spätestens mit
+dem vorhandenen WebSocket-Lebenszeichen. Es gibt keine zusätzlichen Zeitgrenzen,
+persistierten Zustände oder Eingriffe in die Klassifikation. Die Kachel zeigt aktive
+Einzelkorrekturen aus `manual_targets` unabhängig vom Erfassungsstatus an.
+
 Manuelle Korrekturen enthalten im Journal den automatischen Vergleichswert,
 Beobachtungszeit und vorherigen effektiven Zustand. Nach Möglichkeit speichert
 `app.py` den Gesamt-ROI des vorhandenen aktuellen Bildpuffers unter
