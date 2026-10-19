@@ -1110,3 +1110,53 @@ vorstehenden Abschnitten:
 
 Installation des Tags: `git clone --branch v0.8.0 …` und `./install.sh` gemäß README.
 `--upgrade` wechselt bestehende Installationen auf den höchsten Versionstag.
+
+## 2026-10-19 – Ergonomische Administration
+
+**Anlass:** Die Administration war bei 20 Bahnen eine lange Liste mit kleiner
+Schrift. Kamera-, Bahn- und Sitzungsverwaltung waren vermischt, und
+Detailinformationen standen ständig sichtbar da. Auf `mediamtx18` sollen die Kameras
+erstmals über diese Seite angelegt werden.
+
+**Umsetzung:** Drei Bereiche (Kameras, Bahnen, Sitzungen), umgeschaltet über den
+URL-Hash. Es bleibt bei statischem HTML, CSS und JavaScript ohne Framework; Stil und
+Touchgrößen folgen dem Tablet (16 px Grundschrift, Bedienelemente ab 44–48 px).
+
+- *Kameras:* Liste mit Verbindungspunkt. Die Kennung wird aus dem Namen
+  vorgeschlagen und ist nach dem Anlegen fest, weil Kalibrierungen an ihr hängen.
+  Die RTSP-Adresse wird im Klartextfeld eingegeben; beim Bearbeiten erscheint die
+  gespeicherte Adresse ohne Zugangsdaten. Bahnen werden über Schaltflächen
+  zugeordnet, bereits vergebene Bahnen sind gesperrt. Dazu kommen Vorschau,
+  Kalibrierungslinks und ein Entfernen in zwei Schritten statt eines Dialogs.
+- *Bahnen:* Raster mit Bahnnummer, Kamera und Erfassungsstatus aus #30, ergänzt um
+  Störungen: Kamera getrennt, Erfassung gestoppt, Kalibrierung fehlerhaft.
+  Details, Quellensperre, automatische Zielzustände, Korrekturen und
+  Kalibrierungsstand erscheinen erst nach Auswahl.
+- *Sitzungen:* Umbenennen sowie Abschließen und Neubeginn mit der bisherigen
+  ausdrücklichen Bestätigung; dazu die Liste der Archive.
+
+**Entscheidung zu #23:** Die vollständige gespeicherte URL wird weiterhin nicht
+angezeigt, weil `/admin` ohne Anmeldung erreichbar ist (#24). Die Kamera-Endpunkte
+liefern stattdessen additiv `address`, mit `***@` für Benutzer/Passwort und `?…`
+für Query-Parameter. Der allgemeine Zustand für Tablets und externe Clients bleibt
+unverändert. Der missverständliche Hinweis „leer lassen“ entfällt: Das Feld heißt
+beim Bearbeiten „Neue RTSP-Adresse (optional)“. Ein leeres Feld behält die
+gespeicherte Adresse wie bisher. Damit sind die Teile von #23 umgesetzt, die keinen
+Zugriffsschutz erfordern.
+
+Keine Änderungen an Ereigniskern, optischer Erkennung, Journal, WebSocket oder
+gespeicherten Daten. Admin-spezifische Regeln wurden aus `calibration.css` in das
+neue `admin.css` verschoben.
+
+**Tests:** Die neue CI-Browserprüfung `administration_browser.cjs` startet echte
+Server mit 4, 10 und 20 Bahnen. Sie prüft Desktop, Tablet und Telefon
+(1366/768/390 px) auf horizontales Scrollen, Schriftgröße und Höhe der
+Bedienelemente. Bei 20 Bahnen auf dem Desktop verlangt sie höchstens vier Reihen.
+Geprüft werden außerdem Kamera-CRUD mit Pflichtadresse und vorgeschlagener Kennung,
+keine Zugangsdaten in der Seite, unverändert gespeicherte URL beim Bearbeiten ohne
+neue Adresse, Adresswechsel, doppelte Bahnvergabe, Entfernen in zwei Schritten,
+Bahnstatus, Details und Quellensperre, Sitzungswechsel mit Bestätigung und Archiv,
+Neuladen sowie eine sichtbare Serverunterbrechung. Die bestehenden Prüfungen für
+RTSP-Administration (echte Vorschau und Kalibrierung), Sitzungen und Erfassung
+wurden an die neue Struktur angepasst. Ein Python-Test prüft die bereinigte Adresse
+einschließlich Passwort mit `@`, Query-Zugangsdaten und IPv6.

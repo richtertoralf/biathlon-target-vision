@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 
 from . import API_VERSION, __version__
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
-from .config import CameraSettings, Settings, load_settings, save_settings
+from .config import CameraSettings, Settings, display_url, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
 from .core import Conflict
 from .sessions import Sessions, SessionStart, SessionName
@@ -144,13 +144,17 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     def lane_camera(lane_id):
         return next((camera for camera in app.state.settings.cameras if lane_id in camera.lane_ids), None)
 
-    def camera_list():
+    def camera_list(addresses=False):
         result = []
         for camera in app.state.settings.cameras:
             capture = app.state.cameras.snapshot(camera.id)
             result.append({"id": camera.id, "name": camera.name, "lane_ids": camera.lane_ids,
                            "url_configured": True, "connected": capture["connected"],
                            "captured_at": capture["captured_at"].isoformat() if capture["captured_at"] else None})
+            # Only the camera endpoints show the address, and never its credentials;
+            # the state for tablets and external clients stays unchanged.
+            if addresses:
+                result[-1]["address"] = display_url(camera.url)
         return {"cameras": result}
 
     def save_correction_image(command, event):
@@ -191,7 +195,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
 
     @app.get("/api/cameras")
     async def cameras():
-        return camera_list()
+        return camera_list(addresses=True)
 
     async def change_camera(request, camera_id=None):
         async with camera_changes:
@@ -217,7 +221,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             save_settings(data_dir, settings)
             await run_in_threadpool(app.state.cameras.configure, settings.cameras)
             app.state.settings = settings
-            return camera_list()
+            return camera_list(addresses=True)
 
     @app.post("/api/cameras")
     async def add_camera(request: Request):
@@ -236,7 +240,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             save_settings(data_dir, settings)
             await run_in_threadpool(app.state.cameras.configure, settings.cameras)
             app.state.settings = settings
-            return camera_list()
+            return camera_list(addresses=True)
 
     @app.get("/api/cameras/{camera_id}/frame")
     async def camera_frame(camera_id: str):

@@ -48,6 +48,15 @@ class Settings(BaseModel):
         return self
 
 
+def display_url(url):
+    """RTSP address for the administration: user, password and query parameters hidden."""
+    parsed = urlsplit(url)
+    credentials = "***@" if "@" in parsed.netloc else ""
+    host = parsed.netloc.rpartition("@")[2]
+    # Some cameras pass credentials as query parameters; hide them all.
+    return f"{parsed.scheme}://{credentials}{host}{parsed.path}" + ("?…" if parsed.query else "")
+
+
 def load_settings(directory):
     path = Path(directory) / "config.json"
     try:

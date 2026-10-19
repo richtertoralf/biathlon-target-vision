@@ -54,6 +54,15 @@ class CameraApiTests(unittest.TestCase):
         self.assertEqual(self.client.delete('/api/cameras/cam-1').status_code,200)
         self.assertEqual(self.client.get('/api/cameras').json()['cameras'],[])
         self.assertEqual(self.client.get('/api/cameras/cam-1/frame').status_code,404)
+    def test_administration_address_hides_credentials_and_stays_out_of_state(self):
+        raw=self.camera();raw['url']='rtsp://user:p%40ss@word@10.0.0.5:554/Streaming/101?user=x&password=secret'
+        for response in (self.client.post('/api/cameras',json=raw),self.client.get('/api/cameras')):
+            self.assertNotIn('secret',response.text);self.assertNotIn('word',response.text)
+            self.assertEqual(response.json()['cameras'][0]['address'],'rtsp://***@10.0.0.5:554/Streaming/101?…')
+        raw['url']='rtsp://[fe80::1]:8554/cam';self.assertEqual(self.client.put('/api/cameras/cam-1',json=raw).status_code,200)
+        self.assertEqual(self.client.get('/api/cameras').json()['cameras'][0]['address'],'rtsp://[fe80::1]:8554/cam')
+        # The shared state for tablets and external clients keeps its previous fields.
+        self.assertNotIn('address',self.client.get('/api/state').json()['capture']['cameras'][0])
     def test_invalid_or_conflicting_config_never_echoes_credentials(self):
         self.client.post('/api/cameras',json=self.camera())
         for changes in ({'id':'cam-2'}, {'id':'cam-2','lane_ids':[4]}, {'id':'cam-2','lane_ids':[3],'url':'http://user:secret@localhost/test'}, {'id':'cam-2','lane_ids':[True]}):

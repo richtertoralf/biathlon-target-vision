@@ -330,12 +330,22 @@ zu getrenntem Status und Wiederverbindung nach einer Sekunde; nach spätestens
 drei Sekunden gilt ein Bild als veraltet. Native Decoderlogs sind wegen möglicher
 Zugangsdaten deaktiviert. API/Tablet bleiben bei Verbindungsausfällen unabhängig.
 
-`/admin` verwaltet Kameras, Bahnzuordnung und JPEG-Vorschau. Die vorhandene Seite
+`/admin` gliedert sich in drei Bereiche, umgeschaltet über den URL-Hash ohne
+zusätzliches Frontend-Framework: Kameras (anlegen, bearbeiten, entfernen,
+Bahnzuordnung über Bahnschaltflächen, Verbindungsstatus, JPEG-Vorschau,
+Kalibrierungslinks), Bahnen (Raster mit Kamera und Erfassungsstatus; Details,
+Quellensperre und Zielzustände erst nach Auswahl) und Sitzungen. Ein einziger
+Abruf von `/api/state` alle zwei Sekunden aktualisiert alle Bereiche und die
+Serveranzeige. Die Kennung wird aus dem Namen vorgeschlagen und bleibt danach fest,
+weil Kalibrierungen an sie gebunden sind. Die Kamera-Endpunkte liefern zur Kontrolle
+eine bereinigte Adresse ohne Zugangsdaten und Query-Parameter; der allgemeine
+Zustand enthält sie nicht. Die vorhandene Seite
 `/calibration?lane=N` übernimmt ein aktuelles Kamerabild als eingefrorenes Standbild.
 Kalibrierungen enthalten Kamerakennung und URL-Hash; eine andere Quelle verlangt
 Neukalibrierung. Bildgröße und begrenzte Nachführung prüfen die Bildgeometrie.
 Beim Bearbeiten kann eine leere URL die vorhandene übernehmen; öffentliche
-Kameraantworten enthalten ausschließlich Namen, Kennung, Bahnen und Status.
+Kameraantworten enthalten Namen, Kennung, Bahnen, Status und höchstens die
+bereinigte Adresse.
 
 
 ## Laufende optische Erfassung

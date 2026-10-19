@@ -590,7 +590,7 @@ Zusätzlich enthalten vollständige Zustände:
 | `session_id`, `session` | Sitzungskennung sowie Name und Start-/Endzeit |
 | `health` | `ok` oder `error`; Fehler bei Erfassung oder Speicherung, siehe `capture.running` und Befehlsantworten |
 | `capture.running` | Optische Auswertungsaufgabe läuft; bedeutet nicht, dass jede Kamera verbunden/kalibriert ist |
-| `capture.cameras` | Dieselbe bereinigte Liste wie `/api/cameras`, einschließlich `connected` und letzter Bildempfangszeit |
+| `capture.cameras` | Bereinigte Kameraliste wie `/api/cameras`, jedoch ohne `address`; einschließlich `connected` und letzter Bildempfangszeit |
 | `capture.calibration_errors` | Aktuell vom Erfassungskern gemeldete beschädigte Kalibrierungen je Bahn |
 | `capture.lanes` | Flüchtiger optischer Erfassungsstatus je Bahnkennung: `active`, `uncertain` oder `unavailable` |
 | `simulation` | Beim Start gewählter Simulationsmodus |
@@ -709,7 +709,10 @@ Anwendung. Der Vertrag verlangt keine zusätzliche Schnittstelle oder Datenbank.
 ## Kameraverwaltung
 
 - `GET /api/cameras`: Liste mit `id`, `name`, `lane_ids`, `url_configured`,
-  `connected`, `captured_at`. Keine RTSP-URL oder Zugangsdaten.
+  `connected`, `captured_at` und `address`. `address` ist die RTSP-Adresse zur
+  Kontrolle in der Administration: Benutzer/Passwort als `***@`, Query-Parameter
+  als `?…` ausgeblendet, etwa `rtsp://***@10.0.0.5:554/Streaming/101`. Die
+  vollständige URL und Zugangsdaten werden nie zurückgegeben.
 - `POST /api/cameras`: JSON mit `id`, `name`, `url`, `lane_ids`.
 - `PUT /api/cameras/{id}`: dieselben Felder; leere `url` erhält die gespeicherte
   Adresse. Kennung bleibt fest. Vollständige RTSP-/RTSPS-Adresse erforderlich.

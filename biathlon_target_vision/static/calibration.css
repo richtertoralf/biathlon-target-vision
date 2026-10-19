@@ -19,10 +19,3 @@ canvas { display: none; width: 100%; touch-action: none; cursor: crosshair; }
 #status { padding: 14px; background: #233b4e; border-left: 4px solid #85cdbb; }
 #status.error { border-color: #ff9a8e; color: #ffc7bf; }
 .note, #saved { color: #b3c5d3; font-size: .9rem; }
-/* Sitzungsnamen und Kennungen bleiben auch auf kleinen Tablets lesbar. */
-#current-session { overflow-wrap: anywhere; }
-#rename-session label, #start-session label { flex-wrap: wrap; margin: 16px 0; }
-#rename-session input, #new-session-name { max-width: 100%; box-sizing: border-box; }
-#rename-session input, #new-session-name { min-height: 44px; padding: 8px; }
-#start-session .session-confirmation { flex-wrap: nowrap; align-items: flex-start; }
-#confirm-session { width: 24px; height: 24px; flex-shrink: 0; }
