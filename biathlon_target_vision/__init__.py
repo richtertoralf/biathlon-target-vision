@@ -7,4 +7,4 @@ os.environ["OPENCV_LOG_LEVEL"] = "SILENT"
 
 __version__ = "0.7.0"
 
-API_VERSION = 1
+API_VERSION = 2

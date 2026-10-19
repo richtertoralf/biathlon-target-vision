@@ -13,7 +13,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
   browser=await chromium.launch({headless:true}); const page=await browser.newPage(); await page.goto(url+'/monitor');
   await expect(page.locator('#connection')).toHaveText('Live'); await expect(page.locator('.lane')).toHaveCount(2);
   await expect(page.locator('button,input,select')).toHaveCount(0);
-  await fetch(url+'/api/observations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'target',lane_id:1,target_id:5,state:'fallen',source:'test',observed_at:'2026-10-17T12:00:00Z'})});
+  await fetch(url+'/api/observations',{method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':(await(await fetch(url+'/api/state')).json()).session_id},body:JSON.stringify({kind:'target',lane_id:1,target_id:5,state:'fallen',source:'test',observed_at:'2026-10-17T12:00:00Z'})});
   await expect(page.locator('#lane-1 .target').nth(4)).toHaveAttribute('data-state','fallen');
   await expect(page.locator('#lane-1 .fallen')).toHaveCount(1);
   await expect(page.locator('#lane-1 .unknown')).toHaveCount(4);

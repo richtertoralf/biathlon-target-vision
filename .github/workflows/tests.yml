@@ -37,3 +37,4 @@ jobs:
           node tests/monitor_browser.cjs
           node tests/browser_smoke.cjs
           node tests/vision_browser.cjs
+          node tests/sessions_browser.cjs

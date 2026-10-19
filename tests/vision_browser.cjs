@@ -11,7 +11,7 @@ const {spawn}=require('node:child_process');const readline=require('node:readlin
   await tablet.goto(url);await monitor.goto(url+'/monitor');
   await expect(monitor.locator('#lane-1 .standing')).toHaveCount(5,{timeout:10000});
   const state=await (await fetch(url+'/api/state')).json();const lane=state.lanes['1'];
-  const assignment=await fetch(url+'/api/lanes/1/bib',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({lane_id:1,bib:42,expected_revision:lane.revision,expected_assignment_revision:lane.assignment_revision})});assert.equal(assignment.status,200);
+  const assignment=await fetch(url+'/api/lanes/1/bib',{method:'PUT',headers:{'Content-Type':'application/json','X-Session-ID':state.session_id},body:JSON.stringify({lane_id:1,bib:42,expected_revision:lane.revision,expected_assignment_revision:lane.assignment_revision})});assert.equal(assignment.status,200);
   const write=data=>{fs.writeFileSync(control+'.new',JSON.stringify(data));fs.renameSync(control+'.new',control);};
   write({camera1:{mask:16},camera2:{mask:4}});
   await expect(tablet.locator('#lane-1 .target').nth(4)).toHaveAttribute('data-state','fallen');

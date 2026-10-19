@@ -98,3 +98,4 @@ input[type="checkbox"] { width: 24px; height: 24px; accent-color: #075d45; }
 }
 @media (max-width: 400px) { .lane-heading h2 { font-size: 20px; }.badge { font-size: 12px; } }
 @media (max-height: 680px) and (min-width: 700px) { dialog:has(.keypad) { width: 720px; } .bib-editor { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; } .keypad { margin: 0; grid-row: span 2; } }
+#session-name { overflow-wrap: anywhere; margin: 0; }

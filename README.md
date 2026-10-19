@@ -83,6 +83,9 @@ sichtbar unbekannt.
 
 ## Entwicklungsstand und geplanter Praxistest
 
+**BTV befindet sich in aktiver Entwicklung und ist noch nicht für den produktiven
+Wettkampfbetrieb freigegeben.**
+
 Der aktuelle Entwicklungsstand auf `main` umfasst einen einheitlichen Bedienablauf
 mit manueller Priorität, synchronisierte Tablets, einen schreibgeschützten Kontrollmonitor,
 RTSP-Kameraverwaltung und browserbasierte Kalibrierung. Startnummern lassen sich
@@ -214,6 +217,47 @@ eigenem Datenordner:
 Die Bahnanzahl wird beim ersten Start gespeichert. Für eine andere Anzahl einen
 neuen Datenordner verwenden. Genau einen Serverprozess je Datenordner betreiben.
 
+## Aufzeichnungssitzungen
+
+Unter `/admin` lässt sich die aktuelle Sitzung benennen und mit **„Sitzung
+abschließen und neue starten“** beenden. Den Namen der nächsten Sitzung eingeben
+und den Abschluss ausdrücklich bestätigen. Die Seite warnt vor noch belegten
+Bahnen oder offenen Schießeinlagen. Ein bestätigter Abschluss archiviert den
+bisherigen Stand; er behauptet keine mechanische Rückstellung und kein Verlassen.
+
+Die neue Sitzung hat keine Startnummern, Belegungen oder Schießeinlagen. Alle
+Bahnen beginnen grau und müssen erneut vorbereitet werden. Tablets und Monitor
+wechseln automatisch; offene Eingaben aus der alten Sitzung werden geschlossen.
+Die Kameras, Bahnzuordnungen, Kalibrierungen und administrativen Quellensperren
+bleiben erhalten. Erste Kamerabilder sind Grundbeobachtungen, keine rückwirkenden
+Fälle oder Rückstellungen. Identische BIBs in verschiedenen Sitzungen sind unabhängig.
+
+Journal und Korrekturbelege bleiben je Sitzung unter `sessions/SITZUNGS-ID/` im
+Datenordner erhalten. Abgeschlossene Sitzungen sind in der Administration mit
+ihrer Journal-API verlinkt; eine zeitbezogene Journalansicht und Exportoberfläche
+sind weiterhin geplant. Archive werden nicht automatisch gelöscht. Neustarts
+setzen die aktive Sitzung fort. Die Administration setzt derzeit weiterhin ein
+vertrauenswürdiges lokales Netz voraus; Benutzerrollen sind noch nicht umgesetzt.
+
+**Einmaliger Wechsel alter Testinstallationen:** Alte Stände speicherten direkt
+`events.jsonl` und `corrections/` im Datenordner. Dieser Bestand wird weder
+umgeschrieben noch gelöscht; der neue Server verlangt vorherige manuelle
+Archivierung. Server stoppen, den vollständigen bisherigen Datenordner unter
+einem eindeutig benannten Archivpfad aufbewahren und einen neuen Datenordner
+anlegen. Nur `config.json` und `calibrations/`, soweit vorhanden, aus der Sicherung
+kopieren. Bei systemd liegt der Datenordner unter `/var/lib/biathlon-target-vision`;
+Eigentümer `btv:btv`, Verzeichnisrechte `0750`, Konfigurationsrechte `0600` und
+Schreibrechte des Dienstbenutzers auch für kopierte Kalibrierungen wiederherstellen.
+Lokal kann stattdessen ein neuer `--data-dir` verwendet werden. Administrative
+Quellensperren aus dem alten Journal bei Bedarf erneut setzen.
+
+Bisher benötigte jede neue Veranstaltung einen eigenen Datenordner und einen
+Serverneustart. Für neu angelegte Sitzungen entfällt das. Ältere
+Entwicklungsversionen und API-Schreiber ohne Sitzungskennung werden nicht
+unterstützt; siehe [Sitzungsvertrag](docs/API.md#aufzeichnungssitzungen-api-version-2).
+Keinen älteren Programmstand mit dem neuen Datenordner betreiben. Für einen
+bewussten Rückwechsel den separat aufbewahrten alten Testbestand verwenden.
+
 ## Kameras einrichten
 
 `http://SERVER-IP:8091/admin` öffnen. Kennung, Name, vollständige RTSP-Adresse
@@ -231,7 +275,7 @@ Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Unter „Erfassu
 je Bahn“ lässt sich eine fehlerhafte Quelle administrativ sperren oder wieder
 zulassen; dort stehen auch automatische Vergleichswerte und aktive Korrekturen.
 Für den normalen Ablauf oder einen Kameraausfall ist diese Einstellung unnötig.
-Aus älteren Installationen übernommene manuelle Quellensperren bleiben erhalten.
+Quellensperren bleiben über Neustarts und Sitzungswechsel erhalten.
 
 Kleine Bildverschiebungen werden nachgeführt; unklare Sicht oder zu große Bewegung
 führt zu unbekannten Beobachtungen. Beim Bearbeiten bleibt eine leer gelassene

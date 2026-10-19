@@ -33,6 +33,7 @@ class CameraApiTests(unittest.TestCase):
         self.directory = tempfile.TemporaryDirectory(); self.path = Path(self.directory.name)
         self.mock = patch('biathlon_target_vision.app.CameraManager', FakeCameras); self.mock.start()
         self.client = TestClient(create_app(self.path, 3)); self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
     def tearDown(self):
         self.client.__exit__(None,None,None); self.mock.stop(); self.directory.cleanup()
     def camera(self, **changes):
@@ -48,6 +49,7 @@ class CameraApiTests(unittest.TestCase):
         self.assertEqual(self.client.put('/api/cameras/cam-1',json=edited).status_code,200)
         self.assertEqual(load_settings(self.path).cameras[0].url,self.camera()['url'])
         self.client.__exit__(None,None,None); self.client=TestClient(create_app(self.path)); self.client.__enter__()
+        self.client.headers["X-Session-ID"] = self.client.get("/api/state").json()["session_id"]
         self.assertEqual(self.client.get('/api/cameras').json()['cameras'][0]['lane_ids'],[3])
         self.assertEqual(self.client.delete('/api/cameras/cam-1').status_code,200)
         self.assertEqual(self.client.get('/api/cameras').json()['cameras'],[])

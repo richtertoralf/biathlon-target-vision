@@ -2,8 +2,19 @@
 <!-- Kameraverwaltung; die vorhandene Kalibrierungsseite markiert die Gesamt-ROI. -->
 <html lang="de" translate="no" class="notranslate"><meta charset="utf-8">
   <meta name="google" content="notranslate"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BTV – Kameras</title><link rel="stylesheet" href="/static/calibration.css">
-<main><header><h1>Kameras</h1><a href="/monitor">Kontrollmonitor</a></header>
+<title>BTV – Administration</title><link rel="stylesheet" href="/static/calibration.css">
+<main><header><h1>Administration</h1><a href="/monitor">Kontrollmonitor</a></header>
+<section aria-labelledby="sessions-heading"><h2 id="sessions-heading">Aufzeichnungssitzung</h2>
+<p id="current-session"></p>
+<form id="rename-session"><label>Name der aktuellen Sitzung <input id="session-name" required maxlength="128"></label> <button>Namen speichern</button></form>
+<form id="start-session"><label>Name der neuen Sitzung <input id="new-session-name" required maxlength="128" autocomplete="off"></label>
+<p>Journal und Korrekturbelege bleiben im Archiv. Die neue Sitzung beginnt ohne Startnummern und Belegungen; die Bahnen müssen erneut vorbereitet werden. Kameras und Kalibrierungen bleiben erhalten.</p>
+<p id="session-warning"></p>
+<label class="session-confirmation"><input id="confirm-session" type="checkbox" required><span>Aktuelle Sitzung abschließen; auch die oben genannten Belegungen und offenen Schießeinlagen nur noch archivieren.</span></label>
+<p><button id="start-session-button">Sitzung abschließen und neue starten</button></p></form>
+<p id="session-status" role="status"></p>
+<details><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
+</section><h2>Kameras</h2>
 <label>Kamera <select id="camera"><option value="">Neue Kamera</option></select></label>
 <form id="camera-form"><div class="controls">
 <label>Kennung <input id="camera-id" required pattern="[a-zA-Z0-9_-]{1,64}"></label>

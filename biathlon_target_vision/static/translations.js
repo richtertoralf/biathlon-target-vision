@@ -1,6 +1,7 @@
 // Alle Texte des Tablet-Bedienplatzes; keine Sprachlogik im Ereigniskern.
 window.BTV_I18N = {
   en: {
+    sessionChanged: 'New recording session started. Previous inputs have been closed.',
     confirmTarget: 'Confirm the actual target position.', checkTargets: 'Check targets · enter corrections directly',
     enterNumber: 'Enter',
     occupyLane: 'Occupy lane', leaveLane: 'Leave lane', allStanding: 'All targets are standing',
@@ -38,6 +39,7 @@ window.BTV_I18N = {
     inputOffline: 'Your input is preserved locally. Confirmation is unavailable until reconnection.',
   },
   de: {
+    sessionChanged: 'Neue Aufzeichnungssitzung gestartet. Bisherige Eingaben wurden geschlossen.',
     confirmTarget: 'Tatsächliche Scheibenstellung bestätigen.', checkTargets: 'Scheiben prüfen · direkt korrigieren',
     enterNumber: 'Eingeben',
     occupyLane: 'Bahn belegen', leaveLane: 'Bahn verlassen', allStanding: 'Alle Scheiben aufgerichtet',
@@ -75,6 +77,7 @@ window.BTV_I18N = {
     inputOffline: 'Deine Eingabe bleibt lokal erhalten. Bestätigen ist erst nach Wiederverbindung möglich.',
   },
   cs: {
+    sessionChanged: 'Byla zahájena nová relace záznamu. Předchozí zadávání bylo ukončeno.',
     confirmTarget: 'Potvrďte skutečnou polohu terče.', checkTargets: 'Zkontrolujte terče · opravte přímo',
     enterNumber: 'Zadat',
     occupyLane: 'Obsadit stav', leaveLane: 'Opustit stav', allStanding: 'Všechny terče jsou vztyčené',

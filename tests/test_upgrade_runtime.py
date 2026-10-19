@@ -51,9 +51,11 @@ class UpgradeRuntimeTests(unittest.TestCase):
                     with urlopen(f'http://127.0.0.1:{port}/api/state',timeout=2) as response:return json.load(response)
                 try:
                     service('systemctl','start',deployment.SERVICE);ready()
-                    request=Request(f'http://127.0.0.1:{port}/api/observations',data=json.dumps({'lane_id':1,'kind':'target','source':'upgrade-test','target_id':5,'state':'fallen','baseline':True,'observed_at':'2026-10-17T12:00:00Z'}).encode(),headers={'Content-Type':'application/json'},method='POST')
+                    request=Request(f'http://127.0.0.1:{port}/api/observations',data=json.dumps({'lane_id':1,'kind':'target','source':'upgrade-test','target_id':5,'state':'fallen','baseline':True,'observed_at':'2026-10-17T12:00:00Z'}).encode(),headers={'Content-Type':'application/json','X-Session-ID':state()['session_id']},method='POST')
                     with urlopen(request,timeout=2) as response:self.assertEqual(response.status,200)
-                    before=state();files={path.relative_to(data):path.read_bytes() for path in data.rglob('*') if path.is_file()}
+                    request=Request(f'http://127.0.0.1:{port}/api/sessions/start',data=json.dumps({'session_id':'ba389980-936b-490a-a875-998128bd178a','expected_session_id':state()['session_id'],'name':'Upgrade-Test'}).encode(),headers={'Content-Type':'application/json'},method='POST')
+                    with urlopen(request,timeout=2) as response:self.assertEqual(response.status,200)
+                    before=state();self.assertEqual(before['session']['name'],'Upgrade-Test');files={path.relative_to(data):path.read_bytes() for path in data.rglob('*') if path.is_file()}
                     with patch.object(deployment,'run',side_effect=service):deployment.activate(root,data,root/'new',__version__)
                     after=state();self.assertNotEqual(before.pop('instance_id'),after.pop('instance_id'));self.assertEqual(before,after)
                     self.assertEqual((root/'current').resolve(),root/'new')

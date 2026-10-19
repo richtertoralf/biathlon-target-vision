@@ -3,6 +3,7 @@
   const lanes = document.getElementById('lanes'), connection = document.getElementById('connection');
   let socket, timer, retry, lastMessage = 0;
   function render(state) {
+    document.getElementById('session-name').textContent = state.session?.name || '';
     lanes.replaceChildren();
     for (const lane of Object.values(state.lanes)) {
       const occupied = state.bouts[lane.occupied_bout_id];

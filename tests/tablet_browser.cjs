@@ -337,7 +337,7 @@ async function stop(server) {
     await card(first, 3).locator('[data-action="bib"]').click();
     await typeBib(first, 85);
     const unoccupied = (await getState()).lanes['3'];
-    const released = await fetch(server.url+'/api/lanes/3/release', {method:'POST',headers:{'Content-Type':'application/json'},
+    const released = await fetch(server.url+'/api/lanes/3/release', {method:'POST',headers:{'Content-Type':'application/json','X-Session-ID':(await getState()).session_id},
       body:JSON.stringify({lane_id:3,bout_id:unoccupied.current_bout_id,expected_revision:unoccupied.revision,expected_assignment_revision:unoccupied.assignment_revision})});
     assert.equal(released.status,200);
     await expect(first.locator('#confirm-bib')).toBeDisabled();
@@ -378,7 +378,7 @@ async function stop(server) {
     await expect(normalPage.locator('#simulation-banner')).not.toBeVisible();
     await expect(normalPage.locator('button.target')).toHaveCount(100);
     await expect(normalPage.locator('.simulate-reset')).toHaveCount(0);
-    const denied = await fetch(normal.url + '/api/observations', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    const denied = await fetch(normal.url + '/api/observations', {method: 'POST', headers: {'Content-Type': 'application/json','X-Session-ID':(await(await fetch(normal.url+'/api/state')).json()).session_id},
       body: JSON.stringify({kind: 'reset', lane_id: 1, source: 'simulator', observed_at: new Date().toISOString()})});
     assert.equal(denied.status, 403);
     assert.equal((await (await fetch(normal.url + '/api/state')).json()).sequence, 0);

@@ -21,7 +21,8 @@ from . import API_VERSION, __version__
 from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .config import CameraSettings, Settings, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
-from .core import Conflict, EventStore
+from .core import Conflict
+from .sessions import Sessions, SessionStart, SessionName
 from .models import (Assignment, Observation, Release, ModeChange, ManualTarget,
                      OverrideRelease, ManualReset, Occupy)
 from .vision import VisionService
@@ -36,16 +37,15 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     @asynccontextmanager
     async def lifespan(app):
         app.state.instance_id = str(uuid4())
-        app.state.store = EventStore(Path(data_dir), lane_count)
+        app.state.sessions = Sessions(Path(data_dir), lane_count)
+        app.state.store = app.state.sessions.store
         try:
             app.state.calibrations = CalibrationStore(Path(data_dir))
             app.state.settings = load_settings(data_dir)
             if any(lane > len(app.state.store.state["lanes"]) for camera in app.state.settings.cameras for lane in camera.lane_ids):
                 raise ValueError("Kamerakonfiguration enthält unbekannte Bahn")
             app.state.cameras = CameraManager(app.state.settings.cameras)
-            app.state.vision = VisionService(lambda: app.state.settings, app.state.cameras,
-                                             app.state.calibrations, app.state.store, publish)
-            app.state.vision_task = asyncio.create_task(app.state.vision.run())
+            start_vision()
             try:
                 yield
             finally:
@@ -54,7 +54,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                     await asyncio.gather(app.state.vision_task, return_exceptions=True)
                     await run_in_threadpool(app.state.cameras.close)
         finally:
-            app.state.store.close()
+            app.state.sessions.close()
 
     app = FastAPI(title="Biathlon Target Vision", version=__version__, lifespan=lifespan)
     static = Path(__file__).with_name("static")
@@ -74,10 +74,11 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return JSONResponse(status_code=503, content={"detail": "Speicherfehler. Serverprotokoll und Datenträger prüfen."})
 
     def api_identity():
-        return {"api_version": API_VERSION, "instance_id": app.state.instance_id}
+        return {"api_version": API_VERSION, "instance_id": app.state.instance_id,
+                "session_id": app.state.sessions.current["session_id"]}
 
     def health_status():
-        return "ok" if not app.state.store.failed and not app.state.vision_task.done() else "error"
+        return "ok" if not app.state.sessions.failed and not app.state.store.failed and not app.state.vision_task.done() else "error"
 
     def snapshot():
         state = app.state.store.snapshot()
@@ -91,7 +92,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                     and any(manual is None and not pending for manual, pending in
                             zip(lane["manual_targets"], lane["automatic_baseline_pending"]))):
                 lane["status"] = "reset_required"
-        return {**state, **api_identity(), "simulation": simulation,
+        return {**state, **api_identity(), "session": dict(app.state.sessions.current), "simulation": simulation,
                 "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
                     **cameras, "calibration_errors": dict(app.state.vision.errors)}}
 
@@ -110,7 +111,16 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return {"type": "state", **snapshot(), "editor_id": editor_id,
                 "drafts": [draft for draft, _ in drafts.values()]}
 
-    def publish(command):
+    def start_vision():
+        session_id = app.state.sessions.current["session_id"]
+        app.state.vision = VisionService(lambda: app.state.settings, app.state.cameras,
+            app.state.calibrations, app.state.store,
+            lambda command: publish(command, session_id),
+            not_before=app.state.sessions.current["started_at"])
+        app.state.vision_task = asyncio.create_task(app.state.vision.run())
+
+    def publish(command, session_id):
+        app.state.sessions.check_session(session_id)
         duplicate = command.event_id in app.state.store.by_id
         event = app.state.store.apply(command)
         if isinstance(command, ManualTarget) and not duplicate:
@@ -157,13 +167,14 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             ok, encoded = cv2.imencode(".jpg", crop)
             if not ok:
                 raise ValueError("JPEG-Kodierung fehlgeschlagen")
-            directory = Path(data_dir) / "corrections"
+            directory = app.state.sessions.path / "corrections"
             directory.mkdir(exist_ok=True)
             stem = directory / str(event["sequence"])
             stem.with_suffix(".jpg").write_bytes(encoded.tobytes())
             # Pufferbild ist ein Vergleichsbeleg, nicht zwingend das Bild der
             # letzten stabilisierten Beobachtung. Empfangszeit ausdrücklich angeben.
             stem.with_suffix(".json").write_text(json.dumps({
+                "session_id": app.state.sessions.current["session_id"],
                 "sequence": event["sequence"], "lane_id": command.lane_id,
                 "target_id": command.target_id, "camera_id": camera.id,
                 "captured_at": capture["captured_at"].isoformat(),
@@ -254,55 +265,85 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return JSONResponse(snapshot(), headers={"Cache-Control": "no-store"})
 
     @app.get("/api/events")
-    async def events(after: int = Query(0, ge=0), limit: int = Query(1000, ge=1, le=1000)):
-        return JSONResponse({"events": app.state.store.history(after, limit),
-                             "sequence": app.state.store.state["sequence"], **api_identity()},
+    async def events(after: int = Query(0, ge=0), limit: int = Query(1000, ge=1, le=1000), session_id: str | None = None):
+        session_id = session_id or app.state.sessions.current["session_id"]
+        try:
+            history, sequence = app.state.sessions.history(session_id, after, limit)
+        except KeyError:
+            raise HTTPException(404, "Sitzung existiert nicht") from None
+        return JSONResponse({"events": history, "sequence": sequence, **api_identity(), "session_id": session_id},
                             headers={"Cache-Control": "no-store"})
 
+    @app.get("/api/sessions")
+    async def sessions():
+        return JSONResponse(app.state.sessions.metadata, headers={"Cache-Control": "no-store"})
+
+    @app.put("/api/sessions/current")
+    async def rename_session(command: SessionName):
+        app.state.sessions.rename(command)
+        wake_subscribers()
+        return snapshot()
+
+    @app.post("/api/sessions/start")
+    async def start_session(command: SessionStart):
+        # Kein await zwischen Prüfung, dauerhaftem Wechsel und Austausch der
+        # Verarbeitung: andere HTTP-Befehle sehen vollständig alt oder neu.
+        if app.state.sessions.start(command):
+            previous = app.state.vision_task
+            previous.cancel()
+            app.state.store = app.state.sessions.store
+            drafts.clear()
+            start_vision()
+            wake_subscribers()
+            with anyio.CancelScope(shield=True):
+                await asyncio.gather(previous, return_exceptions=True)
+        return snapshot()
+
     @app.post("/api/observations")
-    async def observations(command: Observation, x_lane_revision: int | None = Header(default=None, ge=0)):
+    async def observations(command: Observation, x_session_id: str = Header(),
+                           x_lane_revision: int | None = Header(default=None, ge=0)):
         if command.source == "simulator" and not simulation:
             raise HTTPException(403, "Simulationsbetrieb ist deaktiviert.")
-        # Optionaler Revisionsschutz für manuelle Simulation; Kameras behalten
-        # ihre bisherige Schnittstelle. Prüfung und Verarbeitung ohne await.
+        # Optionaler Revisionsschutz für manuelle Simulation. Der Sitzungsbezug
+        # gilt für jede Quelle; Prüfung und Verarbeitung erfolgen ohne await.
         if x_lane_revision is not None and command.event_id not in app.state.store.by_id:
             lane = app.state.store.state["lanes"].get(str(command.lane_id))
             if lane is None or lane["revision"] != x_lane_revision:
                 raise Conflict("Bahn wurde zwischenzeitlich geändert. Zustand neu laden.")
-        return publish(command)
+        return publish(command, x_session_id)
 
     @app.put("/api/lanes/{lane_id}/bib")
-    async def assign(lane_id: int, command: Assignment):
-        return publish_lane(lane_id, command)
+    async def assign(lane_id: int, command: Assignment, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.post("/api/lanes/{lane_id}/occupy")
-    async def occupy(lane_id: int, command: Occupy):
-        return publish_lane(lane_id, command)
+    async def occupy(lane_id: int, command: Occupy, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.post("/api/lanes/{lane_id}/release")
-    async def release(lane_id: int, command: Release):
-        return publish_lane(lane_id, command)
+    async def release(lane_id: int, command: Release, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
-    def publish_lane(lane_id, command):
+    def publish_lane(lane_id, command, session_id):
         if lane_id != command.lane_id:
             raise HTTPException(422, "Bahnnummer in URL und Befehl unterscheiden sich.")
-        return publish(command)
+        return publish(command, session_id)
 
     @app.put("/api/lanes/{lane_id}/mode")
-    async def set_mode(lane_id: int, command: ModeChange):
-        return publish_lane(lane_id, command)
+    async def set_mode(lane_id: int, command: ModeChange, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.post("/api/lanes/{lane_id}/manual-target")
-    async def manual_target(lane_id: int, command: ManualTarget):
-        return publish_lane(lane_id, command)
+    async def manual_target(lane_id: int, command: ManualTarget, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.post("/api/lanes/{lane_id}/override-release")
-    async def override_release(lane_id: int, command: OverrideRelease):
-        return publish_lane(lane_id, command)
+    async def override_release(lane_id: int, command: OverrideRelease, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.post("/api/lanes/{lane_id}/reset")
-    async def manual_reset(lane_id: int, command: ManualReset):
-        return publish_lane(lane_id, command)
+    async def manual_reset(lane_id: int, command: ManualReset, x_session_id: str = Header()):
+        return publish_lane(lane_id, command, x_session_id)
 
     @app.websocket("/ws")
     async def websocket(socket: WebSocket):
@@ -325,6 +366,11 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                         if len(raw) > 1024:
                             raise ValueError("Entwurf zu groß")
                         data = json.loads(raw)
+                        try:
+                            app.state.sessions.check_session(data.get("session_id"))
+                        except Conflict:
+                            wake_subscribers()
+                            continue
                         if data["type"] == "draft_clear":
                             if socket in drafts:
                                 del drafts[socket]

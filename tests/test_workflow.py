@@ -216,6 +216,7 @@ class WorkflowApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             with TestClient(create_app(directory, 1)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 with client.websocket_connect('/ws') as first, client.websocket_connect('/ws') as second:
                     first.receive_json(); second.receive_json()
                     # BIB-Eingabe beginnt vor den manuellen Zuständen auf dem zweiten Tablet.
@@ -239,6 +240,7 @@ class WorkflowApiTests(unittest.TestCase):
                     self.assertEqual(client.put('/api/lanes/1/bib', json=pending).json()['event'], response.json()['event'])
                     self.assertEqual(client.get('/api/state').json()['sequence'], state['sequence'])
             with TestClient(create_app(directory)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 restored = client.get('/api/state').json()
                 self.assertEqual(restored['lanes']['1'], lane)
                 self.assertEqual(len(restored['bouts']), 1)
@@ -248,6 +250,7 @@ class WorkflowApiTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory=Path(temporary)
             with TestClient(create_app(directory,2)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 with client.websocket_connect('/ws') as first,client.websocket_connect('/ws') as second:
                     first.receive_json();second.receive_json()
                     response=client.post('/api/lanes/1/occupy',json={'lane_id':1,'expected_revision':0})
@@ -263,6 +266,7 @@ class WorkflowApiTests(unittest.TestCase):
                     self.assertEqual(response.status_code,200)
                     self.assertEqual(response.json()['state']['lanes']['1']['status'],'reset_required')
             with TestClient(create_app(directory)) as client:
+                client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                 state=client.get('/api/state').json();self.assertIsNone(state['lanes']['1']['occupied_bout_id'])
                 self.assertEqual(state['bouts'][bout]['bib'],82)
                 self.assertEqual(client.get('/api/health').status_code,200)
@@ -282,6 +286,7 @@ class WorkflowApiTests(unittest.TestCase):
             save_settings(directory,Settings(cameras=[CameraSettings(id='test',name='Test',url='rtsp://localhost/test',lane_ids=[1])]))
             with patch('biathlon_target_vision.app.CameraManager',SwitchCamera),patch('biathlon_target_vision.vision.VisionService.run',idle):
                 with TestClient(create_app(directory,1)) as client:
+                    client.headers["X-Session-ID"] = client.get("/api/state").json()["session_id"]
                     result=client.post('/api/lanes/1/reset',json={'lane_id':1,'expected_control_revision':0})
                     self.assertEqual(result.status_code,200)
                     at=datetime.now(timezone.utc)

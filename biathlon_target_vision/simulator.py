@@ -9,13 +9,15 @@ from uuid import uuid4
 
 
 def send_observation(url, lane_id, action, target_id=None):
+    with urlopen(url.rstrip("/") + "/api/state", timeout=10) as response:
+        session_id = json.load(response)["session_id"]
     command = {"event_id": str(uuid4()), "lane_id": lane_id,
                "kind": "reset" if action == "reset" else "target",
                "source": "simulator", "observed_at": datetime.now(timezone.utc).isoformat()}
     if action != "reset":
         command.update(target_id=target_id, state={"hit": "fallen", "standing": "standing", "unknown": "unknown"}[action])
     request = Request(url.rstrip("/") + "/api/observations", data=json.dumps(command).encode(),
-                      headers={"Content-Type": "application/json"}, method="POST")
+                      headers={"Content-Type": "application/json", "X-Session-ID": session_id}, method="POST")
     with urlopen(request, timeout=10) as response:
         return json.load(response)
 

@@ -1,4 +1,4 @@
-# Ereigniskern und Schnittstellen, Version 0.7
+# Ereigniskern und Schnittstellen, API-Version 2
 
 ## Interaktive API-Dokumentation
 
@@ -12,8 +12,9 @@ Die Endpunkte sind über die Serveradresse erreichbar,
 beispielsweise `http://SERVER-IP:8091/docs`.
 
 Lesende Endpunkte wie `GET /api/state` sind ohne Anmeldung
-zugänglich. Schreibende Endpunkte unterliegen den
-konfigurierten Bediener- und Administratorberechtigungen (in Version 0.7 noch nicht umgesetzt).
+zugänglich. Auch schreibende Endpunkte haben derzeit keine Anmeldung. Bediener- und
+Administratorberechtigungen sind in Issue #24 geplant; nur im vertrauenswürdigen
+lokalen Netz betreiben.
 
 Die validierten Befehlsmodelle stehen bei laufendem Server unter `/docs` und
 `/openapi.json`; Zustandsvertrag und Kamerafelder sind hier dokumentiert. Technische Zustandsbezeichner bleiben englisch. 
@@ -28,7 +29,10 @@ implementiert. Sensoradapter folgen.
 | Schnittstelle | Aufgabe |
 |---|---|
 | `GET /api/state` | Gemeinsamer Zustand aller Bahnen und Schießeinlagen |
-| `GET /api/events?after=0&limit=1000` | Journal nach Sequenznummer, höchstens 1.000 Einträge pro Abruf |
+| `GET /api/events?after=0&limit=1000&session_id=UUID` | Journal einer Sitzung, höchstens 1.000 Einträge pro Abruf |
+| `GET /api/sessions` | Aktive und archivierte Sitzungsmetadaten |
+| `PUT /api/sessions/current` | Aktuelle Sitzung benennen |
+| `POST /api/sessions/start` | Aktuelle Sitzung abschließen und neue starten |
 | `POST /api/observations` | Einheitlicher Eingang für Simulator, Kamera und Sensor |
 | `PUT /api/lanes/{lane_id}/bib` | Startnummer zuordnen oder ausdrücklich korrigieren |
 | `POST /api/lanes/{lane_id}/release` | Verlassen bestätigen, bestimmte Belegung freigeben |
@@ -42,13 +46,60 @@ implementiert. Sensoradapter folgen.
 | `POST /api/lanes/{lane_id}/calibration` | Standbild erkennen und erfolgreiche Kalibrierung speichern |
 | `POST /api/lanes/{lane_id}/calibration/align` | Zielbereiche in neuem Standbild nachführen |
 
-Beobachtungs-, Zuordnungs- und Freigabebefehle senden JSON. Erfolgreiche Befehle
+Beobachtungs-, Zuordnungs- und Freigabebefehle senden JSON sowie den verpflichtenden
+HTTP-Header `X-Session-ID` aus dem zuvor gelesenen Zustand. Das gilt für alle
+Erfassungsbefehle unter `/api/lanes/` und `/api/observations`; Kamera- und
+Kalibrierkonfiguration sind sitzungsübergreifend. Erfolgreiche Befehle
 liefern `{"event": ..., "state": ...}` mit dem gespeicherten Ereignis und dem
 aktuellen Zustand. Die `lane_id` im Befehl muss bei Bahnendpunkten zur URL passen.
 Jedes Journalereignis enthält `sequence`, den serverseitigen Zeitpunkt
 `accepted_at` und den gespeicherten Befehl `command`.
 `bib` ist eine positive Ganzzahl; das Tablet beschränkt die Eingabe auf 15 Ziffern,
 damit JavaScript sie exakt darstellen kann.
+
+## Aufzeichnungssitzungen (API-Version 2)
+
+`session_id` ist die aktive UUID. `session` im vollständigen Zustand enthält
+`session_id`, `name`, `started_at` und `ended_at` (UTC mit Zeitzone, aktiv: `null`).
+`instance_id` bezeichnet weiterhin einen Prozessstart. Ein Sitzungswechsel ändert
+`session_id`, aber nicht `instance_id`; ein Neustart macht es umgekehrt.
+
+- `GET /api/sessions`: `schema_version: 1`, `active_session_id`, `sessions` als
+  chronologische Liste der Metadaten. Kein Zugriff auf RTSP-Zugangsdaten.
+- `PUT /api/sessions/current`: `{"expected_session_id":"UUID","name":"Vormittag"}`.
+  Nur die aktuelle Sitzung kann umbenannt werden. Namen: 1–128 Zeichen nach Trimmen.
+- `POST /api/sessions/start`: beispielsweise
+  `{"expected_session_id":"ALTE-UUID","session_id":"NEUE-UUID","name":"Nachmittag","confirm_active":false}`.
+  Neue UUID im Client erzeugen. Bei belegten Bahnen **oder** offenen Schießeinlagen
+  antwortet der Server mit 409 und Bahnnummern. Erst nach bewusster Bestätigung
+  `confirm_active: true` senden. Die Administration verlangt den Abschluss auch
+  bei leeren Bahnen ausdrücklich zu bestätigen. Falsche erwartete Sitzung: 409.
+  Beide Schreibendpunkte liefern den vollständigen aktuellen Zustand.
+- Wiederholung desselben Starts mit aktiver neuer UUID und gleichem Namen ist
+  wirkungslos erfolgreich. Eine bereits archivierte UUID wird nicht reaktiviert.
+- `GET /api/events?session_id=UUID&after=N&limit=1000` liefert nur dieses Journal,
+  `sequence` ist dessen letzter Eintrag. Ohne ID wird die aktive Sitzung gelesen;
+  unbekannte ID: 404. Jeder Antwort liegt die tatsächlich gelesene `session_id` bei.
+
+Alle Erfassungsbefehle benötigen `X-Session-ID`. Fehlender Header: 422; veraltete
+Sitzung: 409, ohne Journaländerung. Ein bestehender Befehl darf **nicht** mit einer
+neu gelesenen Kennung automatisch wiederholt werden: Er bezog sich auf den alten
+Sportlerbestand. Neue Kameraserien nach Wechsel sind Grundbeobachtungen, keine
+rückwirkenden Fälle oder Rückstellungen. Administrative Quellensperren werden
+als `mode`-Befehle im neuen Journal gespeichert; dessen Anfangssequenz muss daher
+nicht 0 sein. Es entstehen keine künstlichen Freigabe-, Rückstell- oder Schussereignisse.
+
+Externe Cursor sind `(session_id, sequence)`. Bei einem Sitzungswechsel über
+WebSocket oder neu gelesenen Zustand alte Anzeigen, Dialoge und Entwürfe verwerfen,
+auch wenn die Sequenz kleiner ist. Verspätete Antworten auf Befehle der alten
+Sitzung dürfen diesen Wechsel nicht zurücknehmen. Gleiches gilt für parallel
+laufende HTTP-Zustandsabfragen. Journal-Paginierung immer an eine feste ID binden.
+
+Die API-Version steigt von 1 auf 2, weil Schreibbefehle jetzt einen verpflichtenden
+Sitzungsbezug haben. Es gibt keine Übergangsannahme für alte API-Schreiber und keine
+automatische Übernahme alter Datenordner. BTV ist noch nicht für produktive
+Wettkämpfe freigegeben. Die [README](../README.md#aufzeichnungssitzungen) beschreibt
+das manuelle Archivieren alter Testbestände unter Erhalt der Kamerakonfiguration.
 
 ## Beobachtungen
 
@@ -231,7 +282,7 @@ Eine manuelle Korrektur und die spätere Aufhebung sind getrennte Journalbefehle
 automatische Fälle werden nur für automatisch wirksame Ziele erfasst. Für eine
 Live-Anzeige immer alle fünf `targets` lesen, niemals aus dieser Liste ableiten.
 
-Optionaler Vergleichsbeleg im Datenordner: `corrections/SEQUENZ.jpg` und `.json`
+Optionaler Vergleichsbeleg im Datenordner: `sessions/SITZUNGS-ID/corrections/SEQUENZ.jpg` und `.json`
 mit Sequenz, Bahn/Ziel, Kamera, Bildempfangszeit und Vergleichswerten. Kein neuer
 öffentlicher Bildendpunkt, keine zugesicherte Bildverfügbarkeit. Der Ausschnitt
 stammt aus dem aktuellen Kamerapuffer, nicht notwendigerweise aus dem zur
@@ -252,7 +303,8 @@ Ereignissen unverändert wiedergegeben, nicht rückwirkend repariert. Noch wirks
 ungebundene Eingaben bleiben beim ersten neuen Zuordnungsbefehl nach dem Upgrade
 erhalten; ihre Zuordnung wird aus den vorhandenen Journalbefehlen wiederhergestellt.
 
-Die öffentlichen Befehlsformen und API-Version 1 bleiben erhalten. Journalleser
+Die fachlichen Befehlsformen bleiben erhalten; seit Issue #29 benötigen sie
+zusätzlich den Sitzungsheader der API-Version 2. Journalleser
 müssen den Regelmarker berücksichtigen oder die ausgegebenen `effective_targets`
 bzw. vollständigen Zustände verwenden. **Nach ersten Ereignissen mit Regelversion 2
 ist ein Downgrade auf PR #9 oder ältere Stände mit diesem Journal unsicher**, auch
@@ -432,7 +484,7 @@ sichtbare Tablet-Nummer, nicht als Anmeldung oder dauerhafte Gerätekennung.
 Ein aktiver Eingabebereich sendet bei Änderungen und spätestens alle fünf Sekunden:
 
 ```json
-{"type":"draft","lane_id":1,"bout_id":null,"value":"42"}
+{"type":"draft","session_id":"AKTUELLE-UUID","lane_id":1,"bout_id":null,"value":"42"}
 ```
 
 `value` ist eine Zeichenkette mit höchstens 15 ASCII-Ziffern, auch leer;
@@ -444,25 +496,29 @@ ein Entwurf. Andere Verbindungen können ihn weder ersetzen noch löschen.
 ausgewählten Bahnen und kennzeichnen sie ausdrücklich als unbestätigt.
 
 Beim Verlassen des Eingabebereichs oder Schließen des Dialogs sendet der Browser
-`{"type":"draft_clear"}`. Bestätigung, Verbindungsende oder mehr als 15 Sekunden
+`{"type":"draft_clear","session_id":"AKTUELLE-UUID"}`. Bestätigung, Verbindungsende oder mehr als 15 Sekunden
 ohne Erneuerung entfernen den Entwurf ebenfalls. Der Ablauf wird spätestens beim
 nächsten Fünf-Sekunden-Zustand sichtbar. Die Zeitbegrenzung entfernt lediglich
 alte Anzeigen; sie ist kein Lock und keine Reservierung. Nach Wiederverbindung
 hat das Tablet eine neue Nummer und sendet seinen weiterhin offenen Text erneut,
 solange der Eingabebereich aktiv ist. Fehlerhafte Entwurfsnachrichten beenden die
-Verbindung mit WebSocket-Code 1008.
+Verbindung mit WebSocket-Code 1008. Fehlende/veraltete Sitzungskennungen werden
+verworfen und ein aktueller Zustand angekündigt; sie erzeugen keinen Entwurf.
+Nach einem Sitzungswechsel wird ein alter lokaler Text nicht erneut gesendet.
 
 Entwürfe verändern weder `sequence`, Bahnrevisionen, Belegung noch Ereignisjournal.
 `GET /api/state` enthält ausschließlich den offiziellen Zustand und den Simulationsmodus.
 
 ## Speicherung und Fehlerbehandlung
 
-Ereignisse liegen im gewählten Datenordner in `events.jsonl`, Kalibrierungen unter
-`calibrations/`. Die Bahnanzahl wird beim ersten Start gespeichert; eine spätere
-widersprechende Angabe wird abgelehnt. Pro Datenordner ist genau ein Serverprozess
-zulässig. Für eine neue Veranstaltung einen neuen Datenordner verwenden und den
-alten aufbewahren. Speicheraufbau und Wiederherstellung beschreibt
-[ARCHITECTURE.md](ARCHITECTURE.md#ereigniskern-und-speicherung).
+Ereignisse liegen im gewählten Datenordner in `sessions/UUID/events.jsonl`,
+Korrekturbelege in `sessions/UUID/corrections/`, gemeinsame Kalibrierungen unter
+`calibrations/`. `sessions.json` bestimmt die aktive Sitzung; dieser Index gehört
+zusammen mit **allen** Sitzungsordnern zur Datensicherung. Die Bahnanzahl wird beim
+ersten Start gespeichert; eine spätere widersprechende Angabe wird abgelehnt.
+Pro Datenordner ist genau ein Serverprozess zulässig. Neue Sitzungen entstehen
+über die Administration. Speicheraufbau und Wiederherstellung beschreibt
+[ARCHITECTURE.md](ARCHITECTURE.md#aufzeichnungssitzungen).
 
 Ungültige Befehlsfelder liefern HTTP 422, fachliche Konflikte HTTP 409 mit einer
 Erklärung in `detail`. Bei einem Konflikt den aktuellen Zustand laden und die
@@ -503,9 +559,9 @@ für diese Abgrenzung erhalten. GFX integriert BTV später als eigene Quelle neb
 KES und HORA; [Integrationsauftrag #102](https://github.com/richtertoralf/gfx-engine/issues/102).
 In diesem Auftrag wurde dort ausschließlich das Issue angelegt, kein Code geändert.
 
-### Stabiler lesender Vertrag (API-Version 1)
+### Lesender Vertrag (API-Version 2)
 
-Die Anwendungsversion 0.7 und `api_version: 1` sind unterschiedliche Angaben.
+Die Anwendungsversion 0.7 und `api_version: 2` sind unterschiedliche Angaben.
 Additive Felder sind zulässig; Clients ignorieren unbekannte Felder. Ein künftig
 inkompatibler Vertrag erhält eine andere API-Version. Bestehende Befehle und
 Endpunkte bleiben erhalten; für externe Live-Anzeigen ist kein Schreibzugriff nötig.
@@ -517,11 +573,11 @@ Endpunkte bleiben erhalten; für externe Live-Anzeigen ist kein Schreibzugriff n
 | `GET /api/events?after=N&limit=1000` | Optionales Journal, zum Nachvollziehen akzeptierter Beobachtungen/Befehle |
 | `GET /api/health` | HTTP 200 bei betriebsfähigem Kern/Auswertung, sonst 503; `status`, Anwendungsversion und API-Identität |
 
-REST-Zustand, WebSocket-Zustände und Journalantworten enthalten `api_version` und
-`instance_id`. Die Instanzkennung wechselt bei jedem Serverstart, auch wenn das
+REST-Zustand, WebSocket-Zustände und Journalantworten enthalten `api_version`,
+`instance_id` und `session_id`. Die Instanzkennung wechselt bei jedem Serverstart, auch wenn das
 Journal und seine `sequence` erhalten bleiben. Auf einer neuen Verbindung immer
 den vollständigen Anfangszustand übernehmen. Nach Instanzwechsel alte
-Sequenzvergleiche und flüchtige Daten verwerfen. Innerhalb derselben Instanz dürfen
+Sequenzvergleiche und flüchtige Daten verwerfen. Innerhalb derselben Sitzung und Instanz dürfen
 ältere Befehlsantworten keinen neueren Zustand ersetzen. Gleiche Sequenznummern
 nicht pauschal verwerfen: Kamerastatus, Lebenszeichen und Eingabeentwürfe können
 sich ohne neues Journalereignis ändern.
@@ -530,7 +586,8 @@ Zusätzlich enthalten vollständige Zustände:
 
 | Feld | Bedeutung |
 |---|---|
-| `sequence` | Letztes dauerhaft akzeptiertes Ereignis, keine Bild- oder Schussnummer |
+| `sequence` | Letztes dauerhaft akzeptiertes Ereignis dieser Sitzung, keine Bild- oder Schussnummer |
+| `session_id`, `session` | Sitzungskennung sowie Name und Start-/Endzeit |
 | `health` | `ok` oder `error`; Fehler bei Erfassung oder Speicherung, siehe `capture.running` und Befehlsantworten |
 | `capture.running` | Optische Auswertungsaufgabe läuft; bedeutet nicht, dass jede Kamera verbunden/kalibriert ist |
 | `capture.cameras` | Dieselbe bereinigte Liste wie `/api/cameras`, einschließlich `connected` und letzter Bildempfangszeit |
@@ -585,7 +642,7 @@ Langsame WebSocket-Empfänger dürfen Zwischenzustände überspringen; jede Nach
 ist vollständig. Das Journal bewahrt die akzeptierten Beobachtungen, jedoch keine
 unbeobachteten physischen Vorgänge. Optional seitenweise über die letzte empfangene
 Ereignis-`sequence` weiterlesen, bis diese die Antwort-`sequence` erreicht; bei
-Instanzwechsel erneut synchronisieren. Keine Schüsse aus nachgeladenen Zuständen
+Instanz- oder Sitzungswechsel erneut synchronisieren. Keine Schüsse aus nachgeladenen Zuständen
 rekonstruieren. `event.baseline: true` bezeichnet eine Grundbeobachtung, keinen
 beobachteten Fall oder Einlagenwechsel. Die Journalfolge beschreibt die Annahme-
 reihenfolge des Servers. Mehrere Zieländerungen aus demselben Bild können dieselbe
@@ -609,7 +666,7 @@ async def watch():
                     state = json.loads(await asyncio.wait_for(socket.recv(), timeout=12))
                     if state.get("type") != "state":
                         continue
-                    if state.get("api_version") != 1:
+                    if state.get("api_version") != 2:
                         raise RuntimeError("Nicht unterstützte BTV-API-Version")
                     for lane in state["lanes"].values():
                         bout = state["bouts"].get(lane["occupied_bout_id"])
