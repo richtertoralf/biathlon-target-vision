@@ -286,6 +286,30 @@ unterstützt; siehe [Sitzungsvertrag](docs/API.md#aufzeichnungssitzungen-api-ver
 Keinen älteren Programmstand mit dem neuen Datenordner betreiben. Für einen
 bewussten Rückwechsel den separat aufbewahrten alten Testbestand verwenden.
 
+### Praxistest: Feldprotokoll, Testdiagnose und Testprotokoll
+
+Unter `/admin#sessions` stehen für Praxistests drei optionale Funktionen bereit.
+Eine normale Sitzung funktioniert ohne sie vollständig.
+
+1. **„Feldprotokoll (PDF) herunterladen“:** ein druckfertiges A4-Formular für
+   alles, was BTV nicht selbst erfassen kann: Kameraaufbau und Abstände, Wetter,
+   Licht, unabhängige Referenz der Scheibenstellungen und Bedienbarkeit. Es ist mit
+   Sitzung, Version, Kameras, Bahnen und Kalibrierungsstand vorausgefüllt.
+2. **„Testdiagnose starten“ / „beenden“:** BTV misst etwa alle fünf Sekunden
+   Prozess- und Systemlast, Kameraverbindungen, Bildauflösung, Erfassungsstatus
+   je Bahn und Verarbeitungszeiten. Optional lassen sich Kameraabstände, Wetter,
+   Licht und Beobachtungen eintragen.
+3. **„Testprotokoll erstellen“:** ein Markdown-Bericht aus Sitzung,
+   Ereignisjournal, Konfiguration, Kalibrierungen, Messwerten und
+   MediaMTX-Aufzeichnungsdateien; auch für abgeschlossene Sitzungen. Die
+   Messwerte gibt es zusätzlich als JSON.
+
+Die Daten liegen unter `sessions/SITZUNGS-ID/diagnostics/` im Datenordner. Eine
+laufende Testdiagnose wird nach einem Neustart von BTV fortgesetzt und beim
+Sitzungsabschluss beendet. Gemessen werden Verarbeitungszeiten in BTV, keine
+physische Ende-zu-Ende-Latenz. Ablauf, erfasste Werte und Grenzen beschreibt
+[ARBER-TESTPROTOKOLL.md](docs/ARBER-TESTPROTOKOLL.md).
+
 ## Kameras einrichten
 
 `http://SERVER-IP:8091/admin` öffnen. Die Administration hat drei Bereiche:
@@ -335,6 +359,7 @@ Tastenfeld geplante Erweiterungen.
 
 ## Weiterführende Dokumentation
 
+- [Testprotokoll Praxistest](docs/ARBER-TESTPROTOKOLL.md): Feldprotokoll, Testdiagnose und automatisches Testprotokoll.
 - [Roadmap](docs/ROADMAP.md): priorisierte Issues, nächste Schritte und offene Entscheidungen für den Arberstadion-Praxistest.
 - [API und Integration](docs/API.md): Schnittstellen, Zuordnungsregeln und Integrationshinweise.
 - [Architektur und Betrieb](docs/ARCHITECTURE.md): Komponenten, Speicherung und Upgrades.

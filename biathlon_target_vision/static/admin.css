@@ -59,3 +59,13 @@ details.card { margin-top: var(--space); }
 summary { min-height: var(--touch-min); display: flex; align-items: center; font-weight: 700; }
 #session-archives { padding-left: 20px; }
 #session-archives li { margin: 6px 0; }
+
+/* Test diagnostics: three steps in the order of the field test. */
+.diagnostics { margin-top: var(--space); }
+.diagnostics h4 { margin: var(--space) 0 8px; }
+.diagnostics .actions { margin: 12px 0; }
+.diagnostics-state { padding: 8px 12px; border-left: 5px solid var(--neutral); background: var(--neutral-soft); font-weight: 650; }
+.diagnostics-state[data-active="true"] { border-color: var(--ok); background: var(--ok-soft); color: var(--ok-text); }
+.diagnostics-state[data-error] { border-color: var(--error); background: var(--error-soft); color: var(--error-text); }
+.button-link { display: inline-flex; align-items: center; min-height: var(--control-height); padding: 0 16px; border: 2px solid var(--control-border); border-radius: var(--radius); background: var(--surface); font-weight: 650; text-decoration: none; }
+#session-archives .actions { margin: 6px 0 12px; }

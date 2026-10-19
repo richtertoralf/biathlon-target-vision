@@ -1303,3 +1303,78 @@ die systemd-Aufrufe waren ersetzt. Dabei wurde geprüft, dass das
 Installationsarchiv den tatsächlichen Commit enthält. Eine Aktualisierung auf dem
 Zielserver selbst steht aus. Die Betriebsuhr setzt eine per NTP synchronisierte
 Serveruhr voraus.
+
+## 2026-10-19 – Testdiagnose, automatisches Testprotokoll und Feldprotokoll
+
+**Ziel:** Den Praxistest (#13) weitgehend automatisch dokumentieren. Von Hand
+bleibt nur, was eine unabhängige Beobachtung erfordert. Beschreibung für
+Anwender: [ARBER-TESTPROTOKOLL.md](ARBER-TESTPROTOKOLL.md).
+
+**Umsetzung:**
+
+- `diagnostics.py`:
+  - optionaler Sampler etwa alle fünf Sekunden im BTV-Prozess, nur während
+    aktiver Diagnose;
+  - Ablage je Sitzung unter `diagnostics/`, jede Messung sofort mit `fsync`;
+  - Fortsetzung nach Neustart, Abschluss beim Sitzungswechsel;
+  - Schreibfehler halten nur die Diagnose an.
+- **Quellen:** `/proc` für Prozess- und System-CPU, RAM und Last; die vorhandenen
+  Decoder-Momentaufnahmen für Verbindung, Verbindungszähler, Bildnummer und
+  Bildauflösung; der Erfassungsstatus aus #30.
+- **Einzige Ergänzung der Erkennung:** begrenzte Ringpuffer für Auswertungsdauer
+  je Bahn, Durchlaufdauer und Durchlaufabstand in `vision.py`.
+- `report.py` erzeugt den Markdown-Bericht in 17 Abschnitten aus Journal,
+  Konfiguration, Kalibrierungen, Messwerten, Notizen und der schreibgeschützten
+  Liste der MediaMTX-Dateien. Der Bericht bewertet keine Tests als bestanden.
+- `fieldprotocol.py` erzeugt das A4-Feldprotokoll mit einem minimalen
+  PDF-Schreiber.
+- Die Administration erhält im Sitzungsbereich die drei Schritte Feldprotokoll,
+  Testdiagnose und Testprotokoll, dazu Links für archivierte Sitzungen.
+- Neue Endpunkte unter `/api/sessions/{id}/…` (additiv, API-Version bleibt `2`).
+
+**Entscheidungen:**
+
+- *PDF ohne neue Abhängigkeit:* Weder eine PDF-Bibliothek noch ein Werkzeug war
+  vorhanden. Für ein Formular aus Text, Linien und Tabellen genügen die
+  PDF-Standardschriften; Zeichen außerhalb von WinAnsi werden zu „?“.
+- *MediaMTX-Verzeichnis:* Es wird nur aus absoluten `recordPath` gelesen. Ein
+  relativer Pfad hängt vom unbekannten Arbeitsverzeichnis von MediaMTX ab; dann
+  wird es in der Testdiagnose angegeben. Unterbrechungen der Aufzeichnung werden
+  nicht aus Dateien abgeleitet, weil Segmentdauer und Zeitzone der Dateinamen
+  nicht verlässlich bekannt sind.
+- *Zeitbasis:* Ausfälle werden als Wechsel zwischen Messungen und über den
+  Verbindungszähler des Decoders gezählt, nicht über eine eigene Überwachung.
+- *Zuordnung und Kalibrierung:* Kalibrierungen und Kamerazuordnung im Bericht
+  zeigen den aktuellen Stand und sind entsprechend gekennzeichnet (keine Historie,
+  #15).
+
+**Messung des Aufwands** (synthetisch, 20 Bahnen auf vier Kameras,
+Entwicklungsrechner):
+
+- eine Messung 1–6 ms (Median 1,9 ms) alle fünf Sekunden;
+- Prozess-CPU je 60 s ohne Diagnose 277 % und mit Diagnose 269 % eines Kerns,
+  also im Rauschen;
+- etwa 3,4 KB pro Messung (rund 2,5 MB pro Stunde);
+- Testprotokoll in 91 ms, Feldprotokoll in 45 ms (29 KB).
+
+**Tests:** `tests/test_diagnostics.py` deckt ab:
+
+- Start, Stopp und Messungen;
+- einen Kameraausfall zwischen Messungen;
+- einen Bericht mit allen 17 Abschnitten, Notizen und fehlender Kalibrierung;
+- einen Bericht ohne Diagnose („nicht gemessen“);
+- einen Neustart während der Diagnose mit Fortsetzung;
+- den Sitzungswechsel ohne Übernahme von Messwerten und einen Bericht für die
+  archivierte Sitzung;
+- einen Schreibfehler, bei dem die Bedienung weiterläuft;
+- vorhandene und fehlende Aufzeichnungsverzeichnisse ohne Veränderung der Dateien;
+- die PDF-Struktur mit Seitenzahl, Querverweistabelle und Vorausfüllung sowie ein
+  PDF ohne Kameras;
+- den Ausschluss von RTSP-Zugangsdaten in Bericht, Messwerten, Status und PDF;
+- ein bytegleiches Journal nach Bericht und PDF.
+
+Die Browserprüfung `administration_browser.cjs` lädt Feldprotokoll und
+Testprotokoll tatsächlich herunter, auch für eine archivierte Sitzung, und prüft
+Start, Messungen, Notizen und Stopp. Ein Probe-PDF wurde zusätzlich mit PyMuPDF
+in einer temporären Umgebung geöffnet und gerendert; die sechs Seiten wurden
+visuell kontrolliert.

@@ -33,6 +33,7 @@ Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 | `static/monitor.*` | Schreibgeschützte Gesamtübersicht |
 | `deployment.py`, `install.sh`, `systemd/` | Installation, Upgrade und Dienstbetrieb |
 | `status.py` | Betriebsstatus für `--status` |
+| `diagnostics.py`, `report.py`, `fieldprotocol.py` | Optionale Testdiagnose je Sitzung, Markdown-Testprotokoll und PDF-Feldprotokoll |
 
 Bestätigte Bedienbefehle und simulierte Zielbeobachtungen gelangen über REST und
 die Befehlsvalidierung in den Ereigniskern. Optische Beobachtungen verwenden
@@ -222,6 +223,31 @@ Teilrückstellungen, Revisionen, Zielwerte und die frühere Bereinigung beim
 Einlagenbeginn. Regel `3` übernimmt ungebundene manuelle Eingaben beim Beginn.
 Das Journal wird weder migriert noch umgeschrieben. Nach Wiederherstellung gelten
 für neue Befehle die neuen Regeln. Details und Downgrade-Grenzen: [API.md](API.md).
+
+## Optionale Testdiagnose und Protokolle
+
+Die Testdiagnose ergänzt eine Aufzeichnungssitzung; sie ist kein zweites
+Journal und keine eigene Plattform.
+
+- *Ablage:* `sessions/<id>/diagnostics/` mit `state.json` (Läufe, atomar
+  geschrieben), `samples.jsonl` (je Messung eine Zeile mit `fsync`), `notes.json`
+  und erzeugten Berichten.
+- *Sampler:* eine Async-Aufgabe im BTV-Prozess, nur während einer aktiven
+  Diagnose, Intervall etwa fünf Sekunden. Sie liest `/proc`, die Momentaufnahmen
+  der vorhandenen Kameradecoder, den Erfassungsstatus und begrenzte
+  Verarbeitungszeiten der Erkennung. `VisionService.timings` sind Ringpuffer mit
+  fester Länge und werden bei jeder Messung geleert. Es gibt keinen eigenen
+  RTSP-Abruf und keine zusätzliche Bildverarbeitung.
+- *Lebenszyklus:* Beim Start setzt die App eine laufende Diagnose der aktiven
+  Sitzung fort. Ein Sitzungswechsel beendet die Diagnose der alten Sitzung.
+  Schreibfehler halten nur die Diagnose an.
+- *Testprotokoll:* `report.py` formatiert ohne Seiteneffekte Journal (über den
+  vorhandenen Lesezugriff), Konfiguration, Kalibrierungen, Messwerte, Notizen und
+  die schreibgeschützte Liste der MediaMTX-Aufzeichnungen. Die Erzeugung läuft im
+  Threadpool.
+- *Feldprotokoll:* `fieldprotocol.py` enthält einen minimalen PDF-Schreiber mit
+  den Standardschriften Helvetica und Helvetica-Bold (WinAnsi). Es gibt keine
+  zusätzliche Abhängigkeit.
 
 ## Gemeinsamer Seitenrahmen und Designsystem
 

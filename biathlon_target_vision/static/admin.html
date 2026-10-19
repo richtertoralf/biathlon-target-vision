@@ -75,6 +75,33 @@
       </form>
     </div>
     <p id="session-status" class="message" role="status"></p>
+    <section class="card diagnostics" aria-labelledby="diagnostics-heading">
+      <h3 id="diagnostics-heading">Praxistest: Protokolle und Testdiagnose</h3>
+      <p class="hint">Optional. Die Sitzung funktioniert ohne Testdiagnose vollständig. Messdaten liegen im Sitzungsordner unter <code>diagnostics/</code>.</p>
+      <div class="actions">
+        <a id="field-protocol" class="button-link" href="#" download>Feldprotokoll (PDF) herunterladen</a>
+        <button id="diagnostics-start" type="button" class="primary">Testdiagnose starten</button>
+        <button id="diagnostics-stop" type="button">Testdiagnose beenden</button>
+      </div>
+      <p id="diagnostics-state" class="diagnostics-state" role="status">Status wird geladen …</p>
+      <form id="diagnostics-notes">
+        <h4>Optionale Angaben vor Ort</h4>
+        <div class="columns">
+          <label class="field">Kameraabstände <textarea id="note-camera_distances" rows="3" maxlength="4000"></textarea></label>
+          <label class="field">Wetter <textarea id="note-weather" rows="3" maxlength="4000"></textarea></label>
+          <label class="field">Licht <textarea id="note-light" rows="3" maxlength="4000"></textarea></label>
+          <label class="field">Besondere Testbeobachtungen <textarea id="note-observations" rows="3" maxlength="4000"></textarea></label>
+        </div>
+        <label class="field">MediaMTX-Aufzeichnungsverzeichnis (nur nötig, wenn nicht automatisch erkannt) <input id="note-recordings_dir" maxlength="1000" autocomplete="off" spellcheck="false" placeholder="/var/lib/mediamtx/recordings"></label>
+        <button>Angaben speichern</button>
+      </form>
+      <div class="actions">
+        <button id="report-create" type="button" class="primary">Testprotokoll erstellen</button>
+        <a id="report-download" class="button-link" href="#" hidden>Letztes Testprotokoll herunterladen</a>
+        <a id="measurements" class="button-link" href="#" download>Messwerte (JSON)</a>
+      </div>
+      <p id="diagnostics-message" class="message" role="status"></p>
+    </section>
     <details class="card"><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
   </section>
 </main>

@@ -107,13 +107,34 @@ async function checkErgonomics(page,name){
    await page.locator('[data-tab=sessions]').click();
    await page.locator('#session-name').fill('Training');await page.locator('#rename-session button').click();
    await expect(page.locator('#current-session')).toContainText('Training');
+   // Field test: field protocol (PDF), test diagnostics and report in the session area.
+   const download=async action=>{const [file]=await Promise.all([page.waitForEvent('download'),action()]);return file;};
+   const pdf=await download(()=>page.locator('#field-protocol').click());
+   assert.match(pdf.suggestedFilename(),/^feldprotokoll-.*\.pdf$/);
+   assert.equal(fs.readFileSync(await pdf.path()).subarray(0,5).toString(),'%PDF-');
+   await page.locator('#diagnostics-start').click();
+   await expect(page.locator('#diagnostics-state')).toContainText('Testdiagnose läuft');
+   await expect(page.locator('#diagnostics-start')).toBeDisabled();
+   await expect(page.locator('#diagnostics-state')).toContainText(/[1-9]\d* Messungen/);
+   await page.locator('#note-weather').fill('bedeckt, 6 °C');await page.locator('#diagnostics-notes button').click();
+   await expect(page.locator('#diagnostics-message')).toHaveText('Angaben gespeichert.');
+   const report=await download(()=>page.locator('#report-create').click());
+   const text=fs.readFileSync(await report.path(),'utf8');
+   assert.match(text,/## 17\. Zusammenfassung/);assert.match(text,/bedeckt, 6 °C/);assert.doesNotMatch(text,/geheim/);
+   await expect(page.locator('#report-download')).toBeVisible();
+   await page.locator('#diagnostics-stop').click();await expect(page.locator('#diagnostics-state')).toContainText('Testdiagnose beendet');
+   await checkErgonomics(page,'sessions-diagnostics');
    const oldId=(await json(server.url+'/api/state')).session_id;
    await page.locator('#new-session-name').fill('Arber Test');await page.locator('#start-session-button').click();
    assert.equal((await json(server.url+'/api/state')).session_id,oldId,'Ohne Bestätigung kein Wechsel');
    await page.locator('#confirm-session').check();await page.locator('#start-session-button').click();
    await expect(page.locator('#session-status')).toContainText('Neue Sitzung gestartet');
    await expect(page.locator('#current-session')).toContainText('Arber Test');
-   await page.locator('details summary').click();await expect(page.locator('#session-archives a')).toContainText('Training');
+   await page.locator('details summary').click();await expect(page.locator('#session-archives a').first()).toContainText('Training');
+   // Reports and field protocols remain available for archived sessions.
+   const archived=await download(()=>page.locator(`[data-report="${oldId}"]`).click());
+   assert.match(fs.readFileSync(await archived.path(),'utf8'),/# Testprotokoll – Training/);
+   await expect(page.locator('#diagnostics-state')).toContainText('Testdiagnose nicht gestartet');
    // Camera configuration survives the session change; reloading keeps the selected area.
    await page.reload();await expect(page.locator('#sessions')).toBeVisible();
    assert.equal((await json(server.url+'/api/cameras')).cameras.length,1);
