@@ -197,6 +197,26 @@ class VisionTests(unittest.TestCase):
             finally:store.close()
         with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
 
+    def test_run_corrects_delivered_status_the_loop_never_observed(self):
+        async def scenario(directory):
+            store=EventStore(directory,1);cameras=SequenceCameras()
+            camera=CameraSettings(id='test',name='test',url='rtsp://localhost/test',lane_ids=[1])
+            service=VisionService(lambda:Settings(cameras=[camera]),cameras,CalibrationStore(directory),store,store.apply)
+            try:
+                cameras.set('test',None,1)
+                # A client receives 'uncertain', then the camera drops again before
+                # the loop runs: the loop itself only ever sees 'unavailable'.
+                cameras.set('test',scene()[0],2)
+                self.assertEqual(service.delivered_statuses(),{'1':'uncertain'})
+                cameras.set('test',None,3)
+                notified=asyncio.Event()
+                task=asyncio.create_task(service.run(notified.set))
+                try:await asyncio.wait_for(notified.wait(),1)
+                finally:task.cancel();await asyncio.gather(task,return_exceptions=True)
+                self.assertEqual(service.delivered_statuses(),{'1':'unavailable'})
+            finally:store.close()
+        with tempfile.TemporaryDirectory() as temporary:asyncio.run(scenario(Path(temporary)))
+
 
     def test_baseline_journal_is_readable_by_previous_release(self):
         with tempfile.TemporaryDirectory() as temporary:

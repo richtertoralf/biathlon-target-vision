@@ -105,6 +105,7 @@ class VisionService:
         self.trackers = {}
         self.frames = {}
         self.errors = {}
+        self.delivered = None
 
     def capture_status(self, lane_id):
         """Derive availability from the live lane tracker, never from journal values alone."""
@@ -132,6 +133,11 @@ class VisionService:
     def capture_statuses(self):
         return {lane_id: self.capture_status(lane["lane_id"])
                 for lane_id, lane in self.store.state["lanes"].items()}
+
+    def delivered_statuses(self):
+        """Statuses for an outgoing state; remembered so run() can correct them."""
+        self.delivered = self.capture_statuses()
+        return self.delivered
 
     def emit(self, commands):
         for command in commands:
@@ -208,7 +214,9 @@ class VisionService:
                 current = self.capture_statuses()
                 # Notify only on status changes, never at frame rate or through
                 # extra journal events. The existing heartbeat remains separate.
-                if current != previous:
+                # A client may have received a status this loop never observed
+                # (two changes between iterations); its reversal must be pushed too.
+                if current != previous or self.delivered not in (None, current):
                     previous = current
                     status_changed()
                 await asyncio.sleep(.1)

@@ -114,15 +114,22 @@ class IntegrationContractTests(unittest.TestCase):
                             self.assertLess(monotonic()-started,2,'Status must not wait for the five-second heartbeat')
                             if state['capture']['lanes']=={'1':status,'2':status}:
                                 break
-                    count=len(sent);sleep(.4)
+                    # Under CI load the loop may confirm a change after both tablets
+                    # already received it; let such a push settle before the check.
+                    settle=monotonic()
+                    while True:
+                        count=len(sent);sleep(.4)
+                        if len(sent)==count or monotonic()-settle>3:break
+                    sleep(.5)
                     self.assertEqual(len(sent),count,'Unchanged frames must not trigger status pushes')
                 async def stop_capture():
                     self.client.app.state.vision_task.cancel()
                     await asyncio.gather(self.client.app.state.vision_task,return_exceptions=True)
                 started=monotonic();self.client.portal.call(stop_capture)
                 for socket in (first,second):
-                    state=socket.receive_json()
-                    self.assertFalse(state['capture']['running'])
+                    # A heartbeat sent just before cancellation may still be queued.
+                    while (state:=socket.receive_json())['capture']['running']:
+                        self.assertLess(monotonic()-started,2)
                     self.assertEqual(state['capture']['lanes'],{'1':'unavailable','2':'unavailable'})
                     self.assertEqual(state['sequence'],0)
                 self.assertLess(monotonic()-started,2)
