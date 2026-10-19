@@ -5,8 +5,8 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag ist `v0.8.0` (Arber Field Test – Development Release);
-der letzte Abschnitt fasst seinen Umfang seit `v0.7.0` zusammen.
+Der letzte Versionstag ist `v0.8.1` (Development Release); der letzte Abschnitt
+fasst seinen Umfang zusammen, der Abschnitt zu `v0.8.0` den Umfang seit `v0.7.0`.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
@@ -1160,3 +1160,17 @@ Neuladen sowie eine sichtbare Serverunterbrechung. Die bestehenden Prüfungen f�
 RTSP-Administration (echte Vorschau und Kalibrierung), Sitzungen und Erfassung
 wurden an die neue Struktur angepasst. Ein Python-Test prüft die bereinigte Adresse
 einschließlich Passwort mit `@`, Query-Zugangsdaten und IPv6.
+
+## 2026-10-19 – Version 0.8.1: Development Release
+
+Entwicklungsrelease mit der überarbeiteten Administration (PR #38, siehe
+vorheriger Abschnitt). **Nicht für produktiven Wettkampfbetrieb freigegeben.**
+Die API-Version bleibt `2`; einzige Schnittstellenergänzung ist das additive Feld
+`address` der Kamera-Endpunkte. Keine neuen Abhängigkeiten, keine Änderungen an
+Ereigniskern, optischer Erkennung, Journalformat, systemd-Unit oder Installer.
+
+Bestehende `v0.8.0`-Installationen wechseln mit `sudo biathlon-target-vision --upgrade`.
+Der Upgrade-Weg wurde auf dem Entwicklungsrechner mit echten Programmständen aus
+`v0.8.0` und `v0.8.1` simuliert; nur die systemd-Aufrufe waren ersetzt. Datenordner
+mit Konfiguration, Kalibrierungen und Sitzungen blieben erhalten, und die neue
+Version war erreichbar. Eine Aktualisierung auf dem Zielserver selbst steht aus.

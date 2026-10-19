@@ -1,7 +1,7 @@
 # Roadmap
 
-Stand: **19. Oktober 2026**, Release `v0.8.0` (Arber Field Test – Development
-Release, `main` nach PR #36): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
+Stand: **19. Oktober 2026**, Release `v0.8.1` (Development Release, `main` nach
+PR #38): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
 ändern weder die GitHub-Issues noch den implementierten Umfang. Die fachliche
 Zielbeschreibung steht im [Produktkonzept](PRODUKTKONZEPT.md), der tatsächliche
 Entwicklungsstand im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md). BTV ist in
@@ -41,12 +41,12 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
 
 ### Vorbereitung bis Dienstag, 20.10.
 
-1. **Softwarestand festlegen:** Den Release `v0.8.0` gezielt installieren
-   (`git clone --branch v0.8.0 …`, dann `./install.sh`; siehe
-   [README](../README.md#unter-debianubuntu-installieren)). `biathlon-target-vision
-   --version` meldet `0.8.0`; den Commit des Tags im Testprotokoll festhalten.
-   `--upgrade` wechselt nur auf einen höheren Versionstag. Korrekturen vor dem Test
-   deshalb nur als neuer Patch-Tag (etwa `v0.8.1`) bereitstellen.
+1. **Softwarestand festlegen:** Auf `mediamtx18` läuft `v0.8.0`; mit
+   `sudo biathlon-target-vision --upgrade` auf `v0.8.1` (überarbeitete
+   Administration) wechseln. Danach die Kameras unter `/admin` anlegen.
+   `biathlon-target-vision --version` meldet `0.8.1`; den Commit des Tags im
+   Testprotokoll festhalten. `--upgrade` wechselt nur auf einen höheren Versionstag;
+   weitere Korrekturen vor dem Test deshalb nur als neuer Patch-Tag.
 2. **Bahnanzahl vor dem ersten Dienststart klären:** Der Installer startet den
    Dienst ohne `--lanes`, also mit 20 Bahnen; die Zahl ist danach je Datenordner
    fest. Sollen physische Bahnnummern über 20 verwendet werden, `--lanes N` per
@@ -182,7 +182,7 @@ Issue-Bestand.
 |---|---|---|
 | **P0** | [#13 – Praxistest Arber](https://github.com/richtertoralf/biathlon-target-vision/issues/13) | Am 21.10. durchführen, sichern, auswerten, Fehler priorisieren. |
 | **P1** | [#22 – ROI-Markierung](https://github.com/richtertoralf/biathlon-target-vision/issues/22) | Nach dem Test. Bis dahin nennen Kalibrierungsseite und Fehlermeldung die Eckpunktreihenfolge. |
-| **P1** | [#23 – Kameraeingaben vereinfachen](https://github.com/richtertoralf/biathlon-target-vision/issues/23) | Nach #24 vollständige RTSP-Adresse administrativ bearbeiten; stabile interne ID erhalten. |
+| **P1** | [#23 – Kameraeingaben vereinfachen](https://github.com/richtertoralf/biathlon-target-vision/issues/23) | Teilweise in `v0.8.1` umgesetzt (Klartexteingabe, bereinigte Anzeige der gespeicherten Adresse, Kennung aus dem Namen). Nach #24 vollständige RTSP-Adresse administrativ anzeigen. |
 | **P1** | [#24 – Zugriffsschutz](https://github.com/richtertoralf/biathlon-target-vision/issues/24) | Vor erstem Einsatz außerhalb eines vertrauenswürdigen Netzes; zwei gemeinsame Passwörter, REST und WebSocket serverseitig schützen. |
 | **P1** | [#25 – Navigation und öffentlicher Lesezugriff](https://github.com/richtertoralf/biathlon-target-vision/issues/25) | Mit #24 öffentliche Lesewege und Navigation gemeinsam prüfen. |
 | **P1** | [#28 – Alle Seiten dreisprachig](https://github.com/richtertoralf/biathlon-target-vision/issues/28) | Nach dem Test; bestehende `translations.js` für Monitor, Administration und Kalibrierung nutzen. |
