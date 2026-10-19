@@ -303,6 +303,7 @@ Tastenfeld geplante Erweiterungen.
 
 ## Weiterführende Dokumentation
 
+- [Roadmap](docs/ROADMAP.md): priorisierte Issues, nächste Schritte und offene Entscheidungen für den Arberstadion-Praxistest.
 - [API und Integration](docs/API.md): Schnittstellen, Zuordnungsregeln und Integrationshinweise.
 - [Architektur und Betrieb](docs/ARCHITECTURE.md): Komponenten, Speicherung und Upgrades.
 - [Terminologie](docs/TERMINOLOGIE.md): bestätigte IBU-/Verbandsbegriffe und technische UI-Bezeichnungen.
