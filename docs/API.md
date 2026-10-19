@@ -101,6 +101,25 @@ automatische Übernahme alter Datenordner. BTV ist noch nicht für produktive
 Wettkämpfe freigegeben. Die [README](../README.md#aufzeichnungssitzungen) beschreibt
 das manuelle Archivieren alter Testbestände unter Erhalt der Kamerakonfiguration.
 
+### Testdiagnose und Protokolle (additiv)
+
+Optionale, rein additive Endpunkte je Sitzung. Sie verändern weder Journal noch
+Ereigniskern. Eine unbekannte Sitzungskennung liefert 404.
+
+| Endpunkt | Zweck |
+|---|---|
+| `GET /api/sessions/{id}/diagnostics` | Status: `active`, `running`, Läufe, Anzahl der Messungen, Berichte, Fehler, Notizen, `server_time` |
+| `POST /api/sessions/{id}/diagnostics/start` | Testdiagnose starten; nur für die aktive Sitzung, sonst 409 |
+| `POST /api/sessions/{id}/diagnostics/stop` | Testdiagnose beenden; die Messwerte bleiben erhalten |
+| `PUT /api/sessions/{id}/diagnostics/notes` | Optionale Angaben `camera_distances`, `weather`, `light`, `observations`, `recordings_dir` |
+| `POST /api/sessions/{id}/diagnostics/report` | Markdown-Testprotokoll erzeugen und in der Sitzung speichern (`{"report": name}`) |
+| `GET /api/sessions/{id}/diagnostics/report` | Zuletzt erzeugtes Testprotokoll herunterladen |
+| `GET /api/sessions/{id}/diagnostics/measurements.json` | Läufe mit Systemangaben und alle Messungen als JSON |
+| `GET /api/sessions/{id}/field-protocol.pdf` | Vorausgefülltes Feldprotokoll (PDF, A4) |
+
+Inhalt und Grenzen: [ARBER-TESTPROTOKOLL.md](ARBER-TESTPROTOKOLL.md). Ausgaben
+enthalten keine Zugangsdaten; Kameraadressen erscheinen höchstens bereinigt.
+
 ## Beobachtungen
 
 Beispiel für `POST /api/observations`:

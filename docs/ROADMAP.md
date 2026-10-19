@@ -75,10 +75,11 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
    Datei. Vorab die Grundlast von MediaMTX allein messen und die synthetische
    Zeitmessung auf `mediamtx18` wiederholen, mit und ohne `OPENCV_FOR_THREADS_NUM=1`:
    `cd /opt/biathlon-target-vision/current && .venv/bin/python -m tests.benchmark_vision`.
-8. **Testprotokoll vorbereiten:** Je Durchgang Uhrzeit, Bahn, Kamera, tatsächliche
-   Scheibenstellungen, BTV-Anzeige, manuelle Korrekturen und Bemerkungen zu Licht,
-   Wetter und Verdeckung. Außerdem Softwarestand, Anlagentyp, Kameramodelle,
-   Kamera-/Bahnzuordnung, Tablets/Browser und Netzwerk.
+8. **Testprotokoll vorbereiten:** Ab `v0.8.4` unter `/admin#sessions` das
+   vorausgefüllte Feldprotokoll (PDF) drucken, die Testdiagnose starten und nach
+   dem Test das automatische Testprotokoll erstellen; siehe
+   [ARBER-TESTPROTOKOLL.md](ARBER-TESTPROTOKOLL.md). Von Hand bleiben
+   Referenzstellungen, Kameraaufbau, Wetter, Licht und Bedienbarkeit.
 9. **Netz:** Tablets, Monitor und Server in einem getrennten, vertrauenswürdigen
    Netz betreiben. BTV hat noch keine Anmeldung (#24); das ist für den
    beaufsichtigten Entwicklungstest kein Blocker.

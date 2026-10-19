@@ -2,6 +2,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from collections import defaultdict
 from datetime import datetime, timezone
 import json
 import logging
@@ -9,6 +10,7 @@ from itertools import count
 from pathlib import Path
 from time import monotonic
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import anyio
 import cv2
@@ -24,6 +26,9 @@ from .calibration import CalibrationError, CalibrationStore, align, calibrate
 from .config import CameraSettings, Settings, display_url, load_settings, save_settings
 from .cameras import CameraManager, camera_binding
 from .core import Conflict
+from .diagnostics import Diagnostics, Notes, mediamtx_roots, recordings
+from .fieldprotocol import field_protocol
+from .report import build_report, calibration_geometry
 from .sessions import Sessions, SessionStart, SessionName
 from .models import (Assignment, Observation, Release, ModeChange, ManualTarget,
                      OverrideRelease, ManualReset, Occupy)
@@ -48,9 +53,13 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
                 raise ValueError("Kamerakonfiguration enthält unbekannte Bahn")
             app.state.cameras = CameraManager(app.state.settings.cameras)
             start_vision()
+            app.state.diagnostics = Diagnostics(app.state.sessions, data_dir, live_capture)
+            app.state.diagnostics.resume()
             try:
                 yield
             finally:
+                # A running diagnosis stays active in state.json and resumes after a restart.
+                app.state.diagnostics.close()
                 app.state.vision_task.cancel()
                 with anyio.CancelScope(shield=True):
                     await asyncio.gather(app.state.vision_task, return_exceptions=True)
@@ -288,6 +297,170 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return JSONResponse({"events": history, "sequence": sequence, **api_identity(), "session_id": session_id},
                             headers={"Cache-Control": "no-store"})
 
+    # ---- Optional test diagnostics and protocols; journal and event core stay untouched ----
+    def live_capture():
+        cameras = {}
+        for camera in app.state.settings.cameras:
+            capture = app.state.cameras.snapshot(camera.id)
+            frame = capture["frame"]
+            cameras[camera.id] = {"lane_ids": camera.lane_ids, "connected": capture["connected"],
+                                  "stream_epoch": capture.get("stream_epoch", 0), "frame_number": capture.get("frame_number"),
+                                  "resolution": [frame.shape[1], frame.shape[0]] if frame is not None else None,
+                                  "captured_at": capture["captured_at"].isoformat() if capture.get("captured_at") else None}
+        timings = app.state.vision.take_timings()
+        classify = defaultdict(list)
+        for lane_id, value in timings["classify"]:
+            classify[str(lane_id)].append(round(value, 1))
+        running = not app.state.vision_task.done()
+        return {"health": health_status(), "capture_running": running, "cameras": cameras,
+                "lanes": app.state.vision.capture_statuses() if running else {},
+                "timings": {"classify": classify, "step": [round(value, 1) for value in timings["step"]],
+                            "period": [round(value, 1) for value in timings["period"]]}}
+
+    def session_entry(session_id):
+        try:
+            app.state.diagnostics.directory(session_id)
+        except (KeyError, ValueError):
+            raise HTTPException(404, "Sitzung existiert nicht") from None
+        return next(item for item in app.state.sessions.metadata["sessions"] if item["session_id"] == session_id)
+
+    def session_events(session_id):
+        events, after = [], 0
+        while True:
+            page, _ = app.state.sessions.history(session_id, after, 1000)
+            events += page
+            if len(page) < 1000:
+                return events
+            after = page[-1]["sequence"]
+
+    def session_lane_count(session_id):
+        if session_id == app.state.sessions.current["session_id"]:
+            return len(app.state.store.state["lanes"])
+        try:
+            with (app.state.sessions.session_path(session_id) / "events.jsonl").open(encoding="utf-8") as journal:
+                return json.loads(journal.readline())["lane_count"]
+        except (OSError, ValueError, KeyError):
+            return None
+
+    def lane_calibrations(count):
+        result = {}
+        for lane_id in range(1, (count or 0) + 1):
+            camera = lane_camera(lane_id)
+            try:
+                saved = app.state.calibrations.load(lane_id)
+            except CalibrationError:
+                saved = None
+            if camera or saved:
+                valid = bool(saved and camera and all(saved.get(k) == v for k, v in camera_binding(camera).items()))
+                result[lane_id] = {"camera": camera.id if camera else None, "calibration": saved, "valid": valid}
+        return result
+
+    @app.get("/api/sessions/{session_id}/diagnostics")
+    async def diagnostics_status(session_id: str):
+        session_entry(session_id)
+        return JSONResponse(app.state.diagnostics.status(session_id), headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/sessions/{session_id}/diagnostics/start")
+    async def diagnostics_start(session_id: str):
+        session_entry(session_id)
+        try:
+            return app.state.diagnostics.start(session_id)
+        except ValueError as error:
+            raise HTTPException(409, str(error)) from None
+        except OSError:
+            logging.exception("Testdiagnose konnte nicht gestartet werden")
+            raise HTTPException(503, "Testdiagnose konnte nicht gespeichert werden; die Sitzung ist nicht betroffen.") from None
+
+    @app.post("/api/sessions/{session_id}/diagnostics/stop")
+    async def diagnostics_stop(session_id: str):
+        session_entry(session_id)
+        try:
+            return app.state.diagnostics.stop(session_id)
+        except OSError:
+            raise HTTPException(503, "Testdiagnose konnte nicht gespeichert werden; die Sitzung ist nicht betroffen.") from None
+
+    @app.put("/api/sessions/{session_id}/diagnostics/notes")
+    async def diagnostics_notes(session_id: str, notes: Notes):
+        session_entry(session_id)
+        try:
+            return app.state.diagnostics.save_notes(session_id, notes.model_dump())
+        except OSError:
+            raise HTTPException(503, "Angaben konnten nicht gespeichert werden.") from None
+
+    @app.post("/api/sessions/{session_id}/diagnostics/report")
+    async def diagnostics_report(session_id: str):
+        session = session_entry(session_id)
+        diagnostics = app.state.diagnostics
+        notes = diagnostics.notes(session_id)
+        roots, hints = mediamtx_roots(notes["recordings_dir"])
+        since = datetime.fromisoformat(session["started_at"])
+        found, problems = recordings(roots, app.state.settings.cameras, since)
+        count = session_lane_count(session_id)
+        context = {"session": session, "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                   "version": __version__, "commit": commit, "lane_count": count, "notes": notes,
+                   "runs": diagnostics.state(session_id)["runs"], "events": session_events(session_id),
+                   "cameras": [{"id": c.id, "name": c.name, "lane_ids": c.lane_ids, "address": display_url(c.url)}
+                               for c in app.state.settings.cameras],
+                   "calibrations": lane_calibrations(count), "recordings": (found, problems, hints),
+                   "correction_images": len(list((app.state.sessions.session_path(session_id) / "corrections").glob("*.jpg")))}
+
+        def write():
+            # Samples are read from the file inside the worker thread, not kept in memory.
+            context["samples"] = diagnostics.samples(session_id)
+            text = build_report(context)
+            directory = diagnostics.directory(session_id)
+            directory.mkdir(exist_ok=True)
+            path = directory / f"testprotokoll-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.md"
+            path.write_text(text, encoding="utf-8")
+            return path.name
+        try:
+            name = await run_in_threadpool(write)
+        except OSError:
+            logging.exception("Testprotokoll konnte nicht gespeichert werden")
+            raise HTTPException(503, "Testprotokoll konnte nicht gespeichert werden.") from None
+        return {"report": name}
+
+    @app.get("/api/sessions/{session_id}/diagnostics/report")
+    async def diagnostics_report_download(session_id: str):
+        session_entry(session_id)
+        reports = app.state.diagnostics.reports(session_id)
+        if not reports:
+            raise HTTPException(404, "Für diese Sitzung wurde noch kein Testprotokoll erstellt.")
+        return FileResponse(app.state.diagnostics.directory(session_id) / reports[-1], media_type="text/markdown; charset=utf-8",
+                            filename=reports[-1], headers={"Cache-Control": "no-store"})
+
+    @app.get("/api/sessions/{session_id}/diagnostics/measurements.json")
+    async def diagnostics_measurements(session_id: str):
+        session = session_entry(session_id)
+        diagnostics = app.state.diagnostics
+        data = await run_in_threadpool(lambda: {"session": session, "runs": diagnostics.state(session_id)["runs"],
+                                                "samples": list(diagnostics.samples(session_id))})
+        return JSONResponse(data, headers={"Cache-Control": "no-store",
+                                           "Content-Disposition": f'attachment; filename="messwerte-{session_id}.json"'})
+
+    @app.get("/api/sessions/{session_id}/field-protocol.pdf")
+    async def field_protocol_pdf(session_id: str):
+        session = session_entry(session_id)
+        local = ZoneInfo("Europe/Berlin")
+        calibrations = {}
+        for lane_id, item in lane_calibrations(session_lane_count(session_id)).items():
+            saved = item["calibration"]
+            calibrations[lane_id] = {"valid": item["valid"], "image_size": saved["image_size"] if saved else None,
+                                     "diameter_px": calibration_geometry(saved)[0] if saved else None}
+        cameras = []
+        for camera in app.state.settings.cameras:
+            frame = app.state.cameras.snapshot(camera.id)["frame"]
+            size = [frame.shape[1], frame.shape[0]] if frame is not None else next(
+                (calibrations[lane]["image_size"] for lane in camera.lane_ids if calibrations.get(lane, {}).get("image_size")), None)
+            cameras.append({"id": camera.id, "name": camera.name, "lane_ids": camera.lane_ids,
+                            "resolution": "×".join(map(str, size)) if size else None})
+        context = {"session": session, "cameras": cameras, "calibrations": calibrations, "version": __version__, "commit": commit,
+                   "date": datetime.fromisoformat(session["started_at"]).astimezone(local).strftime("%d.%m.%Y"),
+                   "generated_at": datetime.now(local).strftime("%d.%m.%Y %H:%M")}
+        pdf = await run_in_threadpool(field_protocol, context)
+        return Response(pdf, media_type="application/pdf", headers={
+            "Cache-Control": "no-store", "Content-Disposition": f'attachment; filename="feldprotokoll-{session_id}.pdf"'})
+
     @app.get("/api/sessions")
     async def sessions():
         return JSONResponse(app.state.sessions.metadata, headers={"Cache-Control": "no-store"})
@@ -302,7 +475,12 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
     async def start_session(command: SessionStart):
         # Kein await zwischen Prüfung, dauerhaftem Wechsel und Austausch der
         # Verarbeitung: andere HTTP-Befehle sehen vollständig alt oder neu.
+        closing = app.state.sessions.current["session_id"]
         if app.state.sessions.start(command):
+            try:
+                app.state.diagnostics.stop(closing, "Sitzung abgeschlossen")
+            except OSError:
+                logging.exception("Testdiagnose der abgeschlossenen Sitzung konnte nicht beendet werden")
             previous = app.state.vision_task
             previous.cancel()
             app.state.store = app.state.sessions.store

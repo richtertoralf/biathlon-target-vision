@@ -1,7 +1,9 @@
 """Optische Zielzustände bestätigen und geordnet an den vorhandenen Kern übergeben."""
 
 import asyncio
+from collections import deque
 from datetime import datetime, timezone
+from time import perf_counter
 import logging
 from time import monotonic
 
@@ -106,6 +108,9 @@ class VisionService:
         self.frames = {}
         self.errors = {}
         self.delivered = None
+        # Bounded processing times for the optional session diagnostics; taken and
+        # cleared by take_timings(), so memory stays constant without a reader.
+        self.timings = {"classify": deque(maxlen=5000), "step": deque(maxlen=1000), "period": deque(maxlen=1000)}
 
     def capture_status(self, lane_id):
         """Derive availability from the live lane tracker, never from journal values alone."""
@@ -138,6 +143,13 @@ class VisionService:
         """Statuses for an outgoing state; remembered so run() can correct them."""
         self.delivered = self.capture_statuses()
         return self.delivered
+
+    def take_timings(self):
+        """Processing times in ms since the last call: per lane classification, step and cycle period."""
+        result = {key: list(values) for key, values in self.timings.items()}
+        for values in self.timings.values():
+            values.clear()
+        return result
 
     def emit(self, commands):
         for command in commands:
@@ -184,10 +196,12 @@ class VisionService:
                 if self.frames.get(lane_id) == frame_key:
                     continue
                 self.frames[lane_id] = frame_key
+                started = perf_counter()
                 try:
                     states = await asyncio.to_thread(classify, capture["frame"], calibration)
                 except CalibrationError:
                     states = ["unknown"]*5
+                self.timings["classify"].append((lane_id, (perf_counter() - started) * 1000))
                 # Kamera oder Kalibrierung kann während der CPU-Arbeit geändert werden.
                 current = next((c for c in self.settings().cameras if lane_id in c.lane_ids), None)
                 saved = self.calibration(lane_id)
@@ -209,8 +223,14 @@ class VisionService:
     async def run(self, status_changed):
         try:
             previous = self.capture_statuses()
+            last_start = None
             while True:
+                started = perf_counter()
+                if last_start is not None:
+                    self.timings["period"].append((started - last_start) * 1000)
+                last_start = started
                 await self.step()
+                self.timings["step"].append((perf_counter() - started) * 1000)
                 current = self.capture_statuses()
                 # Notify only on status changes, never at frame rate or through
                 # extra journal events. The existing heartbeat remains separate.

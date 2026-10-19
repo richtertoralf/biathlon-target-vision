@@ -39,7 +39,10 @@
       if (link.dataset.tab === tab) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
     }
     for (const section of document.querySelectorAll('.area')) section.hidden = section.id !== tab;
-    if (tab === 'sessions') loadArchives().catch(error => message('session-status', error.message, true));
+    if (tab === 'sessions') {
+      loadArchives().catch(error => message('session-status', error.message, true));
+      loadDiagnostics().catch(error => message('diagnostics-message', error.message, true));
+    }
   }
   window.addEventListener('hashchange', showTab);
 
@@ -277,8 +280,86 @@
     const archived = data.sessions.filter(item => item.ended_at);
     el('session-archives').replaceChildren(...(archived.length ? archived.map(item =>
       h('li', {}, h('a', {href: `/api/events?session_id=${encodeURIComponent(item.session_id)}`,
-        text: `${item.name} · ${time(item.started_at)} – ${time(item.ended_at)} (Journal-API)`}))) : [h('li', {text: 'Noch keine abgeschlossenen Sitzungen.'})]));
+        text: `${item.name} · ${time(item.started_at)} – ${time(item.ended_at)} (Journal-API)`}),
+        h('div', {class: 'actions'},
+          h('button', {type: 'button', 'data-report': item.session_id, text: 'Testprotokoll erstellen und herunterladen'}),
+          h('a', {class: 'button-link', href: `${sessionBase(item.session_id)}/field-protocol.pdf`, download: true, text: 'Feldprotokoll (PDF)'})))) :
+      [h('li', {text: 'Noch keine abgeschlossenen Sitzungen.'})]));
   }
+
+  // ---- Optional test diagnostics, field protocol and test report ----
+  const sessionBase = id => `/api/sessions/${encodeURIComponent(id)}`;
+  let diagnostics = null, notesFor = null, diagnosticsBusy = false;
+  const NOTE_FIELDS = ['camera_distances', 'weather', 'light', 'observations', 'recordings_dir'];
+  function clockDuration(seconds) {
+    seconds = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(seconds / 3600)} h ${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')} min`;
+  }
+  async function loadDiagnostics() {
+    if (!sessionId || el('sessions').hidden) return;
+    diagnostics = await request(`${sessionBase(sessionId)}/diagnostics`);
+    renderDiagnostics();
+  }
+  function renderDiagnostics() {
+    const run = diagnostics.runs.at(-1), base = sessionBase(diagnostics.session_id);
+    el('diagnostics-start').disabled = diagnosticsBusy || diagnostics.active;
+    el('diagnostics-stop').disabled = diagnosticsBusy || !diagnostics.active;
+    // Duration from server times, independent of the browser clock.
+    const elapsed = run ? (Date.parse(run.stopped_at || diagnostics.server_time) - Date.parse(run.started_at)) / 1000 : 0;
+    el('diagnostics-state').textContent = diagnostics.error ? diagnostics.error
+      : diagnostics.active ? `Testdiagnose läuft seit ${time(run.started_at)} · Dauer ${clockDuration(elapsed)} · ${diagnostics.samples} Messungen`
+      : run ? `Testdiagnose beendet ${time(run.stopped_at)} (${run.stop_reason}) · Dauer ${clockDuration(elapsed)} · ${diagnostics.samples} Messungen`
+      : 'Testdiagnose nicht gestartet.';
+    el('diagnostics-state').dataset.active = String(diagnostics.active);
+    el('diagnostics-state').toggleAttribute('data-error', !!diagnostics.error);
+    el('field-protocol').href = `${base}/field-protocol.pdf`;
+    el('measurements').href = `${base}/diagnostics/measurements.json`;
+    el('report-download').href = `${base}/diagnostics/report`;
+    el('report-download').hidden = !diagnostics.reports.length;
+    if (diagnostics.reports.length) el('report-download').textContent = `Letztes Testprotokoll herunterladen (${diagnostics.reports.at(-1)})`;
+    // Fill the notes once per session, never while someone is typing.
+    if (notesFor !== diagnostics.session_id) {
+      for (const field of NOTE_FIELDS) el(`note-${field}`).value = diagnostics.notes[field] || '';
+      notesFor = diagnostics.session_id;
+    }
+  }
+  async function diagnosticsAction(path, done) {
+    if (diagnosticsBusy) return;
+    diagnosticsBusy = true; renderDiagnostics();
+    try {
+      diagnostics = await request(`${sessionBase(sessionId)}/diagnostics/${path}`, {method: 'POST'});
+      message('diagnostics-message', done);
+    } catch (error) { message('diagnostics-message', error.message, true); }
+    finally { diagnosticsBusy = false; await loadDiagnostics().catch(() => {}); }
+  }
+  el('diagnostics-start').onclick = () => diagnosticsAction('start', 'Testdiagnose gestartet. Messung etwa alle 5 Sekunden.');
+  el('diagnostics-stop').onclick = () => diagnosticsAction('stop', 'Testdiagnose beendet. Messdaten bleiben erhalten.');
+  el('diagnostics-notes').onsubmit = async event => {
+    event.preventDefault();
+    try {
+      await request(`${sessionBase(sessionId)}/diagnostics/notes`, {method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(Object.fromEntries(NOTE_FIELDS.map(field => [field, el(`note-${field}`).value])))});
+      message('diagnostics-message', 'Angaben gespeichert.');
+    } catch (error) { message('diagnostics-message', error.message, true); }
+  };
+  // Create a report, then download it; works for the active and archived sessions.
+  async function createReport(id) {
+    const result = await request(`${sessionBase(id)}/diagnostics/report`, {method: 'POST'});
+    location.href = `${sessionBase(id)}/diagnostics/report`;
+    return result.report;
+  }
+  el('report-create').onclick = async () => {
+    el('report-create').disabled = true;
+    try { message('diagnostics-message', `Testprotokoll erstellt: ${await createReport(sessionId)}`); }
+    catch (error) { message('diagnostics-message', error.message, true); }
+    finally { el('report-create').disabled = false; await loadDiagnostics().catch(() => {}); }
+  };
+  el('session-archives').onclick = async event => {
+    const id = event.target.closest('[data-report]')?.dataset.report;
+    if (!id) return;
+    try { message('session-status', `Testprotokoll erstellt: ${await createReport(id)}`); }
+    catch (error) { message('session-status', error.message, true); }
+  };
   el('rename-session').onsubmit = async event => {
     event.preventDefault();
     if (sessionBusy) return;
@@ -322,6 +403,7 @@
     const current = state.capture.cameras.map(camera => `${camera.id}:${camera.lane_ids}`).join('|');
     if (known !== current) await loadCameras().catch(error => message('status', error.message, true));
     renderCameraList(); renderLanePicker(); renderCameraLive(); renderLanes(); renderSession();
+    await loadDiagnostics().catch(error => message('diagnostics-message', error.message, true));
   }
 
   showTab();

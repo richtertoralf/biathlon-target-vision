@@ -63,7 +63,7 @@ const readline=require('node:readline'),fs=require('node:fs'),assert=require('no
   const archived=await(await fetch(url+'/api/events?session_id='+oldId)).json();
   assert.equal(archived.events.filter(event=>event.command.kind==='assign').length,1);
   await admin.locator('details summary').click();
-  await expect(admin.locator('#session-archives a')).toContainText('Vormittag');
+  await expect(admin.locator('#session-archives li > a')).toContainText('Vormittag');
   // Offline begonnenen BIB-Entwurf bei Wiederverbindung zur nächsten Sitzung verwerfen.
   await second.locator('#lane-2 [data-action=bib]').tap();await second.locator('#bib-input').fill('88');
   await landscape.setOffline(true);
