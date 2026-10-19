@@ -5,7 +5,7 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag ist `v0.8.2` (Development Release); der letzte Abschnitt
+Der letzte Versionstag ist `v0.8.3` (Development Release); der letzte Abschnitt
 fasst seinen Umfang zusammen, der Abschnitt zu `v0.8.0` den Umfang seit `v0.7.0`.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
@@ -1286,3 +1286,20 @@ Ansichten bei 1920×1080, 1366×768, 1024×768, 768×1024 und 390×844.
 Commit im Installationsarchiv. Alle bisherigen Browserprüfungen bestehen nach
 Anpassung der Selektoren für Monitorstatus, Serverstatus und das umbenannte
 Kamera-Abzeichen. Bildschirmfotos aller Ansichten wurden visuell kontrolliert.
+
+## 2026-10-19 – Version 0.8.3: Development Release
+
+Entwicklungsrelease mit einheitlichem Designsystem und gemeinsamem Seitenrahmen
+(PR #43, siehe vorheriger Abschnitt): Betriebsuhr mit Serverzeit,
+Verbindungsstatus, Version und Commit in der Fußzeile.
+**Nicht für produktiven Wettkampfbetrieb freigegeben.** Die API-Version bleibt
+`2`; `/api/health` ist additiv um `commit` und `server_time` erweitert. Keine
+neuen Abhängigkeiten, keine Änderungen an Ereigniskern, Erkennung, Journalformat,
+systemd-Unit oder Upgrade-Logik.
+
+Bestehende Installationen wechseln mit `sudo biathlon-target-vision --upgrade`.
+Der Upgrade-Weg von `v0.8.2` wurde wie bei den vorherigen Releases simuliert; nur
+die systemd-Aufrufe waren ersetzt. Dabei wurde geprüft, dass das
+Installationsarchiv den tatsächlichen Commit enthält. Eine Aktualisierung auf dem
+Zielserver selbst steht aus. Die Betriebsuhr setzt eine per NTP synchronisierte
+Serveruhr voraus.
