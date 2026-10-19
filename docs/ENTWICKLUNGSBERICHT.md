@@ -5,7 +5,7 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag ist `v0.8.1` (Development Release); der letzte Abschnitt
+Der letzte Versionstag ist `v0.8.2` (Development Release); der letzte Abschnitt
 fasst seinen Umfang zusammen, der Abschnitt zu `v0.8.0` den Umfang seit `v0.7.0`.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
@@ -1208,3 +1208,15 @@ Sitzungsangaben und das Fehlen von Zugangsdaten. Weitere Tests decken Störung
 Rückfall auf den Datenordner, nicht lesbare Konfiguration ohne erfundene Adressen,
 nur antwortende Adressen bei unbekannter Bindung, Loopback-Bindung und die
 Auswertung der systemd-Ausgabe ab.
+
+## 2026-10-19 – Version 0.8.2: Development Release
+
+Entwicklungsrelease mit der ausführlichen Statusanzeige `--status` (PR #40, siehe
+vorheriger Abschnitt). **Nicht für produktiven Wettkampfbetrieb freigegeben.**
+Die API-Version bleibt `2`. Keine neuen Abhängigkeiten, keine Änderungen an
+Ereigniskern, optischer Erkennung, REST/WebSocket, Journalformat, systemd-Unit oder
+Installer. Die Upgrade-Logik in `deployment.py` ist unverändert; entfernt wurde
+dort nur die alte Statusfunktion. Bestehende Installationen wechseln mit
+`sudo biathlon-target-vision --upgrade`. Der Upgrade-Weg von `v0.8.1` wurde wie bei
+`v0.8.1` simuliert, nur die systemd-Aufrufe waren ersetzt. Eine Aktualisierung auf
+dem Zielserver selbst steht aus.
