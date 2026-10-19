@@ -1,7 +1,7 @@
 # Roadmap
 
-Stand: **19. Oktober 2026**, Release `v0.8.3` (Development Release, `main` nach
-PR #43): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
+Stand: **19. Oktober 2026**, Release `v0.8.4` (Development Release, `main` nach
+PR #45): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
 ändern weder die GitHub-Issues noch den implementierten Umfang. Die fachliche
 Zielbeschreibung steht im [Produktkonzept](PRODUKTKONZEPT.md), der tatsächliche
 Entwicklungsstand im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md). BTV ist in
@@ -42,10 +42,10 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
 ### Vorbereitung bis Dienstag, 20.10.
 
 1. **Softwarestand festlegen:** Auf `mediamtx18` mit
-   `sudo biathlon-target-vision --upgrade` auf `v0.8.3` wechseln (überarbeitete
-   Administration, ausführliches `--status`, einheitlicher Seitenrahmen mit
-   Betriebsuhr). Danach die Kameras unter `/admin` anlegen.
-   `sudo biathlon-target-vision --status` meldet Version `0.8.3`; den Commit des Tags im
+   `sudo biathlon-target-vision --upgrade` auf `v0.8.4` wechseln (überarbeitete
+   Administration, ausführliches `--status`, Seitenrahmen mit Betriebsuhr,
+   Testdiagnose mit Test- und Feldprotokoll). Danach die Kameras unter `/admin` anlegen.
+   `sudo biathlon-target-vision --status` meldet Version `0.8.4`; den Commit des Tags im
    Testprotokoll festhalten. `--upgrade` wechselt nur auf einen höheren Versionstag;
    weitere Korrekturen vor dem Test deshalb nur als neuer Patch-Tag.
 2. **Bahnanzahl vor dem ersten Dienststart klären:** Der Installer startet den

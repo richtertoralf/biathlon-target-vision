@@ -5,7 +5,7 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag ist `v0.8.3` (Development Release); der letzte Abschnitt
+Der letzte Versionstag ist `v0.8.4` (Development Release); der letzte Abschnitt
 fasst seinen Umfang zusammen, der Abschnitt zu `v0.8.0` den Umfang seit `v0.7.0`.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
@@ -1378,3 +1378,18 @@ Testprotokoll tatsächlich herunter, auch für eine archivierte Sitzung, und pr�
 Start, Messungen, Notizen und Stopp. Ein Probe-PDF wurde zusätzlich mit PyMuPDF
 in einer temporären Umgebung geöffnet und gerendert; die sechs Seiten wurden
 visuell kontrolliert.
+
+## 2026-10-19 – Version 0.8.4: Development Release
+
+Entwicklungsrelease mit optionaler Testdiagnose, automatischem Testprotokoll und
+PDF-Feldprotokoll für den Praxistest (PR #45, siehe vorheriger Abschnitt).
+**Nicht für produktiven Wettkampfbetrieb freigegeben.** Die API-Version bleibt
+`2`; alle neuen Endpunkte sind additiv. Keine neuen Abhängigkeiten, keine
+Änderungen an Ereigniskern, Journalformat, systemd-Unit, Installer oder
+Upgrade-Logik.
+
+Bestehende Installationen wechseln mit `sudo biathlon-target-vision --upgrade`.
+Der Upgrade-Weg von `v0.8.3` wurde wie bei den vorherigen Releases simuliert; nur
+die systemd-Aufrufe waren ersetzt. Eine Aktualisierung auf dem Zielserver selbst
+steht aus. Die Diagnose schreibt nur in den Datenordner, der für den Dienst
+beschreibbar ist (`ReadWritePaths`).

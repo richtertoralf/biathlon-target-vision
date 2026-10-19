@@ -182,10 +182,10 @@ auf. Technische Vergleichswerte und Quellenverwaltung stehen unter `/admin`.
 
 Voraussetzung: Debian/Ubuntu mit Python 3.11 oder neuer, systemd und Internet
 für die Installation. Installation eines veröffentlichten Versionstags, hier des
-Entwicklungsreleases `v0.8.3` für den Praxistest:
+Entwicklungsreleases `v0.8.4` für den Praxistest:
 
 ```bash
-git clone --branch v0.8.3 https://github.com/richtertoralf/biathlon-target-vision.git
+git clone --branch v0.8.4 https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
 ./install.sh
 ```
