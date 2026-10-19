@@ -280,7 +280,7 @@ class WorkflowApiTests(unittest.TestCase):
             connected=True
             def snapshot(self,camera_id):
                 return {**super().snapshot(camera_id),'connected':self.connected}
-        async def idle(service):await asyncio.Event().wait()
+        async def idle(service, status_changed):await asyncio.Event().wait()
         with tempfile.TemporaryDirectory() as temporary:
             directory=Path(temporary)
             save_settings(directory,Settings(cameras=[CameraSettings(id='test',name='Test',url='rtsp://localhost/test',lane_ids=[1])]))

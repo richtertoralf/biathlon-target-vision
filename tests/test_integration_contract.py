@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import threading
+from time import monotonic, sleep
 import unittest
 from unittest.mock import patch
 
@@ -31,6 +32,7 @@ class IntegrationContractTests(unittest.TestCase):
         with self.client.websocket_connect('/ws') as socket:
             initial=socket.receive_json();self.assertEqual(initial['api_version'],API_VERSION)
             self.assertEqual(initial['health'],'ok');self.assertTrue(initial['capture']['running'])
+            self.assertEqual(initial['capture']['lanes'], {'1':'unavailable','2':'unavailable'})
             self.assertEqual(self.observe(5,'fallen',1,baseline=True).status_code,200)
             state=socket.receive_json();lane=state['lanes']['1']
             self.assertEqual(lane['targets'],['unknown']*4+['fallen'])
@@ -83,6 +85,48 @@ class IntegrationContractTests(unittest.TestCase):
         with self.client.websocket_connect('/ws') as socket:
             state=socket.receive_json();self.assertEqual(state['health'],'error')
             self.assertFalse(state['capture']['running']);self.assertEqual(state['sequence'],0)
+            self.assertEqual(state['capture']['lanes'], {'1':'unavailable','2':'unavailable'})
+
+    def test_capture_availability_wakes_two_tablets_without_journal_changes(self):
+        self.client.__exit__(None,None,None)
+        sent=[];original=WebSocket.send_json
+        class SwitchableCameras(FakeCameras):
+            connected=True
+            def snapshot(self,camera_id):
+                capture=super().snapshot(camera_id)
+                return {**capture,'connected':self.connected,'frame':capture['frame'] if self.connected else None}
+        async def record_send(socket,message,*args,**kwargs):
+            sent.append(message)
+            await original(socket,message,*args,**kwargs)
+        with patch('biathlon_target_vision.app.CameraManager',SwitchableCameras), patch.object(WebSocket,'send_json',record_send):
+            self.client=TestClient(create_app(self.path));self.client.__enter__()
+            self.assertEqual(self.client.post('/api/cameras',json={'id':'test','name':'Test','url':'rtsp://localhost/test','lane_ids':[1,2]}).status_code,200)
+            with self.client.websocket_connect('/ws') as first, self.client.websocket_connect('/ws') as second:
+                first.receive_json();second.receive_json()
+                journal=Path(self.client.app.state.store.file.name).read_bytes()
+                for connected,status in [(False,'unavailable'),(True,'uncertain')]:
+                    started=monotonic()
+                    self.client.app.state.cameras.connected=connected
+                    for socket in (first,second):
+                        while True:
+                            state=socket.receive_json()
+                            self.assertEqual(state['sequence'],0)
+                            self.assertLess(monotonic()-started,2,'Status must not wait for the five-second heartbeat')
+                            if state['capture']['lanes']=={'1':status,'2':status}:
+                                break
+                    count=len(sent);sleep(.4)
+                    self.assertEqual(len(sent),count,'Unchanged frames must not trigger status pushes')
+                async def stop_capture():
+                    self.client.app.state.vision_task.cancel()
+                    await asyncio.gather(self.client.app.state.vision_task,return_exceptions=True)
+                started=monotonic();self.client.portal.call(stop_capture)
+                for socket in (first,second):
+                    state=socket.receive_json()
+                    self.assertFalse(state['capture']['running'])
+                    self.assertEqual(state['capture']['lanes'],{'1':'unavailable','2':'unavailable'})
+                    self.assertEqual(state['sequence'],0)
+                self.assertLess(monotonic()-started,2)
+                self.assertEqual(Path(self.client.app.state.store.file.name).read_bytes(),journal)
 
     def test_storage_failure_is_explicit_in_state(self):
         self.client.app.state.store.failed=True
@@ -100,3 +144,4 @@ class IntegrationContractTests(unittest.TestCase):
                 state=socket.receive_json();self.assertNotIn('PRIVATE_PASSWORD',json.dumps(state))
                 self.assertEqual(state['capture']['cameras'][0]['lane_ids'],[1,2])
                 self.assertTrue(state['capture']['cameras'][0]['connected'])
+                self.assertEqual(state['capture']['lanes'], {'1':'uncertain','2':'uncertain'})

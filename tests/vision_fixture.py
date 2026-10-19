@@ -26,14 +26,23 @@ if __name__ == '__main__':
         for camera in cameras:
             image,quad,_,_=scene();calibration=calibrate(image,quad);calibration.update(camera_binding(camera));calibrations.save(camera.lane_ids[0],calibration)
         class SyntheticCameras:
-            def __init__(self,cameras):pass
+            def __init__(self,cameras):self.frames={}
             def configure(self,cameras):pass
             def close(self):pass
             def snapshot(self,camera_id):
                 controls=json.loads(control.read_text()).get(camera_id,{})
+                number=int(monotonic()*10)
+                key=(number,controls)
+                previous=self.frames.get(camera_id)
+                # Match the real decoder: metadata reads reuse the latest frame
+                # instead of generating another image for every access.
+                if previous and previous[0]==key:
+                    return previous[1]
                 connected=controls.get('connected',True)
                 image=scene(mask=controls.get('mask',0),missing=controls.get('missing'),noise=controls.get('noise',0),brightness=controls.get('brightness',1))[0] if connected else None
-                return {'frame':image,'frame_number':int(monotonic()*10),'captured_at':datetime.now(timezone.utc),'connected':connected}
+                capture={'frame':image,'frame_number':number,'captured_at':datetime.now(timezone.utc),'connected':connected}
+                self.frames[camera_id]=(key,capture)
+                return capture
         with socket.socket() as reservation:
             reservation.bind(('127.0.0.1',0));port=reservation.getsockname()[1]
         with patch('biathlon_target_vision.app.CameraManager',SyntheticCameras):

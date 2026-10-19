@@ -106,6 +106,33 @@ class VisionService:
         self.frames = {}
         self.errors = {}
 
+    def capture_status(self, lane_id):
+        """Derive availability from the live lane tracker, never from journal values alone."""
+        lane = self.store.state["lanes"][str(lane_id)]
+        camera = next((c for c in self.settings().cameras if lane_id in c.lane_ids), None)
+        if lane["mode"] == "manual" or camera is None:
+            return "unavailable"
+        capture = self.cameras.snapshot(camera.id)
+        if not capture["connected"] or capture["frame"] is None:
+            return "unavailable"
+        entry = self.trackers.get(lane_id)
+        if entry is None:
+            return "uncertain"
+        key, tracker = entry
+        # Reconnection and a new bout require their own baseline observation.
+        # Lanes sharing a camera may have different recognition quality.
+        if (key[:2] != (camera.id, camera.url) or key[2] is None or lane_id in self.errors
+                or key[3:] != (capture.get("stream_epoch", 0), lane["automatic_generation"])):
+            return "uncertain"
+        if (all(tracker.continuous) and "unknown" not in tracker.states
+                and tracker.pending == tracker.states == lane["automatic_targets"]):
+            return "active"
+        return "uncertain"
+
+    def capture_statuses(self):
+        return {lane_id: self.capture_status(lane["lane_id"])
+                for lane_id, lane in self.store.state["lanes"].items()}
+
     def emit(self, commands):
         for command in commands:
             try:
@@ -173,10 +200,17 @@ class VisionService:
             del self.trackers[lane_id]
             self.frames.pop(lane_id, None)
 
-    async def run(self):
+    async def run(self, status_changed):
         try:
+            previous = self.capture_statuses()
             while True:
                 await self.step()
+                current = self.capture_statuses()
+                # Notify only on status changes, never at frame rate or through
+                # extra journal events. The existing heartbeat remains separate.
+                if current != previous:
+                    previous = current
+                    status_changed()
                 await asyncio.sleep(.1)
         except Exception:
             logging.exception("Optische Erfassung wurde durch einen Fehler gestoppt")

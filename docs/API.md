@@ -592,12 +592,35 @@ Zusätzlich enthalten vollständige Zustände:
 | `capture.running` | Optische Auswertungsaufgabe läuft; bedeutet nicht, dass jede Kamera verbunden/kalibriert ist |
 | `capture.cameras` | Dieselbe bereinigte Liste wie `/api/cameras`, einschließlich `connected` und letzter Bildempfangszeit |
 | `capture.calibration_errors` | Aktuell vom Erfassungskern gemeldete beschädigte Kalibrierungen je Bahn |
+| `capture.lanes` | Flüchtiger optischer Erfassungsstatus je Bahnkennung: `active`, `uncertain` oder `unavailable` |
 | `simulation` | Beim Start gewählter Simulationsmodus |
 
 RTSP-Adressen und Zugangsdaten fehlen in diesen Antworten. `captured_at` ist die
 Serverzeit beim Bildempfang, keine garantierte Belichtungs- oder Schusszeit. Bei
 unveränderten Zielstellungen bleibt deren `observed_at` unverändert; Bildempfang
 und technische Verfügbarkeit stehen getrennt im Kamerastatus.
+
+`capture.lanes`, beispielsweise `{"1":"active","2":"uncertain","3":"unavailable"}`,
+ist je Bahn abgeleitet, nicht je Kamera: `active` verlangt im aktuellen Tracker
+bestätigte bekannte Werte aller fünf Ziele, passende Quelle/Generation sowie eine
+aktuell damit übereinstimmende Klassifikation. `uncertain` bedeutet: Die Kamera
+liefert Bilder, aber eine vollständige bestätigte Erkennung fehlt, etwa wegen
+fehlender/ungültiger Kalibrierung, Grundbeobachtung oder Verdeckung. `unavailable`
+gilt ohne zugeordnete Kamera, bei administrativer Quellensperre, fehlenden aktuellen
+Bildern oder beendeter Auswertungsaufgabe. Die Bildverfügbarkeit verwendet die
+bestehende Kamera-Frischeprüfung, keine neue Wartezeit.
+
+Manuelle Übersteuerungen verändern diesen optischen Status nicht; maßgeblich bleiben
+`lanes["N"].targets` und die zugehörigen `manual_targets`. Der Status ist kein Nachweis
+einer realen Schießstandvalidierung. Er wird nicht journalisiert und ändert `sequence`
+nicht. Tatsächliche Statusänderungen wecken die vorhandenen WebSocket-Empfänger
+nach dem jeweiligen Auswertungsschritt, auch ohne Journalereignis. Unveränderte
+Kamerabilder lösen keine zusätzlichen Statusmeldungen aus; das bestehende
+Fünf-Sekunden-Lebenszeichen bleibt erhalten. Maßgeblich sind weiterhin Kamera-
+Ausfallerkennung und Verarbeitungsgeschwindigkeit, keine garantierte Echtzeitfrist.
+Bei unterbrochener Verbindung darf ein Client den zuletzt empfangenen Status nicht
+als aktuell ausgeben.
+Die additive Statusangabe ändert weder Befehle noch API-Version oder Journalformat.
 
 ### Daten für einen externen BTV-Adapter
 

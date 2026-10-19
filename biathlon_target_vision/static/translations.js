@@ -2,7 +2,10 @@
 window.BTV_I18N = {
   en: {
     sessionChanged: 'New recording session started. Previous inputs have been closed.',
-    confirmTarget: 'Confirm the actual target position.', checkTargets: 'Check targets · enter corrections directly',
+    confirmTarget: 'Confirm the actual target position.',
+    captureActive: 'Automatic detection active', captureUncertain: 'Detection pending / uncertain',
+    captureManual: 'Manual input required', captureOffline: 'Detection status unavailable · reconnecting',
+    manualMarker: 'Manual', manualCorrection: 'Manual correction',
     enterNumber: 'Enter',
     occupyLane: 'Occupy lane', leaveLane: 'Leave lane', allStanding: 'All targets are standing',
     laneReady: 'Free – ready', laneResetRequired: 'Free – reset required', laneOptions: 'Options',
@@ -40,7 +43,10 @@ window.BTV_I18N = {
   },
   de: {
     sessionChanged: 'Neue Aufzeichnungssitzung gestartet. Bisherige Eingaben wurden geschlossen.',
-    confirmTarget: 'Tatsächliche Scheibenstellung bestätigen.', checkTargets: 'Scheiben prüfen · direkt korrigieren',
+    confirmTarget: 'Tatsächliche Scheibenstellung bestätigen.',
+    captureActive: 'Automatik aktiv', captureUncertain: 'Erkennung läuft / unsicher',
+    captureManual: 'Nur manuell', captureOffline: 'Erfassungsstatus unbekannt · verbinde erneut',
+    manualMarker: 'Manuell', manualCorrection: 'Manuelle Korrektur',
     enterNumber: 'Eingeben',
     occupyLane: 'Bahn belegen', leaveLane: 'Bahn verlassen', allStanding: 'Alle Scheiben aufgerichtet',
     laneReady: 'Frei – bereit', laneResetRequired: 'Frei – Rückstellung ausstehend', laneOptions: 'Optionen',
@@ -78,7 +84,10 @@ window.BTV_I18N = {
   },
   cs: {
     sessionChanged: 'Byla zahájena nová relace záznamu. Předchozí zadávání bylo ukončeno.',
-    confirmTarget: 'Potvrďte skutečnou polohu terče.', checkTargets: 'Zkontrolujte terče · opravte přímo',
+    confirmTarget: 'Potvrďte skutečnou polohu terče.',
+    captureActive: 'Automatické rozpoznávání aktivní', captureUncertain: 'Rozpoznávání probíhá / nejisté',
+    captureManual: 'Pouze ruční zadávání', captureOffline: 'Stav rozpoznávání neznámý · obnovování spojení',
+    manualMarker: 'Ručně', manualCorrection: 'Ruční oprava',
     enterNumber: 'Zadat',
     occupyLane: 'Obsadit stav', leaveLane: 'Opustit stav', allStanding: 'Všechny terče jsou vztyčené',
     laneReady: 'Volný – připravený', laneResetRequired: 'Volný – čeká na vztyčení terčů', laneOptions: 'Možnosti',
