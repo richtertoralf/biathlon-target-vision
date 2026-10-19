@@ -1,7 +1,7 @@
 # Roadmap
 
-Stand: **19. Oktober 2026**, `main` nach PR #32 und #33 (`ba6e5d7`): 14 offene und
-drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
+Stand: **19. Oktober 2026**, Release `v0.8.0` (Arber Field Test – Development
+Release, `main` nach PR #36): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
 ändern weder die GitHub-Issues noch den implementierten Umfang. Die fachliche
 Zielbeschreibung steht im [Produktkonzept](PRODUKTKONZEPT.md), der tatsächliche
 Entwicklungsstand im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md). BTV ist in
@@ -41,12 +41,12 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
 
 ### Vorbereitung bis Dienstag, 20.10.
 
-1. **Softwarestand festlegen:** Einen geprüften Commit von `main` (derzeit
-   `ba6e5d7`) mit `./install.sh` installieren und den Hash im Testprotokoll
-   festhalten. `--version` meldet weiterhin `0.7.0`, obwohl Sitzungen (API-Version 2)
-   und Erfassungsstatus enthalten sind. `--upgrade` lädt nur Versionstags und
-   aktualisiert deshalb nicht; spätere Stände nur durch erneutes `install.sh` aus
-   einem geprüften Checkout. Einen neuen Versionstag erst nach der Auswertung setzen.
+1. **Softwarestand festlegen:** Den Release `v0.8.0` gezielt installieren
+   (`git clone --branch v0.8.0 …`, dann `./install.sh`; siehe
+   [README](../README.md#unter-debianubuntu-installieren)). `biathlon-target-vision
+   --version` meldet `0.8.0`; den Commit des Tags im Testprotokoll festhalten.
+   `--upgrade` wechselt nur auf einen höheren Versionstag. Korrekturen vor dem Test
+   deshalb nur als neuer Patch-Tag (etwa `v0.8.1`) bereitstellen.
 2. **Bahnanzahl vor dem ersten Dienststart klären:** Der Installer startet den
    Dienst ohne `--lanes`, also mit 20 Bahnen; die Zahl ist danach je Datenordner
    fest. Sollen physische Bahnnummern über 20 verwendet werden, `--lanes N` per
@@ -72,8 +72,8 @@ aufgezeichnet wird. MediaMTX wird nicht umgebaut.
 7. **Messung vorbereiten:** CPU und RAM mit Betriebssystemmitteln protokollieren,
    etwa `pidstat -h -u -r -t -C 'python|mediamtx' 10` (Paket `sysstat`) in eine
    Datei. Vorab die Grundlast von MediaMTX allein messen und die synthetische
-   Zeitmessung `python -m tests.benchmark_vision` auf `mediamtx18` wiederholen,
-   mit und ohne `OPENCV_FOR_THREADS_NUM=1`.
+   Zeitmessung auf `mediamtx18` wiederholen, mit und ohne `OPENCV_FOR_THREADS_NUM=1`:
+   `cd /opt/biathlon-target-vision/current && .venv/bin/python -m tests.benchmark_vision`.
 8. **Testprotokoll vorbereiten:** Je Durchgang Uhrzeit, Bahn, Kamera, tatsächliche
    Scheibenstellungen, BTV-Anzeige, manuelle Korrekturen und Bemerkungen zu Licht,
    Wetter und Verdeckung. Außerdem Softwarestand, Anlagentyp, Kameramodelle,
