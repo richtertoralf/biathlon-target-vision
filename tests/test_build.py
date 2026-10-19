@@ -1,6 +1,6 @@
 """Version, commit and server time in /api/health for the shared page frame."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import io
 from pathlib import Path
 import subprocess
@@ -28,7 +28,8 @@ class BuildInfoTests(unittest.TestCase):
             after = datetime.now(timezone.utc)
         self.assertEqual(health['version'], __version__)
         self.assertEqual(health['commit'], git('rev-parse', '--short', 'HEAD').decode().strip())
-        self.assertTrue(before <= datetime.fromisoformat(health['server_time']) <= after)
+        # server_time is truncated to milliseconds and may lie up to 1 ms before `before`.
+        self.assertTrue(before - timedelta(milliseconds=1) <= datetime.fromisoformat(health['server_time']) <= after)
 
     def test_installer_archive_contains_the_real_commit(self):
         # deployment.prepare copies the program with `git archive`; export-subst fills in the commit.
