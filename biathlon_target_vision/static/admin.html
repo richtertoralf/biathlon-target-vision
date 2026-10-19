@@ -1,30 +1,83 @@
 <!doctype html>
-<!-- Kameraverwaltung; die vorhandene Kalibrierungsseite markiert die Gesamt-ROI. -->
-<html lang="de" translate="no" class="notranslate"><meta charset="utf-8">
-  <meta name="google" content="notranslate"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BTV – Administration</title><link rel="stylesheet" href="/static/calibration.css">
-<main><header><h1>Administration</h1><a href="/monitor">Kontrollmonitor</a></header>
-<section aria-labelledby="sessions-heading"><h2 id="sessions-heading">Aufzeichnungssitzung</h2>
-<p id="current-session"></p>
-<form id="rename-session"><label>Name der aktuellen Sitzung <input id="session-name" required maxlength="128"></label> <button>Namen speichern</button></form>
-<form id="start-session"><label>Name der neuen Sitzung <input id="new-session-name" required maxlength="128" autocomplete="off"></label>
-<p>Journal und Korrekturbelege bleiben im Archiv. Die neue Sitzung beginnt ohne Startnummern und Belegungen; die Bahnen müssen erneut vorbereitet werden. Kameras und Kalibrierungen bleiben erhalten.</p>
-<p id="session-warning"></p>
-<label class="session-confirmation"><input id="confirm-session" type="checkbox" required><span>Aktuelle Sitzung abschließen; auch die oben genannten Belegungen und offenen Schießeinlagen nur noch archivieren.</span></label>
-<p><button id="start-session-button">Sitzung abschließen und neue starten</button></p></form>
-<p id="session-status" role="status"></p>
-<details><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
-</section><h2>Kameras</h2>
-<label>Kamera <select id="camera"><option value="">Neue Kamera</option></select></label>
-<form id="camera-form"><div class="controls">
-<label>Kennung <input id="camera-id" required pattern="[a-zA-Z0-9_-]{1,64}"></label>
-<label>Name <input id="camera-name" required maxlength="128"></label>
-<label>RTSP-Adresse <input id="camera-url" type="password" autocomplete="new-password" placeholder="rtsp://192.168.95.43/1/h264major"></label>
-<label>Bahnen (Komma getrennt) <input id="camera-lanes" placeholder="1,2,3"></label>
-</div><p>Beim Bearbeiten die RTSP-Adresse leer lassen, um die gespeicherte Adresse zu behalten.</p>
-<button type="submit">Speichern</button> <button id="remove" type="button" disabled>Entfernen</button></form>
-<p id="status" role="status"></p><p id="connection"></p>
-<img id="preview" alt="Aktuelles Kamerabild" style="max-width:100%;max-height:55vh" hidden>
-<div id="calibrations" class="controls"></div><h2>Erfassungsquellen je Bahn</h2>
-<p>Manuelle Eingaben sind immer möglich und haben Vorrang. Automatische Beobachtungen können hier gesperrt werden, etwa bei einer falsch ausgerichteten Kamera. Ohne Kamera ist keine Einstellung erforderlich.</p>
-<div id="sources"></div></main><script src="/static/admin.js"></script></html>
+<!-- Administration in three areas: cameras, lanes and recording sessions. -->
+<html lang="de" translate="no" class="notranslate">
+<head>
+  <meta charset="utf-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BTV – Administration</title>
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">BIATHLON TARGET VISION</span>
+  <nav class="links" aria-label="Weitere Ansichten"><a href="/">Tablet</a><a href="/monitor">Kontrollmonitor</a><a href="/calibration">Kalibrierung</a></nav>
+  <span id="server" data-status="connecting" role="status">Verbinde …</span>
+</header>
+<main>
+  <h1>Administration</h1>
+  <nav class="tabs" aria-label="Bereiche">
+    <a href="#cameras" data-tab="cameras">Kameras</a>
+    <a href="#lanes" data-tab="lanes">Bahnen</a>
+    <a href="#sessions" data-tab="sessions">Sitzungen</a>
+  </nav>
+
+  <section id="cameras" class="area" aria-labelledby="cameras-heading">
+    <h2 id="cameras-heading">Kameras</h2>
+    <div class="columns">
+      <div class="panel">
+        <ul id="camera-list" class="camera-list"></ul>
+        <button id="new-camera" type="button">Neue Kamera anlegen</button>
+      </div>
+      <form id="camera-form" class="panel" novalidate>
+        <h3 id="camera-form-title">Neue Kamera</h3>
+        <label class="field">Name <input id="camera-name" required maxlength="128" autocomplete="off" placeholder="z. B. Kamera Bahnen 1–4"></label>
+        <label class="field">Kennung <input id="camera-id" required pattern="[a-zA-Z0-9_\-]{1,64}" autocomplete="off" spellcheck="false"></label>
+        <p class="hint" id="camera-id-hint">Wird aus dem Namen vorgeschlagen. Kalibrierungen hängen an dieser Kennung; sie kann später nicht geändert werden.</p>
+        <p id="camera-address" class="address" hidden>Gespeicherte Adresse: <code id="camera-address-value"></code></p>
+        <label class="field"><span id="camera-url-label">RTSP-Adresse</span> <input id="camera-url" type="text" autocomplete="off" spellcheck="false" placeholder="rtsp://192.168.95.43/1/h264major"></label>
+        <p class="hint" id="camera-url-hint">Vollständige Adresse einschließlich Benutzer und Passwort, falls nötig. Gespeicherte Zugangsdaten werden nicht wieder angezeigt.</p>
+        <fieldset><legend>Bahnen dieser Kamera</legend><div id="camera-lanes" class="lane-picker"></div></fieldset>
+        <div class="actions"><button type="submit" class="primary">Speichern</button><button id="remove" type="button" class="danger" disabled>Entfernen</button></div>
+        <p id="status" class="message" role="status"></p>
+      </form>
+      <div id="camera-live" class="panel" hidden>
+        <p id="connection" class="badge"></p>
+        <img id="preview" alt="Aktuelles Kamerabild" hidden>
+        <div id="calibrations" class="link-row"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="lanes" class="area" aria-labelledby="lanes-heading" hidden>
+    <h2 id="lanes-heading">Bahnen</h2>
+    <p class="legend"><span data-capture="active">Automatik aktiv</span><span data-capture="uncertain">Erkennung läuft / unsicher</span><span data-capture="unavailable">Nur manuell</span><span data-capture="fault">Störung</span></p>
+    <div id="lane-grid" class="lane-grid"></div>
+    <div id="lane-detail" class="panel" hidden></div>
+    <p id="lane-status" class="message" role="status"></p>
+  </section>
+
+  <section id="sessions" class="area" aria-labelledby="sessions-heading" hidden>
+    <h2 id="sessions-heading">Aufzeichnungssitzung</h2>
+    <div class="columns">
+      <div class="panel">
+        <h3>Aktuelle Sitzung</h3>
+        <p id="current-session"></p>
+        <p id="session-warning"></p>
+        <form id="rename-session"><label class="field">Name der aktuellen Sitzung <input id="session-name" required maxlength="128"></label><button>Namen speichern</button></form>
+      </div>
+      <form id="start-session" class="panel">
+        <h3>Sitzung abschließen und neu beginnen</h3>
+        <label class="field">Name der neuen Sitzung <input id="new-session-name" required maxlength="128" autocomplete="off"></label>
+        <p class="hint">Journal und Korrekturbelege bleiben im Archiv. Die neue Sitzung beginnt ohne Startnummern und Belegungen; die Bahnen müssen erneut vorbereitet werden. Kameras und Kalibrierungen bleiben erhalten.</p>
+        <label class="session-confirmation"><input id="confirm-session" type="checkbox" required><span>Aktuelle Sitzung abschließen; auch die genannten Belegungen und offenen Schießeinlagen nur noch archivieren.</span></label>
+        <button id="start-session-button" class="primary">Sitzung abschließen und neue starten</button>
+      </form>
+    </div>
+    <p id="session-status" class="message" role="status"></p>
+    <details class="panel"><summary>Abgeschlossene Sitzungen</summary><ul id="session-archives"></ul></details>
+  </section>
+</main>
+<script src="/static/admin.js"></script>
+</body>
+</html>

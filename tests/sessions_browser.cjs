@@ -20,7 +20,7 @@ const readline=require('node:readline'),fs=require('node:fs'),assert=require('no
   const oldId=(await state()).session_id;
   for(const page of [first,second]){await page.goto(url);await expect(page.locator('#connection')).toHaveAttribute('data-status','online');}
   await second.locator('#language').selectOption('cs');
-  await monitor.goto(url+'/monitor');await admin.goto(url+'/admin');
+  await monitor.goto(url+'/monitor');await admin.goto(url+'/admin#sessions');
   await admin.locator('#session-name').fill('Vormittag');await admin.locator('#rename-session button').click();
   await expect(first.locator('#session-name')).toHaveText('Vormittag');
   await first.locator('#lane-1 [data-action=manual-reset]').tap();

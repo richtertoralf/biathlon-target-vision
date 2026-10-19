@@ -281,10 +281,13 @@ bewussten Rückwechsel den separat aufbewahrten alten Testbestand verwenden.
 
 ## Kameras einrichten
 
-`http://SERVER-IP:8091/admin` öffnen. Kennung, Name, vollständige RTSP-Adresse
-(zum Beispiel `rtsp://192.168.95.43/1/h264major`) und Bahnnummern eintragen.
-Mehrere Bahnen können dasselbe Kamerabild nutzen; jede automatisch erfasste Bahn
-hat genau eine zuständige Kamera. Bei Verbindungsproblemen wird erneut verbunden.
+`http://SERVER-IP:8091/admin` öffnen. Die Administration hat drei Bereiche:
+**Kameras**, **Bahnen** und **Sitzungen**. Unter „Kameras“ → „Neue Kamera anlegen“
+Name, vollständige RTSP-Adresse (zum Beispiel `rtsp://192.168.95.43/1/h264major`)
+eintragen und die Bahnen antippen. Die Kennung wird aus dem Namen vorgeschlagen und
+bleibt danach fest. Mehrere Bahnen können dasselbe Kamerabild nutzen; jede
+automatisch erfasste Bahn hat genau eine zuständige Kamera. Bei
+Verbindungsproblemen wird erneut verbunden.
 
 Über „Bahn … kalibrieren“ das aktuelle Kamerabild übernehmen und vier Ecken um
 den gesamten Scheibenbereich markieren. Die fünf Scheiben werden automatisch
@@ -292,16 +295,17 @@ gesucht; ihre gefundenen Umrisse kontrollieren. Keine einzelne Scheibe muss
 manuell markiert werden. Bei Kamera-/Adresswechsel, anderer Auflösung oder
 geänderter Ausrichtung neu kalibrieren.
 
-Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Unter „Erfassungsquellen
-je Bahn“ lässt sich eine fehlerhafte Quelle administrativ sperren oder wieder
-zulassen; dort stehen auch automatische Vergleichswerte und aktive Korrekturen.
+Nach gültiger Kalibrierung beginnt die Auswertung automatisch. Der Bereich
+„Bahnen“ zeigt alle Bahnen als Raster mit Kamera und Erfassungsstatus. Nach Antippen
+einer Bahn lässt sich eine fehlerhafte Quelle administrativ sperren oder wieder
+zulassen; dort stehen auch automatische Zielzustände und aktive Korrekturen.
 Für den normalen Ablauf oder einen Kameraausfall ist diese Einstellung unnötig.
 Quellensperren bleiben über Neustarts und Sitzungswechsel erhalten.
 
 Kleine Bildverschiebungen werden nachgeführt; unklare Sicht oder zu große Bewegung
-führt zu unbekannten Beobachtungen. Beim Bearbeiten bleibt eine leer gelassene
-RTSP-Adresse erhalten; gespeicherte Zugangsdaten werden nicht an den Browser
-zurückgegeben. Administration, Kalibrierung und Monitor sind derzeit deutsch;
+führt zu unbekannten Beobachtungen. Beim Bearbeiten zeigt die Administration die
+gespeicherte Adresse ohne Zugangsdaten; eine neue Adresse ersetzt sie vollständig.
+Gespeicherte Zugangsdaten werden nicht an den Browser zurückgegeben. Administration, Kalibrierung und Monitor sind derzeit deutsch;
 die Tablet-Sprachauswahl ist davon unabhängig.
 
 <img src="./biathlon-target_Luftgewehr.jpg" alt="Mechanische Luftgewehr-Scheibenanlage" width="400">

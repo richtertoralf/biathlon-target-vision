@@ -178,7 +178,8 @@ async function scenario(browser, manualOnly) {
       assert(events.every(event=>!['shot','hit','miss'].includes(event.command.kind)));
     }
     // Quellenwahl ist administrativ; die laufende Kachel bleibt unverändert bedienbar.
-    const admin=await contexts[0].newPage();await admin.goto(url+'/admin');
+    const admin=await contexts[0].newPage();await admin.goto(url+'/admin#lanes');
+    await admin.locator('.lane-tile[data-lane="1"]').click();
     const source=admin.locator('[data-source-lane="1"]');await expect(source).toBeChecked();
     await source.uncheck();await expect.poll(async()=> (await state()).lanes['1'].mode).toBe('manual');
     await captureStatus(1,'unavailable');
