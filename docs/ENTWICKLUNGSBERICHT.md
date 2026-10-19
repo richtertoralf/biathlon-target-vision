@@ -6,8 +6,8 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
 Der letzte Versionstag bleibt `v0.7.0`; die nachfolgenden Änderungen sind darin
-noch nicht enthalten. Der jüngste Abschnitt beschreibt den Tablet-Erfassungsstatus
-für Issue #30 und seine Prüfungen.
+noch nicht enthalten. Die jüngsten Abschnitte beschreiben den Tablet-Erfassungsstatus
+für Issue #30 und das gemessene Zeitverhalten der optischen Erfassung.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
 dokumentieren ihren damaligen Stand; überholte Entscheidungen gelten nicht weiter.
@@ -974,3 +974,89 @@ lokalen Browserprüfungen** einschließlich RTSP bestehen ebenfalls. JavaScript-
 `pip check` und `git diff --check` sind fehlerfrei. Die laufende
 Schießstandvalidierung bleibt unverändert offen; Kamera-Ausfallerkennung,
 Verarbeitungsgeschwindigkeit und Netzverbindung bestimmen die reale Reaktionszeit.
+
+## 2026-10-19 – Zeitverhalten der optischen Erfassung (synthetische Messung)
+
+Technische Grundlage für den Praxistest am 21.10.2026. Es wurde nichts an der
+Architektur geändert; ergänzt ist nur das manuell aufzurufende Messskript
+`tests/benchmark_vision.py`. Es startet die echte Anwendung mit vier synthetischen
+Kameras (1920 × 1080, 25 Bilder/s, Bahnen nebeneinander im Bild) und misst über
+umhüllte vorhandene Funktionen sowie einen WebSocket-Client.
+
+**Ablauf laut `vision.py`:** Ein Durchlauf (`step`) wertet alle Bahnen nacheinander
+aus, je Bahn höchstens ein neues Bild. Danach folgen der Statusvergleich und
+**eine** Pause von 100 ms je Durchlauf, nicht je Bahn. Eine Änderung gilt erst nach
+drei verschiedenen Bildern und mindestens 250 ms als bestätigt. Weil jede Bahn nur
+einmal je Durchlauf ein Bild erhält, dauert die Stabilisierung praktisch zwei
+Durchläufe. Die 250-ms-Grenze wirkt nur bei Durchläufen unter 125 ms und hat in
+keiner Messung begrenzt.
+
+**Messgrößen:** *Klassifikation* ist `classify()` je Bahn und Bild.
+*Erste Erkennung* reicht vom Bildwechsel bis zur ersten Klassifikation mit dem
+neuen Zustand; sie enthält bis zu 40 ms Bildabstand und das Warten auf die Bahn im
+Durchlauf. *Stabilisierung* reicht von dort bis zum bestätigten Befehl.
+*Veröffentlichung* umfasst Journal mit `fsync` und Zustandsaufbau.
+*Gesamt* reicht vom Bildwechsel bis zum Empfang des WebSocket-Zustands.
+
+**Ergebnisse** (Median / 95. Perzentil in ms; je Bahnzahl 40 Einzeländerungen,
+also 20 Fälle und 20 Rückstellungen, sowie sechs gleichzeitige Änderungen aller Bahnen):
+
+| Bahnen (je Kamera) | Scheibe ⌀ | Durchlauf inkl. Pause | Erste Erkennung | Stabilisierung | Veröffentlichung + WebSocket | **Gesamt** | Alle Bahnen gleichzeitig | CPU Ruhebetrieb |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 4 (1) | 64 px | 182 / 214 | 113 / 198 | 362 / 396 | 15 / 18 | **495 / 589** | 572 / 622 | 162 % |
+| 8 (2) | 63 px | 363 / 398 | 269 / 379 | 700 / 744 | 17 / 20 | **965 / 1105** | 1074 / 1084 | 197 % |
+| 12 (3) | 42 px | 449 / 527 | 208 / 497 | 874 / 928 | 17 / 20 | **1117 / 1404** | 1550 / 1679 | 238 % |
+| 16 (4) | 32 px | 553 / 666 | 254 / 620 | 1069 / 1160 | 18 / 22 | **1348 / 1702** | 2134 / 2207 | 298 % |
+| 20 (5) | 25 px | 636 / 741 | 318 / 503 | 1249 / 1324 | 20 / 24 | **1573 / 1872** | 2267 / 2327 | 270 % |
+
+„Veröffentlichung + WebSocket“ ist die Summe beider Einzelwerte.
+CPU in Prozent eines Kerns für den gesamten Prozess über zehn Sekunden ohne
+Zustandsänderung. Die reine Klassifikation lag in der Anwendung im Median bei
+17–32 ms je Bahn. Ein Durchlauf wächst damit um etwa 25–30 ms je Bahn.
+Veröffentlichung und WebSocket sind mit unter 25 ms vernachlässigbar.
+Die Ende-zu-Ende-Zeit wird von Durchlaufdauer und Stabilisierung bestimmt;
+sie beträgt etwa das Zweieinhalbfache eines Durchlaufs.
+
+**Beobachtungen:**
+
+- *Klassifikationszeit hängt von der Auslastung ab:* Isoliert und ohne Pause
+  dauert ein Aufruf 13–15 ms, unabhängig von Scheibengröße und OpenCV-Threads.
+  Mit 100 ms Pause zwischen den Aufrufen sind es 34–40 ms, auch außerhalb von BTV.
+  Vermutlich liegt das an Energiesparzuständen der CPU oder kalten Caches;
+  die Ursache ist nicht weiter untersucht. Werte schwanken deshalb zwischen
+  Läufen; bei vielen Bahnen arbeitet die CPU durchgehender.
+- *OpenCV-Threadpool:* Mit der Umgebungsvariable `OPENCV_FOR_THREADS_NUM=1`
+  sank die Ruhelast auf 46–77 % eines Kerns, also um etwa einen bis zwei Kerne.
+  Die Gesamtzeiten blieben vergleichbar: im Median 679, 895, 852, 1224 und
+  1383 ms für 4 bis 20 Bahnen. Die zusätzlichen Threads beschleunigen die
+  Auswertung also nicht messbar. `OPENBLAS_NUM_THREADS=1` hatte keinen Einfluss.
+- Die Auswertung nutzt wegen der Reihenfolge je Durchlauf höchstens etwa einen
+  Kern. Mehr Bahnen erhöhen deshalb vor allem die Latenz, nicht die CPU-Last.
+
+**Grenzen:** Gemessen auf einem Entwicklungsrechner (AMD Ryzen 7 2700, 8 Kerne/
+16 Threads, Python 3.12.3, OpenCV 4.14.0, NumPy 2.5.4), nicht auf `mediamtx18`.
+Synthetische, ideal begrenzte Scheiben. Nicht enthalten sind Belichtung und
+Kodierung in der Kamera, Netzwerk, Weiterleitung durch MediaMTX, RTSP-Dekodierung
+in BTV (eigene Threads mit zusätzlicher CPU-Last), Tablet-WLAN und
+Browserdarstellung. Diese Anteile kommen zur gemessenen Zeit hinzu und müssen am
+realen Aufbau bestimmt werden, etwa über die Zeiteinblendung der Kamera in der
+Aufzeichnung gegenüber `accepted_at` im Journal.
+
+**Für den Arber-Test:**
+
+- Messung vorab auf `mediamtx18` wiederholen, möglichst bei laufendem MediaMTX:
+  `.venv/bin/python -m tests.benchmark_vision --lanes 4 8 12 16`, einmal ohne und
+  einmal mit `OPENCV_FOR_THREADS_NUM=1`.
+- Erwartung für den Testaufbau mit 4–16 Bahnen: BTV-intern etwa 0,5–1,4 s im
+  Median, bei vielen gleichzeitigen Änderungen bis gut 2 s. Hinzu kommen Kamera,
+  Netz und RTSP.
+- `OPENCV_FOR_THREADS_NUM=1` kann ohne Programmänderung per systemd-Drop-in
+  (`Environment=`) gesetzt werden. Nur nach Bestätigung auf `mediamtx18` verwenden
+  und dann im Testprotokoll vermerken.
+- Architekturänderungen wie parallele Auswertung oder weniger Bilder je Bahn erst
+  nach realen Messwerten bewerten.
+
+**Prüfungen:** Alle 142 Python-Tests bestehen weiterhin; das Messskript gehört
+nicht zur Testsuite. Die Messreihen wurden je Konfiguration vollständig ausgeführt;
+die oben genannten Zahlen stammen aus diesen Läufen. Der Server jeder Bahnzahl
+wird vor der nächsten Messung beendet, damit keine fremde Erfassungsschleife mitläuft.
