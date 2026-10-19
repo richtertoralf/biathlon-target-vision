@@ -3,8 +3,9 @@
 ## Orientierung
 
 Projekt und Funktionsumfang: [README.md](README.md).  
+Internationale Mitarbeit: [CONTRIBUTING.md](CONTRIBUTING.md).  
 Technische Architektur: [ARCHITECTURE.md](docs/ARCHITECTURE.md).  
-Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf) im Repository ist die verbindliche Schnittstellenreferenz.
+Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.10.2001.pdf) im Repository ist die Orientierung für eine Schnittstellenreferenz.
 
 ## Programmierung
 
@@ -23,7 +24,19 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 - Nicht offensichtliche Abläufe, Entscheidungen und technische Besonderheiten direkt im Code kommentieren.
 - Kommentare erklären vor allem **warum**, nicht bloß, was der Code ohnehin zeigt.
 - Keine überflüssigen Kommentare, generierten Dokumentationsmengen oder doppelten Erklärungen.
-- Dokumentation auf Deutsch, technische Bezeichner im Code auf Englisch. Die Sprachen der Benutzeroberflächen legt die Architektur fest.
+
+## Sprache und internationale Zusammenarbeit
+
+- Projektdokumentation (`README.md`, `docs/`, `AGENTS.md`) grundsätzlich auf Deutsch.
+- Programmcode einschließlich Bezeichnern, Kommentaren und Docstrings auf Englisch.
+- GitHub-Issues, Pull Requests und Diskussionen dürfen auf Deutsch, Tschechisch oder Englisch verfasst werden.
+- Bei sprachübergreifender Zusammenarbeit bei Bedarf eine kurze englische Zusammenfassung ergänzen.
+- Commit-Messages auf Englisch.
+- Die Benutzeroberflächen unterstützen Englisch (Standard), Deutsch und Tschechisch.
+- Alle drei Sprachversionen vollständig und konsistent pflegen.
+- Fachbegriffe anhand der IBU-Regeln.
+- Keine zusätzlichen Übersetzungsframeworks oder parallelen Dokumentationsstrukturen einführen.
+- Bestehende Dokumentation nicht allein wegen der Sprache umstrukturieren.
 
 ## Zuständigkeiten der Dokumentation
 
