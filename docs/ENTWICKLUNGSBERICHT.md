@@ -1174,3 +1174,37 @@ Der Upgrade-Weg wurde auf dem Entwicklungsrechner mit echten Programmständen au
 `v0.8.0` und `v0.8.1` simuliert; nur die systemd-Aufrufe waren ersetzt. Datenordner
 mit Konfiguration, Kalibrierungen und Sitzungen blieben erhalten, und die neue
 Version war erreichbar. Eine Aktualisierung auf dem Zielserver selbst steht aus.
+
+## 2026-10-19 – Aussagekräftige CLI-Statusanzeige
+
+**Anlass:** `--status` meldete bisher nur Dienst und API in einer Zeile. Für den
+Betrieb auf `mediamtx18` fehlten Adressen, Kameras, Kalibrierungen und Sitzung.
+
+**Umsetzung:** Das neue Modul `status.py` ersetzt die bisherige Funktion in
+`deployment.py`. Es sammelt die Werte über vorhandene Endpunkte; Ereigniskern,
+Erfassung, REST und WebSocket bleiben unverändert, es gibt keine neuen
+Abhängigkeiten. Fehlende Werte werden als „unbekannt“ ausgewiesen.
+
+- *Adressen:* Bei `0.0.0.0` stammen die URLs aus den globalen IPv4-Adressen
+  (`ip -4 addr`), die Adresse der Standardroute steht zuerst. Bei einer festen
+  Adresse wird diese verwendet, bei Loopback ausdrücklich als lokal markiert.
+  Als normaler Benutzer ist `config.json` (0600, `btv`) nicht lesbar. Statt
+  `127.0.0.1` anzunehmen, gilt die Bind-Adresse dann als unbekannt, und nur
+  tatsächlich antwortende LAN-Adressen werden ausgegeben.
+- *Teilausfall:* Antwortet die API nicht, kommen Bahnanzahl (Journalkopf),
+  Kameras (ohne Verbindungsstatus), Kalibrierungsdateien und Sitzungen aus dem
+  lesbaren Datenordner, ausdrücklich so gekennzeichnet.
+- *Exitcodes:* `0` in Ordnung, `1` Dienst gestoppt oder fehlgeschlagen bzw. API
+  nicht erreichbar, `2` API meldet eine Störung. Ein nicht installierter Dienst bei
+  lokalem Start ist kein Fehler; das systemd-Feld `LoadState` unterscheidet ihn von
+  einem gestoppten Dienst.
+- RTSP-Adressen und Zugangsdaten werden nicht ausgegeben, auch nicht bereinigt.
+
+**Tests:** `tests/test_status.py` startet einen echten Server mit zwei Kameras
+(eine verbunden, eine getrennt), einer gültigen und einer ungültigen Kalibrierung
+sowie einem Sitzungswechsel. Geprüft werden URLs, Kamera-, Kalibrierungs- und
+Sitzungsangaben und das Fehlen von Zugangsdaten. Weitere Tests decken Störung
+(Exitcode 2), gestoppten und nicht installierten Dienst, nicht erreichbare API mit
+Rückfall auf den Datenordner, nicht lesbare Konfiguration ohne erfundene Adressen,
+nur antwortende Adressen bei unbekannter Bindung, Loopback-Bindung und die
+Auswertung der systemd-Ausgabe ab.

@@ -197,9 +197,16 @@ Der Installer nutzt bei Bedarf sudo. Der Dienst startet automatisch als Benutzer
 
 ```bash
 biathlon-target-vision --version
-biathlon-target-vision --status
+sudo biathlon-target-vision --status
 sudo biathlon-target-vision --upgrade
 ```
+
+`--status` zeigt Version, Dienst- und API-Zustand, konfigurierte Serveradresse,
+die im Netzwerk verwendbaren URLs, Bahnen, Kameras mit Verbindungsstatus,
+kalibrierte Bahnen, die aktive Sitzung und das Datenverzeichnis. Ohne sudo ist die
+geschützte Konfiguration nicht lesbar; dann werden nur tatsächlich antwortende
+Adressen genannt. Exitcode `0`: in Ordnung, `1`: Dienst oder API nicht verfügbar,
+`2`: API meldet eine Störung.
 
 Upgrades verwenden den neuesten veröffentlichten Versionstag und erhalten
 Konfiguration, Kalibrierungen und Ereignisse. Änderungen auf `main` können dem

@@ -43,13 +43,6 @@ def reachable(directory, expected_version=None, host=None, port=None):
         return False
 
 
-def status(directory, host=None, port=None):
-    result = subprocess.run(["systemctl", "is-active", SERVICE], capture_output=True, text=True)
-    online = reachable(directory, host=host, port=port)
-    print(f"Dienst: {result.stdout.strip() or 'unbekannt'}; API: {'erreichbar' if online else 'nicht erreichbar'}")
-    return 0 if result.returncode == 0 and online else 1
-
-
 def switch_link(link, target):
     temporary = link.with_name(link.name + ".new")
     temporary.unlink(missing_ok=True)

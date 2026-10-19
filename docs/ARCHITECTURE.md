@@ -30,7 +30,8 @@ Konzepte; Erweiterungen erfolgen nur bei konkretem Bedarf.
 | `config.py`, `cameras.py`, `static/admin.*` | Persistente Kamerakonfiguration, RTSP-Eingang, Administration |
 | `vision.py` | Bestätigte optische Zielbeobachtungen und Grundzustände |
 | `static/monitor.*` | Schreibgeschützte Gesamtübersicht |
-| `deployment.py`, `install.sh`, `systemd/` | Installation, Status, Upgrade und Dienstbetrieb |
+| `deployment.py`, `install.sh`, `systemd/` | Installation, Upgrade und Dienstbetrieb |
+| `status.py` | Betriebsstatus für `--status` |
 
 Bestätigte Bedienbefehle und simulierte Zielbeobachtungen gelangen über REST und
 die Befehlsvalidierung in den Ereigniskern. Optische Beobachtungen verwenden
@@ -292,9 +293,17 @@ Die Konfiguration enthält zunächst `host` und `port`; die Installation bindet 
 
 Der Dienst startet über systemd, Logs liegen im Journal (`journalctl -u
 biathlon-target-vision`). Der Starter unter `/usr/local/bin/biathlon-target-vision`
-bietet `--version`, `--status` und `--upgrade`. Ohne Leserecht auf die geschützte
-Konfiguration prüft Status die Standardadresse; einen abweichenden Port explizit
-mit `--status --port PORT` angeben oder Status mit sudo aufrufen. Upgrade lädt den höchsten stabilen
+bietet `--version`, `--status` und `--upgrade`. `status.py` liest den Betriebsstatus
+über die vorhandenen Endpunkte `/api/health`, `/api/state`, `/api/cameras`,
+`/api/sessions` und die Kalibrierungsabfrage je Kamerabahn. Ist die API nicht
+erreichbar, nutzt es ersatzweise die lesbaren Dateien des Datenordners und
+kennzeichnet die Quelle. LAN-Adressen stammen aus `ip -4 addr`, die primäre aus der
+Standardroute. Ohne Leserecht auf die geschützte Konfiguration gilt die
+Bind-Adresse als unbekannt; dann werden nur tatsächlich antwortende Adressen
+ausgegeben. RTSP-Adressen erscheinen nie. Exitcodes: `0` Dienst und API in
+Ordnung (ein nicht installierter Dienst zählt nicht als Fehler), `1` Dienst
+gestoppt/fehlgeschlagen oder API nicht erreichbar, `2` API meldet `health: error`.
+Upgrade lädt den höchsten stabilen
 Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner unter
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
 Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
