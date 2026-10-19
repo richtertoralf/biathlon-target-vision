@@ -1060,3 +1060,32 @@ Aufzeichnung gegenüber `accepted_at` im Journal.
 nicht zur Testsuite. Die Messreihen wurden je Konfiguration vollständig ausgeführt;
 die oben genannten Zahlen stammen aus diesen Läufen. Der Server jeder Bahnzahl
 wird vor der nächsten Messung beendet, damit keine fremde Erfassungsschleife mitläuft.
+
+## 2026-10-19 – Korrektur: verpasste Aktualisierung des Erfassungsstatus
+
+**Befund:** Der Test `test_capture_availability_wakes_two_tablets_without_journal_changes`
+scheiterte in CI-Lauf 39294103759 gelegentlich: Der neue Status kam erst mit dem
+Fünf-Sekunden-Lebenszeichen. Ursache war ein Produktfehler aus #30. Die
+Erfassungsschleife verglich nur mit ihrem eigenen letzten Stand. Erhielt ein
+Client einen neuen Status, etwa beim Verbinden nach einer Kameraänderung, und
+wechselte dieser vor dem nächsten Durchlauf zurück, sah die Schleife keine
+Änderung. Das Tablet zeigte dann bis zu fünf Sekunden einen veralteten Status,
+etwa „Erkennung läuft“ statt „Nur manuell“. Scheibenzustände und Journal waren
+nicht betroffen. Reproduziert mit verlangsamter Schleife: nächste Aktualisierung
+nach 5,05 s, mit Korrektur nach einem Durchlauf.
+
+**Korrektur:** `VisionService` merkt sich die zuletzt in einem Zustand
+ausgelieferten Status (`delivered_statuses`). Die vorhandene Schleife weckt die
+Empfänger auch dann, wenn dieser Stand vom aktuellen abweicht. Es gibt keine neue
+Schleife, Wartezeit, Ereignisart und keinen Bildraten-Push; unveränderte Bilder
+lösen weiterhin keine Aktualisierung aus.
+
+**Tests:** Ein neuer deterministischer Test bildet den Ablauf nach; mit der alten
+Bedingung scheitert er am Zeitlimit, mit Korrektur besteht er. Im Integrationstest
+wartet die Ruheprüfung nun, bis verspätete, legitime Aktualisierungen
+abgeklungen sind. Nach dem Stoppen der Erfassung liest sie bis zum erwarteten
+Zustand weiter, statt nur genau eine Nachricht zu lesen. Unter künstlicher
+16-facher Parallellast trat gelegentlich ein zusätzlicher Push mit unverändertem
+Status auf: mit alter Bedingung 4 von 96 Läufen, mit Korrektur 5 von 96. Er ist
+also vorbestehend, unabhängig von der Korrektur und harmlos. Alle 143
+Python-Tests und alle neun lokalen Browserprüfungen einschließlich RTSP bestehen.

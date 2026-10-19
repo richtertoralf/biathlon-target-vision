@@ -95,7 +95,7 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
         return {**state, **api_identity(), "session": dict(app.state.sessions.current), "simulation": simulation,
                 "health": health_status(), "capture": {"running": not app.state.vision_task.done(),
                     **cameras, "calibration_errors": dict(app.state.vision.errors),
-                    "lanes": app.state.vision.capture_statuses() if not app.state.vision_task.done()
+                    "lanes": app.state.vision.delivered_statuses() if not app.state.vision_task.done()
                               else {lane_id: "unavailable" for lane_id in state["lanes"]}}}
 
     def wake_subscribers():

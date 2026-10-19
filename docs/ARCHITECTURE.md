@@ -161,7 +161,10 @@ Status haben. `capture.lanes` transportiert diese flüchtige Ableitung im vorhan
 REST-/WebSocket-Zustand. Die vorhandene Erfassungsschleife vergleicht die Status
 nach jedem Auswertungsschritt mit dem vorherigen Stand. Nur bei Änderungen weckt
 sie die bestehenden WebSocket-Empfänger; das Ende der Auswertungsaufgabe meldet
-deren Ausfall ebenfalls unmittelbar. Statuswechsel warten somit nicht auf das
+deren Ausfall ebenfalls unmittelbar. Zusätzlich vergleicht sie mit dem zuletzt
+ausgelieferten Stand: Ein Status, den ein Client zwischen zwei Durchläufen erhalten
+hat, den die Schleife selbst aber nie beobachtet hat, wird so beim Zurückwechseln
+ebenfalls korrigiert. Statuswechsel warten somit nicht auf das
 Fünf-Sekunden-Lebenszeichen. Es gibt keine zusätzliche Schleife, Bildraten-Pushes,
 Zeitgrenzen, persistierten Zustände oder Eingriffe in die Klassifikation. Die Kachel zeigt aktive
 Einzelkorrekturen aus `manual_targets` unabhängig vom Erfassungsstatus an.
