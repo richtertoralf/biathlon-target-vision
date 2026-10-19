@@ -55,7 +55,8 @@ async function scenario(browser, manualOnly) {
       cs:{active:'Automatické rozpoznávání aktivní',uncertain:'Rozpoznávání probíhá / nejisté',unavailable:'Pouze ruční zadávání',marker:'Ručně',correction:'Ruční oprava'},
     };
     async function captureStatus(lane,status) {
-      for(const page of pages)await expect(capture(page,lane)).toHaveAttribute('data-status',status);
+      // Reine Konfigurationsänderungen kommen mit dem Fünf-Sekunden-Lebenszeichen.
+      for(const page of pages)await expect(capture(page,lane)).toHaveAttribute('data-status',status,{timeout:10000});
     }
     assert.equal((await state()).simulation,false);
     if(manualOnly) {

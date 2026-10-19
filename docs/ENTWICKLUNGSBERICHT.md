@@ -925,3 +925,9 @@ anhand tatsächlicher Browserbilder visuell geprüft. `pip check`, JavaScript-Sy
 und `git diff --check` sind fehlerfrei. Die Kameraerkennung bleibt
 synthetisch geprüft; „Automatik aktiv“ ist keine Zusage einer bereits validierten
 Praxistauglichkeit. Der Arberstadion-Test bleibt dafür erforderlich.
+
+Der erste CI-Browserlauf zeigte eine zu knappe Testfrist: Eine Konfigurationsänderung
+ohne Journalereignis wird erst mit dem vorhandenen Lebenszeichen sichtbar; dessen
+Fünf-Sekunden-Intervall entsprach genau dem Standard-Timeout der Prüfung. Die
+zustandsbasierte Browsererwartung erlaubt nun zehn Sekunden einschließlich
+Übertragungs-/CI-Spielraum. Das Laufzeitverhalten erhält keine zusätzliche Wartezeit.
