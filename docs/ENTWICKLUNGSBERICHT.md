@@ -1405,3 +1405,14 @@ chronologische [Testübersicht](praxistests/README.md) mit T1 (Labor-/Simulation
 und Inbetriebnahme, 17.–20.10.) und T2 (Arber, geplant). Die Deinstallation ist anhand
 der vom Installer angelegten Pfade beschrieben, aber nicht ausgeführt. Keine
 Programmänderungen.
+
+## 2026-10-20 – Version 0.8.5: Development Release
+
+Lizenz- und Dokumentationsrelease. BTV steht jetzt unter der Apache License 2.0
+(`LICENSE`, Urheberhinweis in `NOTICE`); die README zeigt Version, Lizenz und
+Teststatus als Badges. Enthält die Dokumentationsbereinigung (siehe vorheriger
+Abschnitt). **Nicht für produktiven Wettkampfbetrieb freigegeben.** Keine
+Programmänderungen außer der Versionsnummer; API-Version, Abhängigkeiten,
+systemd-Unit und Installer unverändert. Die Abhängigkeiten werden bei der
+Installation über pip bezogen und nicht mitverteilt. Der Praxistest am 21.10.
+läuft mit `v0.8.4`; ein Upgrade vorher ist nicht nötig.

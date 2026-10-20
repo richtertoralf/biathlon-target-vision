@@ -1,7 +1,8 @@
 # Biathlon Target Vision
 
-![Development](https://img.shields.io/badge/Status-Active_Development-orange)
-![Production](https://img.shields.io/badge/Production-Not_Ready-red)
+[![Version](https://img.shields.io/github/v/release/richtertoralf/biathlon-target-vision?include_prereleases&sort=semver&label=version)](https://github.com/richtertoralf/biathlon-target-vision/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Tests](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml)
 
 > [!WARNING]
 > **Under active development – not production-ready.** Biathlon Target Vision has not yet
@@ -47,7 +48,7 @@ Zulassung durch einen Verband besteht nicht.
 - **Mehrsprachig:** Tablet-Bedienung in Englisch, Deutsch und Tschechisch; Sportbegriffe
   aus den jeweiligen IBU-Regelfassungen ([Terminologie](docs/TERMINOLOGIE.md)).
 - **Kostengünstig und flexibel:** Standard-Linux-Rechner, handelsübliche Tablets und
-  IP-Kameras, herstellerunabhängig und quelloffen entwickelt.
+  IP-Kameras, herstellerunabhängig, Open Source unter Apache-2.0.
 
 **Abgrenzung:** BTV ist keine Wettkampf-, Zeitnahme- oder Ergebnisverwaltung.
 Ergebnisberechnung, Strafrunden und Ergebnislisten bleiben beim angeschlossenen System.
@@ -60,7 +61,7 @@ während der Installation. Installiert wird ein veröffentlichter Versionstag
 (aktueller Stand: [Releases](https://github.com/richtertoralf/biathlon-target-vision/releases)):
 
 ```bash
-git clone --branch v0.8.4 https://github.com/richtertoralf/biathlon-target-vision.git
+git clone --branch v0.8.5 https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
 ./install.sh
 ```
@@ -132,3 +133,7 @@ betriebenen Mediaserver.
 
 Mitarbeit auf Deutsch, Englisch oder Tschechisch ist willkommen:
 [Contributing Guide](CONTRIBUTING.md).
+
+## Lizenz
+
+Licensed under Apache-2.0 – siehe [LICENSE](LICENSE) und [NOTICE](NOTICE).
