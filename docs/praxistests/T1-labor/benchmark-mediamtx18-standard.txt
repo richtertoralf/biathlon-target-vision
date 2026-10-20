@@ -1,0 +1,58 @@
+start 11:42:47
+
+4 lanes (1 per camera, target diameter about 64 px), 40 single changes, 6 all-lane changes, steady process CPU 122 % of one core
+  classification per lane:   median 21 / p95 34 / max 54 ms
+  step (all lanes):          median 98 / p95 119 / max 142 ms
+  cycle incl. 100 ms pause:  median 198 / p95 219 / max 243 ms
+  first_seen:                median 128 / p95 206 / max 218 ms
+  stabilize:                 median 401 / p95 419 / max 427 ms
+  publish:                   median 6 / p95 11 / max 13 ms
+  websocket:                 median 2 / p95 6 / max 10 ms
+  total:                     median 539 / p95 609 / max 633 ms
+  all lanes changed, last:   median 610 / p95 635 / max 635 ms
+
+8 lanes (2 per camera, target diameter about 63 px), 40 single changes, 6 all-lane changes, steady process CPU 162 % of one core
+  classification per lane:   median 18 / p95 30 / max 44 ms
+  step (all lanes):          median 167 / p95 192 / max 254 ms
+  cycle incl. 100 ms pause:  median 268 / p95 293 / max 355 ms
+  first_seen:                median 160 / p95 279 / max 302 ms
+  stabilize:                 median 535 / p95 553 / max 567 ms
+  publish:                   median 6 / p95 14 / max 15 ms
+  websocket:                 median 2 / p95 8 / max 10 ms
+  total:                     median 702 / p95 806 / max 861 ms
+  all lanes changed, last:   median 882 / p95 938 / max 938 ms
+
+12 lanes (3 per camera, target diameter about 42 px), 40 single changes, 6 all-lane changes, steady process CPU 187 % of one core
+  classification per lane:   median 17 / p95 30 / max 42 ms
+  step (all lanes):          median 246 / p95 285 / max 353 ms
+  cycle incl. 100 ms pause:  median 347 / p95 387 / max 453 ms
+  first_seen:                median 227 / p95 348 / max 392 ms
+  stabilize:                 median 685 / p95 711 / max 733 ms
+  publish:                   median 7 / p95 11 / max 16 ms
+  websocket:                 median 3 / p95 10 / max 11 ms
+  total:                     median 903 / p95 1050 / max 1081 ms
+  all lanes changed, last:   median 1183 / p95 1251 / max 1251 ms
+
+16 lanes (4 per camera, target diameter about 32 px), 40 single changes, 6 all-lane changes, steady process CPU 205 % of one core
+  classification per lane:   median 17 / p95 29 / max 41 ms
+  step (all lanes):          median 325 / p95 369 / max 471 ms
+  cycle incl. 100 ms pause:  median 426 / p95 467 / max 572 ms
+  first_seen:                median 208 / p95 443 / max 475 ms
+  stabilize:                 median 845 / p95 876 / max 889 ms
+  publish:                   median 7 / p95 13 / max 14 ms
+  websocket:                 median 3 / p95 8 / max 12 ms
+  total:                     median 1058 / p95 1306 / max 1315 ms
+  all lanes changed, last:   median 1449 / p95 1476 / max 1476 ms
+
+20 lanes (5 per camera, target diameter about 25 px), 40 single changes, 6 all-lane changes, steady process CPU 214 % of one core
+  classification per lane:   median 17 / p95 29 / max 77 ms
+  step (all lanes):          median 407 / p95 470 / max 578 ms
+  cycle incl. 100 ms pause:  median 508 / p95 572 / max 678 ms
+  first_seen:                median 252 / p95 564 / max 597 ms
+  stabilize:                 median 1007 / p95 1049 / max 1063 ms
+  publish:                   median 8 / p95 14 / max 27 ms
+  websocket:                 median 2 / p95 8 / max 8 ms
+  total:                     median 1270 / p95 1564 / max 1667 ms
+  all lanes changed, last:   median 1764 / p95 1822 / max 1822 ms
+exit 0
+end 11:48:46

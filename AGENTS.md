@@ -40,7 +40,9 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 
 ## Zuständigkeiten der Dokumentation
 
-- `README.md`: Projektbeschreibung, Funktionsumfang, Abgrenzung und kurzer Nutzungseinstieg; keine Implementierungsdetails oder Testprotokolle.
+- `README.md`: kurze öffentliche Produktbeschreibung, Installation, grundlegende Bedienung und Deinstallation. Nicht mit jedem Entwicklungsschritt erweitern; Details in `docs/` verlinken.
+- `docs/`: technische Dokumentation, Schnittstellen, Architektur, Entwicklung, Tests und ausführliche Anleitungen (`docs/BEDIENUNG.md`).
+- `docs/praxistests/`: Ergebnisse und Berichte realer Tests, je Test ein Ordner; keine Videos, Zugangsdaten oder `config.json`.
 - `docs/ARCHITECTURE.md`: aktuelle Architektur und grundlegende technische Entscheidungen.
 - `docs/API.md`: Schnittstellen und Integrationshinweise.
 - `docs/ENTWICKLUNGSBERICHT.md`: Entwicklungsverlauf, Entscheidungen, Tests und Einschränkungen; überholte Entscheidungen kennzeichnen.

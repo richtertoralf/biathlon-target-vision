@@ -1,7 +1,8 @@
 # Roadmap
 
-Stand: **19. Oktober 2026**, Release `v0.8.4` (Development Release, `main` nach
-PR #45): 14 offene und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
+Stand: **20. Oktober 2026**, Release `v0.8.5` (Development Release; gegenüber `v0.8.4`
+nur Lizenz und Dokumentation, der Praxistest läuft mit `v0.8.4`): 18 offene und drei
+abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
 ändern weder die GitHub-Issues noch den implementierten Umfang. Die fachliche
 Zielbeschreibung steht im [Produktkonzept](PRODUKTKONZEPT.md), der tatsächliche
 Entwicklungsstand im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md). BTV ist in
@@ -11,11 +12,11 @@ aktiver Entwicklung und nicht für produktiven Wettkampfbetrieb freigegeben.
 
 | Bereich | Stand | Nachweis und Grenze |
 |---|---|---|
-| Bahnablauf, BIB, mehrere Tablets, Monitor, Sitzungen | implementiert, automatisiert getestet | 142 Python-Tests und neun Browserprüfungen, CI grün; keine physischen Tablets, kein Stadion-WLAN |
+| Bahnablauf, BIB, mehrere Tablets, Monitor, Sitzungen | implementiert, automatisiert getestet | 159 Python-Tests und zehn Browserprüfungen in CI, CI grün; keine physischen Tablets, kein Stadion-WLAN |
 | Optische Erkennung: Kalibrierung, Nachführung, Klassifikation, Stabilisierung, Status je Bahn | implementiert, nur synthetisch getestet | Generierte Scheibenbilder mit dunkler Öffnung, heller Klappe und sichtbarem Rand; keine reale Aufnahme |
-| RTSP-Eingang | implementiert, lokal getestet | Nur MediaMTX/FFmpeg-Teststream mit einem Schlüsselbild je Sekunde; keine reale IP-Kamera |
+| RTSP-Eingang | implementiert, mit realen Kameras verbunden | Am 20.10. vier 4K-IP-Kameras und eine 1080p-Kamera über MediaMTX auf `mediamtx18` stabil empfangen; noch kein Bild einer Schießanlage |
 | Mehrere Bahnen je Kamera | implementiert, synthetisch getestet | Je Bahn eine eigene ROI und Kalibrierung mit genau einer Fünferreihe |
-| Installation als systemd-Dienst | implementiert, isoliert getestet | systemd in Tests ersetzt; noch keine reale Installation auf einem Zielrechner |
+| Installation als systemd-Dienst | implementiert, real installiert | `mediamtx18`: Installation 0.8.0 und Upgrades bis 0.8.4 am 19./20.10.; Deinstallation nur dokumentiert, nicht ausgeführt |
 | Korrekturausschnitte | implementiert | Einzelbilder bei manueller Korrektur; BTV zeichnet kein Video auf |
 | Journalansicht/Export, Zuordnungsprotokoll, Zugriffsschutz, Sprachumschaltung außerhalb des Tablets | geplant | #14, #15, #24/#25, #28 |
 | Schießposition, Juryvorfälle, Schussbeobachtung, Video-Geometrie-API, Sensorik | geplant oder Konzept | #16, #17, #18/#19, #26; Sensorik ohne Issue |

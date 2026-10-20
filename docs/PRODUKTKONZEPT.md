@@ -152,8 +152,8 @@ BTV dokumentiert bisher mechanische Scheibenzustände, nicht einzelne abgegebene
 
 Zuständige Kampfrichter und Jury bleiben für Beobachtungen und Entscheidungen verantwortlich. Die IBU-Regelbezüge dienen der fachlichen Planung optionaler Erfassung und stellen keine Zulassung dar.
 
-Ein Praxistest mit realen Klappscheibenanlagen im Arberstadion ist für Ende Oktober
-2026 vorgesehen. Vorrang haben die vorhandene Erfassung, manuelle Priorität,
+Ein Praxistest mit realen Klappscheibenanlagen im Arberstadion ist für den
+21. Oktober 2026 vorgesehen. Vorrang haben die vorhandene Erfassung, manuelle Priorität,
 Bedienbarkeit und Verhalten bei Ausfällen. Interessierte tschechische Zeitnehmer
 sollen Anwendung und Schnittstellen begutachten und eine mögliche Anbindung
 beurteilen können; eine geprüfte Herstellerintegration wird nicht behauptet.
@@ -162,6 +162,6 @@ BTV bleibt auf Schießstanderfassung und Dokumentation begrenzt. Keine
 Wettkampforganisation, Ergebnisberechnung, automatische Strafentscheidung oder
 KES-Emulation. Neue Funktionen werden erst nach fachlicher Freigabe umgesetzt.
 
-Installation und vollständiger Bedienablauf: [README](../README.md).
+Installation: [README](../README.md). Vollständiger Bedienablauf: [Bedienungsanleitung](BEDIENUNG.md).
 Vorhandene Technik: [Architektur](ARCHITECTURE.md) und [API](API.md).
 Tatsächliche Prüfungen und Grenzen: [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).

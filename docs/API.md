@@ -98,7 +98,7 @@ laufende HTTP-Zustandsabfragen. Journal-Paginierung immer an eine feste ID binde
 Die API-Version steigt von 1 auf 2, weil Schreibbefehle jetzt einen verpflichtenden
 Sitzungsbezug haben. Es gibt keine Übergangsannahme für alte API-Schreiber und keine
 automatische Übernahme alter Datenordner. BTV ist noch nicht für produktive
-Wettkämpfe freigegeben. Die [README](../README.md#aufzeichnungssitzungen) beschreibt
+Wettkämpfe freigegeben. Die [Bedienungsanleitung](BEDIENUNG.md#aufzeichnungssitzungen) beschreibt
 das manuelle Archivieren alter Testbestände unter Erhalt der Kamerakonfiguration.
 
 ### Testdiagnose und Protokolle (additiv)
