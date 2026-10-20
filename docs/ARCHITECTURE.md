@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.7.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.8.4.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
@@ -107,7 +107,7 @@ nachträglich künstlich abgeschlossen.
 
 Es gibt keine automatische Migration alter Testinstallationen und keine
 Übergangsschnittstelle ohne Sitzungskennung. Der einmalige manuelle Schritt steht
-in der [README](../README.md#aufzeichnungssitzungen). Das ist eine bewusste
+in der [Bedienungsanleitung](BEDIENUNG.md#aufzeichnungssitzungen). Das ist eine bewusste
 Entscheidung für die aktive Entwicklungsphase ohne produktive Installationen.
 Systemlogs bleiben unabhängig davon in journald.
 
@@ -376,7 +376,7 @@ Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
 vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
 ein Rückwechsel setzt einen zum Datenformat passenden Programmstand voraus.
 Für den Wechsel vom bisherigen Testdatenordner zur Sitzungsablage ist der
-manuelle Schritt aus der README erforderlich. Eine Rückwärtskompatibilität zu
+manuelle Schritt aus der [Bedienungsanleitung](BEDIENUNG.md#aufzeichnungssitzungen) erforderlich. Eine Rückwärtskompatibilität zu
 älteren Entwicklungsversionen wird nicht zugesichert. Sicherungen und alte
 Programmstände werden nicht automatisch gelöscht.
 Ein Dateilock verhindert parallele Installationen/Upgrades.

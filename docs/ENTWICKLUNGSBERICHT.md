@@ -260,7 +260,7 @@ Integrationsregeln sind zentral in [API.md](API.md) dokumentiert.
 
 Die folgenden Aufrufe dienen zum Wiederholen der Prüfungen, nicht als Nachweis
 einer erneuten Ausführung bei dieser Dokumentationsbereinigung.
-Nach der Installation aus der [README](../README.md):
+Nach dem Start ohne Installation laut [Bedienungsanleitung](BEDIENUNG.md#ohne-installation-starten-entwicklung-und-tests):
 
 ```bash
 .venv/bin/python -m pip install -r requirements-dev.txt
@@ -1393,3 +1393,15 @@ Der Upgrade-Weg von `v0.8.3` wurde wie bei den vorherigen Releases simuliert; nu
 die systemd-Aufrufe waren ersetzt. Eine Aktualisierung auf dem Zielserver selbst
 steht aus. Die Diagnose schreibt nur in den Datenordner, der für den Dienst
 beschreibbar ist (`ReadWritePaths`).
+
+## 2026-10-20 – Dokumentation: kurze README, Bedienungsanleitung und Testübersicht
+
+Die README beschränkt sich auf Produktbeschreibung, Installation, Kurzanleitung und
+Deinstallation. Der ausführliche Bedienablauf, Sitzungen, Kameraeinrichtung, Status,
+Start ohne Installation und Simulator stehen unverändert in
+[BEDIENUNG.md](BEDIENUNG.md). Die Beschreibung der Praxistest-Funktionen war doppelt
+und steht nur noch in [ARBER-TESTPROTOKOLL.md](ARBER-TESTPROTOKOLL.md). Neu ist die
+chronologische [Testübersicht](praxistests/README.md) mit T1 (Labor-/Simulationstests
+und Inbetriebnahme, 17.–20.10.) und T2 (Arber, geplant). Die Deinstallation ist anhand
+der vom Installer angelegten Pfade beschrieben, aber nicht ausgeführt. Keine
+Programmänderungen.
