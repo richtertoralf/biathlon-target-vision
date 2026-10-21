@@ -1416,3 +1416,20 @@ Programmänderungen außer der Versionsnummer; API-Version, Abhängigkeiten,
 systemd-Unit und Installer unverändert. Die Abhängigkeiten werden bei der
 Installation über pip bezogen und nicht mitverteilt. Der Praxistest am 21.10.
 läuft mit `v0.8.4`; ein Upgrade vorher ist nicht nötig.
+
+## 2026-10-21 – Fehlerbehebung: Kalibrierung im Dienst („There was an error parsing the body“)
+
+Beim Praxistest scheiterte die Grundkalibrierung der Bahnen 1–3 (cam81, 3840×2160)
+mit HTTP 400. Ursache: Starlette lagert hochgeladene Dateien über 1 MB nach `/tmp`
+aus; mit `ProtectSystem=strict` ist `/tmp` im Dienst schreibgeschützt, FastAPI
+meldet den Fehler nur als Parserfehler. Kleine Bilder funktionierten, darum fiel es
+in Tests ohne systemd nicht auf. Die Unit erhält `PrivateTmp=true` (eigenes,
+beschreibbares `/tmp`). Geprüft: schreibgeschütztes `/` im Namensraum des laufenden
+Dienstes, Upload eines verkleinerten Bildes erfolgreich, Originalbild 400.
+
+Danach meldete die Kalibrierung „Bilddatei ist größer als 10 MiB.“: Der Browser
+exportiert das Arbeitsbild verlustfrei als PNG (EXIF-sichere Koordinaten), bei
+3840×2160 rund 11,7 MiB. Die Uploadgrenze steigt auf 64 MiB, damit auch die
+bestehende Obergrenze von 20 Megapixeln als PNG passt. Geprüft: 13-MB-PNG von
+cam81 gegen einen lokalen Testserver angenommen; Testsuite 159 Tests, ein
+Fehlschlag in `test_status` (unabhängig von dieser Änderung).

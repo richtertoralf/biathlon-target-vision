@@ -556,7 +556,7 @@ Die POST-Endpunkte nehmen Multipart-Daten an: `image` als Bilddatei, zur ersten
 Kalibrierung zusätzlich `quad` als JSON-Liste mit vier Originalbildkoordinaten
 in der Reihenfolge oben links, oben rechts, unten rechts, unten links.
 Die Browseransicht exportiert genau die angezeigten Pixel, damit EXIF-Ausrichtung
-keine abweichenden Koordinaten verursacht. Grenze: 10 MiB und 20 Megapixel.
+keine abweichenden Koordinaten verursacht. Grenze: 64 MiB und 20 Megapixel (verlustfreies PNG mit 20 Megapixeln passt hinein).
 
 Erfolg liefert fünf nummerierte Polygone und Mittelpunkte im Originalbild.
 Die Grundkalibrierung liegt atomar gespeichert in `data/calibrations/lane-N.json`.

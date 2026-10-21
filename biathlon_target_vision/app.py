@@ -619,9 +619,10 @@ def create_app(data_dir: Path = Path("data"), lane_count: int | None = None, sim
             raise HTTPException(404, "Schießbahn existiert nicht.")
 
     async def read_image(upload):
-        data = await upload.read(10 * 1024 * 1024 + 1)
-        if len(data) > 10 * 1024 * 1024:
-            raise CalibrationError("Bilddatei ist größer als 10 MiB.")
+        # The browser sends a lossless PNG; 20 MP of noisy camera RGB can reach ~60 MB.
+        data = await upload.read(64 * 1024 * 1024 + 1)
+        if len(data) > 64 * 1024 * 1024:
+            raise CalibrationError("Bilddatei ist größer als 64 MiB.")
         try:
             image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR) if data else None
         except cv2.error as exc:

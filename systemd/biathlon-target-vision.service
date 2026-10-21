@@ -16,6 +16,9 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/biathlon-target-vision
+# Uploads over 1 MB (calibration frames) are spooled to /tmp, which
+# ProtectSystem=strict otherwise leaves read-only.
+PrivateTmp=true
 Environment=PYTHONDONTWRITEBYTECODE=1
 
 [Install]
