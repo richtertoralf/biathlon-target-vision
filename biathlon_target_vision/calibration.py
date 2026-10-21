@@ -72,7 +72,10 @@ def _candidates(gray):
         rotation = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
         unit = (xy @ rotation) / [a / 2, b / 2]
         residual = np.abs(np.linalg.norm(unit, axis=1) - 1)
-        if np.quantile(residual, .9) > .12:
+        # The median tolerates a few frayed spots: on 4K overview cameras holes have
+        # only ~18 px and JPEG noise and colour fringes fray the upscaled outline.
+        # Squares still deviate along the whole outline (median > .08).
+        if np.median(residual) > .06:
             continue
         angles = np.arctan2(unit[:, 1], unit[:, 0])
         if np.count_nonzero(np.histogram(angles, bins=24, range=(-np.pi, np.pi))[0]) < 22:

@@ -1433,3 +1433,17 @@ exportiert das Arbeitsbild verlustfrei als PNG (EXIF-sichere Koordinaten), bei
 bestehende Obergrenze von 20 Megapixeln als PNG passt. Geprüft: 13-MB-PNG von
 cam81 gegen einen lokalen Testserver angenommen; Testsuite 159 Tests, ein
 Fehlschlag in `test_status` (unabhängig von dieser Änderung).
+
+Anschließend fand die Kalibrierung auf der Liegend-Platte von Bahn 3 nur drei
+von fünf deutlich sichtbaren Löchern. Bei 3840×2160 haben die Löcher etwa 18 px;
+nach dem Hochrechnen auf die Arbeitsauflösung fransen JPEG-Rauschen und Farbsäume
+die Kontur aus (90-%-Quantil der Ellipsenabweichung bis 0,155, Grenze 0,12). Ein
+höheres Quantil hätte die synthetischen Quadrate (0,157–0,162) zugelassen. Geprüft
+wird deshalb der Median (Grenze 0,06): echte Löcher 0,034–0,074, Quadrate
+0,082–0,111. Ergebnis am Bild vom 21.10.: Liegend-Platte Bahn 3 erkannt; die
+Stehend-Platte (Median bis 0,074) sowie Bahn 1 und 2 mit hellen Klappen (nur
+11–15 von 24 Winkelabschnitten erfasst) weiterhin nicht. Einschränkung: Helle
+Klappen sind bei dieser Auflösung kaum zu finden; das betrifft auch die
+Nachführung im Betrieb (`align_visible` verlangt mindestens drei gefundene Ziele
+einschließlich 1 und 5). Kalibrierung daher im zurückgestellten Zustand.
+Testsuite: 159 Tests, unverändert ein Fehlschlag in `test_status`.
