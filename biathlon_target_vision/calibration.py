@@ -52,6 +52,11 @@ def _candidates(gray):
     binary = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 51, 5)
     contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # Small open holes (~18 px on 4K overview cameras) fray in the local-contrast
+    # image; as dark areas on the bright plate they stay compact. Both contour sets
+    # pass the same shape checks below.
+    _, dark = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    contours = list(contours) + list(cv2.findContours(dark, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
     h, w = gray.shape
     candidates = []
     for contour in contours:

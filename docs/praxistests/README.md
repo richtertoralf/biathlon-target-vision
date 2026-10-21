@@ -97,6 +97,19 @@ Auswertung sind die Videoaufzeichnungen.
 - Erfassung: BTV-Ereignisjournal, Testdiagnose (alle 5 s), Feldprotokoll und Notizen des
   Testers, MediaMTX- und Dienstlogs.
 
+**Aufbau vor Ort (21.10.):**
+
+- Kameras mit 16-mm-Objektiv exakt 20 m vor den Scheiben. cam81 erfasst die
+  10-m-Bahnen 1–3 (je eine Platte liegend und stehend); im Bild sind außerdem die
+  50-m-Scheiben sichtbar. Ein Loch hat bei 3840×2160 etwa 18 px Durchmesser.
+- BTV 0.8.5 mit den Kalibrierkorrekturen vom 21.10. (Branch `fix/calibration-upload`,
+  siehe [Entwicklungsbericht](../ENTWICKLUNGSBERICHT.md)) statt 0.8.4.
+- Kalibriert wird je Bahn eine Platte im zurückgestellten Zustand (alle Löcher
+  schwarz); geprüft wird nur die Erkennung schwarz/weiß.
+- Wetter: leichter Regen, bedeckter Himmel. Die 50-m-Scheiben sind beleuchtet, die
+  10-m-Scheiben nicht und dadurch etwas dunkler; gegen 17:35 Uhr schon sichtbar
+  geringerer Kontrast an den 10-m-Platten.
+
 **Ergebnisse:** werden nach der Auswertung ergänzt.
 
 ## Eigene Tests beitragen

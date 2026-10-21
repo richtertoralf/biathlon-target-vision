@@ -1447,3 +1447,13 @@ Klappen sind bei dieser Auflösung kaum zu finden; das betrifft auch die
 Nachführung im Betrieb (`align_visible` verlangt mindestens drei gefundene Ziele
 einschließlich 1 und 5). Kalibrierung daher im zurückgestellten Zustand.
 Testsuite: 159 Tests, unverändert ein Fehlschlag in `test_status`.
+
+Bei schwächerem Licht (bedeckt, leichter Regen) scheiterten auch die
+Stehend-Platten jeweils an einem Loch. Die Kandidatensuche nimmt deshalb
+zusätzlich die Konturen dunkler Flächen (Otsu-Schwelle auf derselben Glättung)
+auf; beide Konturmengen durchlaufen dieselben Formprüfungen. Ergebnis an Bildern
+vom 21.10.: Bahn 2 und 3 stehend sowie Bahn 3 liegend mit offenen Löchern
+erkannt; Bahn 1 (unscharf am Bildrand) und helle Klappen weiterhin nicht.
+Synthetische Kalibrierung: Zentrumsfehler maximal 0,216 px (vorher 0,076 px),
+minimale Flächen-IoU 0,807 (vorher 0,875, Testgrenze 0,78). Testsuite: 159 Tests,
+unverändert ein Fehlschlag in `test_status`.
