@@ -110,6 +110,15 @@ Auswertung sind die Videoaufzeichnungen.
   10-m-Scheiben nicht und dadurch etwas dunkler; gegen 17:35 Uhr schon sichtbar
   geringerer Kontrast an den 10-m-Platten.
 
+**Erkenntnisse vor Ort (21.10.):**
+
+- Fest montierte Bullet-Kameras müssen vor Ort ausgerichtet werden. PTZ-Kameras wären
+  praktischer, weil Ausrichtung und Zoom aus der Ferne möglich sind.
+- Alternative: Kameras direkt an der Schusslinie unterhalb des Sportlers, nur 10 m
+  vor den Scheiben. Rechnerisch verdoppelt das bei gleichem Objektiv den
+  Lochdurchmesser im Bild (etwa 36 statt 18 px); eine Kamera erfasst dann aber nur
+  etwa halb so viele Bahnen.
+
 **Ergebnisse:** werden nach der Auswertung ergänzt.
 
 ## Eigene Tests beitragen

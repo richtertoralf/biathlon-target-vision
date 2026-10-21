@@ -1457,3 +1457,11 @@ erkannt; Bahn 1 (unscharf am Bildrand) und helle Klappen weiterhin nicht.
 Synthetische Kalibrierung: Zentrumsfehler maximal 0,216 px (vorher 0,076 px),
 minimale Flächen-IoU 0,807 (vorher 0,875, Testgrenze 0,78). Testsuite: 159 Tests,
 unverändert ein Fehlschlag in `test_status`.
+
+Die erste gespeicherte Kalibrierung (Bahn 2 stehend) lag korrekt auf den Löchern,
+die Kalibrierseite zeigte aber scheinbar „durcheinander“ liegende Bereiche:
+Linienbreite und Nummernfelder richteten sich nach der Bildbreite (bei 4K etwa
+110×130 px je Nummer) und überdeckten Scheiben von 13 px Breite im Abstand von
+41 px. Umriss und Nummer richten sich jetzt nach der Scheibengröße; die Nummer
+steht über der Scheibe. Geprüft: Nachzeichnung derselben Maße auf dem Kamerabild,
+API-Tests; kein Browsertest auf dem Server möglich.
