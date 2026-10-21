@@ -22,10 +22,10 @@ function draw() {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0);
   const scale = Math.max(1, canvas.width / 700);
-  function polygon(points, color, close) {
+  function polygon(points, color, close, width = 2 * scale) {
     if (!points.length) return;
     context.strokeStyle = color;
-    context.lineWidth = 2 * scale;
+    context.lineWidth = width;
     context.beginPath();
     points.forEach(([x, y], i) => i ? context.lineTo(x, y) : context.moveTo(x, y));
     if (close) context.closePath();
@@ -38,14 +38,19 @@ function draw() {
     context.beginPath(); context.arc(x, y, 4 * scale, 0, 2 * Math.PI); context.fill();
     context.fillText(String(i + 1), x + 6 * scale, y - 6 * scale);
   });
+  // Targets can be only ~15 px wide in 4K overview images, so outline and label
+  // follow the target size and the label sits above the target, not on it.
+  context.textAlign = "center";
   for (const target of result?.targets || []) {
-    polygon(target.polygon, "#4cffae", true);
-    const [x, y] = target.center;
-    context.fillStyle = "#071c14";
-    context.fillRect(x - 10 * scale, y - 12 * scale, 20 * scale, 24 * scale);
+    const xs = target.polygon.map(([x]) => x), ys = target.polygon.map(([, y]) => y);
+    const size = Math.max(...xs) - Math.min(...xs);
+    const s = Math.min(scale, size / 8);
+    polygon(target.polygon, "#4cffae", true, Math.max(1, s));
+    context.font = `bold ${16 * s}px system-ui`;
     context.fillStyle = "#4cffae";
-    context.fillText(String(target.target_id), x - 5 * scale, y + 6 * scale);
+    context.fillText(String(target.target_id), target.center[0], Math.min(...ys) - 3 * s);
   }
+  context.textAlign = "start";
 }
 
 async function request(url, options) {

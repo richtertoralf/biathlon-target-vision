@@ -1416,3 +1416,52 @@ Programmänderungen außer der Versionsnummer; API-Version, Abhängigkeiten,
 systemd-Unit und Installer unverändert. Die Abhängigkeiten werden bei der
 Installation über pip bezogen und nicht mitverteilt. Der Praxistest am 21.10.
 läuft mit `v0.8.4`; ein Upgrade vorher ist nicht nötig.
+
+## 2026-10-21 – Fehlerbehebung: Kalibrierung im Dienst („There was an error parsing the body“)
+
+Beim Praxistest scheiterte die Grundkalibrierung der Bahnen 1–3 (cam81, 3840×2160)
+mit HTTP 400. Ursache: Starlette lagert hochgeladene Dateien über 1 MB nach `/tmp`
+aus; mit `ProtectSystem=strict` ist `/tmp` im Dienst schreibgeschützt, FastAPI
+meldet den Fehler nur als Parserfehler. Kleine Bilder funktionierten, darum fiel es
+in Tests ohne systemd nicht auf. Die Unit erhält `PrivateTmp=true` (eigenes,
+beschreibbares `/tmp`). Geprüft: schreibgeschütztes `/` im Namensraum des laufenden
+Dienstes, Upload eines verkleinerten Bildes erfolgreich, Originalbild 400.
+
+Danach meldete die Kalibrierung „Bilddatei ist größer als 10 MiB.“: Der Browser
+exportiert das Arbeitsbild verlustfrei als PNG (EXIF-sichere Koordinaten), bei
+3840×2160 rund 11,7 MiB. Die Uploadgrenze steigt auf 64 MiB, damit auch die
+bestehende Obergrenze von 20 Megapixeln als PNG passt. Geprüft: 13-MB-PNG von
+cam81 gegen einen lokalen Testserver angenommen; Testsuite 159 Tests, ein
+Fehlschlag in `test_status` (unabhängig von dieser Änderung).
+
+Anschließend fand die Kalibrierung auf der Liegend-Platte von Bahn 3 nur drei
+von fünf deutlich sichtbaren Löchern. Bei 3840×2160 haben die Löcher etwa 18 px;
+nach dem Hochrechnen auf die Arbeitsauflösung fransen JPEG-Rauschen und Farbsäume
+die Kontur aus (90-%-Quantil der Ellipsenabweichung bis 0,155, Grenze 0,12). Ein
+höheres Quantil hätte die synthetischen Quadrate (0,157–0,162) zugelassen. Geprüft
+wird deshalb der Median (Grenze 0,06): echte Löcher 0,034–0,074, Quadrate
+0,082–0,111. Ergebnis am Bild vom 21.10.: Liegend-Platte Bahn 3 erkannt; die
+Stehend-Platte (Median bis 0,074) sowie Bahn 1 und 2 mit hellen Klappen (nur
+11–15 von 24 Winkelabschnitten erfasst) weiterhin nicht. Einschränkung: Helle
+Klappen sind bei dieser Auflösung kaum zu finden; das betrifft auch die
+Nachführung im Betrieb (`align_visible` verlangt mindestens drei gefundene Ziele
+einschließlich 1 und 5). Kalibrierung daher im zurückgestellten Zustand.
+Testsuite: 159 Tests, unverändert ein Fehlschlag in `test_status`.
+
+Bei schwächerem Licht (bedeckt, leichter Regen) scheiterten auch die
+Stehend-Platten jeweils an einem Loch. Die Kandidatensuche nimmt deshalb
+zusätzlich die Konturen dunkler Flächen (Otsu-Schwelle auf derselben Glättung)
+auf; beide Konturmengen durchlaufen dieselben Formprüfungen. Ergebnis an Bildern
+vom 21.10.: Bahn 2 und 3 stehend sowie Bahn 3 liegend mit offenen Löchern
+erkannt; Bahn 1 (unscharf am Bildrand) und helle Klappen weiterhin nicht.
+Synthetische Kalibrierung: Zentrumsfehler maximal 0,216 px (vorher 0,076 px),
+minimale Flächen-IoU 0,807 (vorher 0,875, Testgrenze 0,78). Testsuite: 159 Tests,
+unverändert ein Fehlschlag in `test_status`.
+
+Die erste gespeicherte Kalibrierung (Bahn 2 stehend) lag korrekt auf den Löchern,
+die Kalibrierseite zeigte aber scheinbar „durcheinander“ liegende Bereiche:
+Linienbreite und Nummernfelder richteten sich nach der Bildbreite (bei 4K etwa
+110×130 px je Nummer) und überdeckten Scheiben von 13 px Breite im Abstand von
+41 px. Umriss und Nummer richten sich jetzt nach der Scheibengröße; die Nummer
+steht über der Scheibe. Geprüft: Nachzeichnung derselben Maße auf dem Kamerabild,
+API-Tests; kein Browsertest auf dem Server möglich.

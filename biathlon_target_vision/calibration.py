@@ -52,6 +52,11 @@ def _candidates(gray):
     binary = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 51, 5)
     contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # Small open holes (~18 px on 4K overview cameras) fray in the local-contrast
+    # image; as dark areas on the bright plate they stay compact. Both contour sets
+    # pass the same shape checks below.
+    _, dark = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    contours = list(contours) + list(cv2.findContours(dark, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
     h, w = gray.shape
     candidates = []
     for contour in contours:
@@ -72,7 +77,10 @@ def _candidates(gray):
         rotation = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
         unit = (xy @ rotation) / [a / 2, b / 2]
         residual = np.abs(np.linalg.norm(unit, axis=1) - 1)
-        if np.quantile(residual, .9) > .12:
+        # The median tolerates a few frayed spots: on 4K overview cameras holes have
+        # only ~18 px and JPEG noise and colour fringes fray the upscaled outline.
+        # Squares still deviate along the whole outline (median > .08).
+        if np.median(residual) > .06:
             continue
         angles = np.arctan2(unit[:, 1], unit[:, 0])
         if np.count_nonzero(np.histogram(angles, bins=24, range=(-np.pi, np.pi))[0]) < 22:
