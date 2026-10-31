@@ -1,6 +1,6 @@
 # Biathlon Target Vision
 
-[![Version](https://img.shields.io/badge/version-0.8.5-blue)](biathlon_target_vision/__init__.py)
+[![Version](https://img.shields.io/badge/version-0.8.6-blue)](biathlon_target_vision/__init__.py)
 [![Release](https://img.shields.io/github/v/release/richtertoralf/biathlon-target-vision?include_prereleases&sort=semver&label=release)](https://github.com/richtertoralf/biathlon-target-vision/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Tests](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml)
@@ -62,7 +62,7 @@ während der Installation. Installiert wird ein veröffentlichter Versionstag
 (aktueller Stand: [Releases](https://github.com/richtertoralf/biathlon-target-vision/releases)):
 
 ```bash
-git clone --branch v0.8.5 https://github.com/richtertoralf/biathlon-target-vision.git
+git clone --branch v0.8.6 https://github.com/richtertoralf/biathlon-target-vision.git
 cd biathlon-target-vision
 ./install.sh
 ```

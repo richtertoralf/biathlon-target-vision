@@ -5,7 +5,7 @@ Testergebnissen. Grundlage des aktuellen Ablaufs ist
 [PR #10](https://github.com/richtertoralf/biathlon-target-vision/pull/10)
 (`56a56b9`, 18.10.2026), ergänzt um den unten beschriebenen BIB-Fix für
 [Issue #21](https://github.com/richtertoralf/biathlon-target-vision/issues/21).
-Der letzte Versionstag ist `v0.8.4` (Development Release); der letzte Abschnitt
+Der letzte Versionstag ist `v0.8.6` (Development Release); der letzte Abschnitt
 fasst seinen Umfang zusammen, der Abschnitt zu `v0.8.0` den Umfang seit `v0.7.0`.
 Maßgeblich für die aktuelle Architektur und Schnittstelle sind
 [ARCHITECTURE.md](ARCHITECTURE.md) und [API.md](API.md). Frühere Abschnitte
@@ -1488,3 +1488,16 @@ weiterhin nur Versionstags und vergleicht die Version.
 
 Bestehende Installationen führen das Upgrade mit ihrem installierten Programmstand
 aus; die neuen Regeln gelten daher erst für Upgrades ab der Version, die sie enthält.
+
+## 2026-10-31 – Version 0.8.6: Development Release
+
+Enthält alle Änderungen seit `v0.8.5`: die Kalibrierkorrekturen aus dem Praxistest T2
+(Uploads in Kameraauflösung im Dienst, offene Löcher in 4K-Übersichtsbildern,
+Kalibrierüberlagerung nach Scheibengröße; PR #51), die Dokumentation von T2 und die
+Verwaltungsbefehle nach ADR-002 (vorheriger Abschnitt). **Nicht für produktiven
+Wettkampfbetrieb freigegeben.** API-Version 2, Abhängigkeiten unverändert.
+
+Die systemd-Unit hat seit `v0.8.5` `PrivateTmp=true` (Kalibrier-Uploads über 1 MB).
+`--upgrade` erneuert die Unit nicht; bestehende Installationen übernehmen sie einmalig
+mit `./install.sh` aus einem Checkout von `v0.8.6`. Ab dieser Version behält ein
+erneutes `./install.sh` Dienstzustand und Autostart bei.
