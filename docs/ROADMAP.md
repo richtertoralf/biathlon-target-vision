@@ -1,8 +1,8 @@
 # Roadmap
 
-Stand: **20. Oktober 2026**, Release `v0.8.5` (Development Release; gegenüber `v0.8.4`
-nur Lizenz und Dokumentation, der Praxistest läuft mit `v0.8.4`): 18 offene und drei
-abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
+Stand: **31. Oktober 2026**, Release `v0.8.6` (Development Release; gegenüber `v0.8.5`
+Kalibrierkorrekturen aus dem Praxistest T2 und Verwaltungsbefehle nach ADR-002): 19 offene
+und drei abgeschlossene Issues. Die Prioritäten und Reihenfolgen sind Empfehlungen; sie
 ändern weder die GitHub-Issues noch den implementierten Umfang. Die fachliche
 Zielbeschreibung steht im [Produktkonzept](PRODUKTKONZEPT.md), der tatsächliche
 Entwicklungsstand im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md). BTV ist in

@@ -1,6 +1,6 @@
 # Architektur – Biathlon Target Vision
 
-Dieses Dokument beschreibt die aktuelle Architektur von Version 0.8.5.
+Dieses Dokument beschreibt die aktuelle Architektur von Version 0.8.6.
 Projektumfang und Nutzungseinstieg stehen in der [README](../README.md),
 Datenfelder und Integrationsregeln in [API.md](API.md), die Entwicklung und
 Validierungsgrenzen im [Entwicklungsbericht](ENTWICKLUNGSBERICHT.md).
