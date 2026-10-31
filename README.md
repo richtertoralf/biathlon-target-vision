@@ -1,6 +1,7 @@
 # Biathlon Target Vision
 
-[![Version](https://img.shields.io/github/v/release/richtertoralf/biathlon-target-vision?include_prereleases&sort=semver&label=version)](https://github.com/richtertoralf/biathlon-target-vision/releases)
+[![Version](https://img.shields.io/badge/version-0.8.5-blue)](biathlon_target_vision/__init__.py)
+[![Release](https://img.shields.io/github/v/release/richtertoralf/biathlon-target-vision?include_prereleases&sort=semver&label=release)](https://github.com/richtertoralf/biathlon-target-vision/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Tests](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/richtertoralf/biathlon-target-vision/actions/workflows/tests.yml)
 
@@ -75,7 +76,8 @@ sudo biathlon-target-vision --status     # Zustand, Adressen, Kameras, Sitzung
 sudo biathlon-target-vision --upgrade    # auf den neuesten Versionstag aktualisieren
 ```
 
-Upgrades erhalten Konfiguration, Kalibrierungen und Ereignisse. Start ohne Installation
+Upgrades erhalten Konfiguration, Kalibrierungen, Ereignisse, den Dienstzustand und die
+Autostart-Einstellung. Start ohne Installation
 für Entwicklung und Tests: [Bedienungsanleitung](docs/BEDIENUNG.md#ohne-installation-starten-entwicklung-und-tests).
 
 ## Kurzanleitung

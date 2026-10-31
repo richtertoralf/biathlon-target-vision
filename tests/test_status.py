@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
 import socket
 import tempfile
@@ -14,6 +15,7 @@ from urllib.request import Request, urlopen
 
 import uvicorn
 
+from biathlon_target_vision import __version__
 from biathlon_target_vision import status as cli
 from biathlon_target_vision.app import create_app
 from biathlon_target_vision.calibration import CalibrationStore, calibrate
@@ -89,14 +91,18 @@ class StatusTests(unittest.TestCase):
                      '1 von 3 Bahnen mit Kamera kalibriert, 1 ungültig', 'Arber Test (ID 5f0c3a1e-7c1b-4d43-9a76-1a2b3c4d5e6f)', 'Archivierte Sitzungen  1',
                      'erreichbar, Zustand ok', 'Exitcode 0'):
             self.assertIn(line, text)
+        # A disconnected camera is a source state, not a technical fault (exit 0 above).
+        self.assertRegex(text, rf'Version +installiert {__version__} · laufend {__version__} \([0-9a-f]{{7,}}\)\n')
+        self.assertRegex(text, r'Build +Commit [0-9a-f]{7,} · Start ohne Installation')
+        self.assertNotIn('neu starten', text)
         for secret in ('geheim', 'admin:', '10.0.0.5', 'rtsp://'):
             self.assertNotIn(secret, text)
 
-    def test_reported_fault_and_stopped_service_have_own_exit_codes(self):
+    def test_reported_fault_and_failed_service_are_technical_errors(self):
         self.start()
         self.app.state.store.failed = True
         code, text = self.run_status()
-        self.assertEqual(code, 2, text); self.assertIn('Störung gemeldet (error)', text)
+        self.assertEqual(code, 1, text); self.assertIn('Störung gemeldet (error)', text)
         self.app.state.store.failed = False
         code, text = self.run_status(service='failed')
         self.assertEqual(code, 1, text); self.assertIn('fehlgeschlagen', text)
@@ -105,8 +111,11 @@ class StatusTests(unittest.TestCase):
         self.assertEqual(self.run_status(service=None)[0], 0)
 
     def test_unreachable_api_uses_readable_data_directory(self):
+        # A deliberately stopped service is no technical fault; a running one without API is.
+        self.assertEqual(self.run_status(service='active')[0], 1)
+        self.assertEqual(self.run_status(service='activating')[0], 1)
         code, text = self.run_status(service='inactive')
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 0, text); self.assertIn('kein technischer Fehler (Exitcode 0)', text)
         for line in ('API                    nicht erreichbar', 'Schießstand (aus Datenverzeichnis)', '2 konfiguriert, Verbindung unbekannt',
                      '2 Kalibrierungsdateien (Gültigkeit unbekannt)', 'laut Konfiguration, API derzeit nicht erreichbar', 'gestoppt'):
             self.assertIn(line, text)
@@ -128,6 +137,22 @@ class StatusTests(unittest.TestCase):
             code, text = self.run_status(directory=missing, addresses=(('127.0.0.1', 'lo'), ('127.0.0.2', 'test')), port=self.port)
             self.assertEqual(code, 0, text)
             self.assertIn(f'http://127.0.0.1:{self.port}/admin', text); self.assertNotIn('127.0.0.2', text)
+
+    def test_invalid_configuration_exits_with_2(self):
+        for content in ('{"port": 0}', '{kein json'):
+            with self.subTest(content=content):
+                (self.data / 'config.json').write_text(content)
+                code, text = self.run_status(service='inactive')
+                self.assertEqual(code, 2, text)
+                self.assertIn(f'ungültig: {self.data / "config.json"}', text); self.assertIn('Konfiguration ungültig (Exitcode 2)', text)
+                self.assertNotIn('mit sudo aufrufen', text)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root reads every file')
+    def test_unreadable_configuration_is_a_hint_not_a_config_error(self):
+        (self.data / 'config.json').chmod(0)  # the temporary directory is removed regardless
+        code, text = self.run_status(service='inactive')
+        self.assertEqual(code, 0, text)
+        self.assertIn('Konfiguration nicht lesbar, mit sudo aufrufen', text); self.assertNotIn('ungültig', text)
 
     def test_loopback_binding_is_marked_local(self):
         save_settings(self.data, Settings(host='127.0.0.1', port=self.port))

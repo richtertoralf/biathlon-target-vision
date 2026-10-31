@@ -10,7 +10,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from biathlon_target_vision import __version__
+from biathlon_target_vision import __version__, build
 from biathlon_target_vision.app import create_app
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -40,3 +40,29 @@ class BuildInfoTests(unittest.TestCase):
         commit = source.split('ARCHIVED_COMMIT = "', 1)[1].split('"', 1)[0]
         self.assertRegex(commit, r'^[0-9a-f]{7,}$')
         self.assertTrue(git('rev-parse', 'HEAD').decode().startswith(commit))
+
+    def test_describe_release_and_checkout_installations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            program = Path(directory)
+            self.assertRegex(build.describe(program), r'^Commit [0-9a-f]{7,} · Start ohne Installation$')
+            (program / 'installation.json').write_text(
+                '{"source": "release", "tag": "v0.8.6", "installed_at": "2026-10-31T18:00:00+01:00"}')
+            self.assertRegex(build.describe(program),
+                             r'^Commit [0-9a-f]{7,} · GitHub-Release v0\.8\.6 · installiert 2026-10-31T18:00:00\+01:00$')
+            (program / 'installation.json').write_text(
+                '{"source": "checkout", "path": "/home/op/btv", "branch": "feature/x", "tag": null, "installed_at": "2026-10-31T18:00:00+01:00"}')
+            self.assertIn('lokaler Checkout /home/op/btv (Branch feature/x) · installiert', build.describe(program))
+            (program / 'installation.json').write_text(
+                '{"source": "checkout", "path": "/home/op/btv", "branch": null, "tag": "v0.8.6", "installed_at": "x"}')
+            self.assertIn('lokaler Checkout /home/op/btv (Tag v0.8.6)', build.describe(program))
+
+
+class ReadmeVersionTests(unittest.TestCase):
+    """ADR-002: the static README badge and the install example follow __version__."""
+
+    def test_badge_and_install_example_match_version(self):
+        readme = (REPOSITORY / 'README.md').read_text(encoding='utf-8')
+        self.assertIn(f'https://img.shields.io/badge/version-{__version__}-blue', readme)
+        self.assertIn(f'git clone --branch v{__version__} ', readme)
+        # A dynamic release badge is allowed only with the label "release".
+        self.assertNotIn('label=version', readme)

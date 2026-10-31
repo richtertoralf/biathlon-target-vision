@@ -359,21 +359,33 @@ Die Konfiguration enthält zunächst `host` und `port`; die Installation bindet 
 
 Der Dienst startet über systemd, Logs liegen im Journal (`journalctl -u
 biathlon-target-vision`). Der Starter unter `/usr/local/bin/biathlon-target-vision`
-bietet `--version`, `--status` und `--upgrade`. `status.py` liest den Betriebsstatus
+bietet `--version`, `--status` und `--upgrade`. `--version` und `--status` zeigen
+neben der Version den Commit (aus `build.py`), die Herkunft (GitHub-Release mit Tag
+oder lokaler Checkout mit Pfad und Branch) und die Installationszeit; beides schreibt
+der Installer als `installation.json` in das Release-Verzeichnis. `status.py` liest den Betriebsstatus
 über die vorhandenen Endpunkte `/api/health`, `/api/state`, `/api/cameras`,
 `/api/sessions` und die Kalibrierungsabfrage je Kamerabahn. Ist die API nicht
 erreichbar, nutzt es ersatzweise die lesbaren Dateien des Datenordners und
 kennzeichnet die Quelle. LAN-Adressen stammen aus `ip -4 addr`, die primäre aus der
 Standardroute. Ohne Leserecht auf die geschützte Konfiguration gilt die
 Bind-Adresse als unbekannt; dann werden nur tatsächlich antwortende Adressen
-ausgegeben. RTSP-Adressen erscheinen nie. Exitcodes: `0` Dienst und API in
-Ordnung (ein nicht installierter Dienst zählt nicht als Fehler), `1` Dienst
-gestoppt/fehlgeschlagen oder API nicht erreichbar, `2` API meldet `health: error`.
+ausgegeben. RTSP-Adressen erscheinen nie. Exitcodes nach ADR-002: `0` kein
+technischer Fehler, auch bei bewusst gestopptem Dienst, getrennter Kamera oder
+lokalem Start ohne installierten Dienst; `1` technischer Fehler (Dienst
+fehlgeschlagen, API bei laufendem Dienst nicht erreichbar oder `health: error`);
+`2` lesbare, aber ungültige `config.json`. Fehlende Leserechte ergeben nur einen
+Hinweis.
 Upgrade lädt den höchsten stabilen
-Git-Versionstag, bereitet ihn vor, stoppt den Dienst, sichert den Datenordner unter
+Git-Versionstag; ist er nicht neuer als die installierte Version, ändert es nichts.
+Sonst bereitet es ihn vor, stoppt einen laufenden Dienst, sichert den Datenordner unter
 `/opt/biathlon-target-vision/backups/` und schaltet atomar den Programmlink um.
-Bleibt die neue API nicht mit passender Versionsnummer erreichbar, wird der
-vorherige Programmstand gestartet. Daten werden dabei nicht zurückgespielt;
+Ein vorher gestoppter Dienst bleibt gestoppt; der Autostart wird nie verändert
+(`systemctl enable` nur bei der Erstinstallation, ein erneutes `./install.sh` behält
+ihn bei). Ein laufender Dienst wird neu gestartet und geprüft; bleibt die neue API
+nicht mit passender Versionsnummer erreichbar, wird der vorherige Programmstand
+gestartet und seine Erreichbarkeit geprüft. Ein fehlgeschlagener Rückweg wird als
+`ROLLBACK FEHLGESCHLAGEN` gemeldet. Ein unvollständig aufgebautes Release-Verzeichnis
+wird entfernt. Daten werden dabei nicht zurückgespielt;
 ein Rückwechsel setzt einen zum Datenformat passenden Programmstand voraus.
 Für den Wechsel vom bisherigen Testdatenordner zur Sitzungsablage ist der
 manuelle Schritt aus der [Bedienungsanleitung](BEDIENUNG.md#aufzeichnungssitzungen) erforderlich. Eine Rückwärtskompatibilität zu

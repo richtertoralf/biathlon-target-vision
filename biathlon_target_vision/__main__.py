@@ -4,14 +4,17 @@ import argparse
 from pathlib import Path
 
 from . import __version__
+from .build import describe
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Biathlon Target Vision starten")
-    parser.add_argument("--version", action="version", version=__version__)
+    # Raw text: argparse would otherwise wrap the one-line --version output at the terminal width.
+    parser = argparse.ArgumentParser(description="Biathlon Target Vision starten",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", action="version", version=f"{__version__} · {describe()}")
     management = parser.add_mutually_exclusive_group()
-    management.add_argument("--status", action="store_true")
-    management.add_argument("--upgrade", action="store_true")
+    management.add_argument("--status", action="store_true", help="Betriebsstatus anzeigen (Exitcode 0/1/2)")
+    management.add_argument("--upgrade", action="store_true", help="auf den neuesten Versionstag aktualisieren (root)")
     parser.add_argument("--host")
     parser.add_argument("--port", type=int)
     parser.add_argument("--lanes", type=int, help="Bahnanzahl beim ersten Start (Standard: 20)")

@@ -2,8 +2,11 @@
 
 Collects only values that are actually available: first from the running API,
 otherwise from the data directory if it is readable (usually with sudo).
-Exit codes: 0 = service and API ok, 1 = service stopped or API unreachable,
-2 = API reachable but reports a fault. Never prints RTSP addresses or secrets.
+Exit codes (ADR-002): 0 = no technical fault, also for a deliberately stopped
+service or a disconnected camera; 1 = technical fault (service failed, API
+unreachable while the service runs, API reports a fault); 2 = config.json is
+readable but invalid. Missing read permission is a hint, not an error.
+Never prints RTSP addresses or secrets.
 """
 
 import ipaddress
@@ -16,6 +19,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 from . import __version__
+from .build import commit, describe
+from .config import load_settings
 from .deployment import SERVICE
 
 DEFAULT_PORT = 8091
@@ -29,11 +34,24 @@ def read_json(path):
         return None
 
 
-def server_address(directory, host=None, port=None):
+def config_invalid(directory):
+    """True if config.json is readable but invalid; missing or unreadable files are no config error."""
+    try:
+        load_settings(directory)
+    except OSError:
+        return False
+    except ValueError:
+        return True
+    return False
+
+
+def server_address(directory, host=None, port=None, invalid=False):
     """Configured bind address; None if unknown. Arguments override the protected config file."""
     config = read_json(Path(directory) / "config.json")
     if host or port:
         return host or (config or {}).get("host"), port or (config or {}).get("port", DEFAULT_PORT), "aus Aufrufparametern"
+    if invalid and config is None:
+        return None, DEFAULT_PORT, f"Adresse {UNKNOWN}, Standardport angenommen – {Path(directory) / 'config.json'} ungültig"
     if config is None:
         # Never assume a bind address: the installer writes 0.0.0.0, a local start uses 127.0.0.1.
         return None, DEFAULT_PORT, f"Adresse {UNKNOWN}, Standardport angenommen – Konfiguration nicht lesbar, mit sudo aufrufen"
@@ -125,6 +143,7 @@ def from_api(base):
             calibration[lane] = None if result is None else \
                 "missing" if not result.get("calibration") else "valid" if result.get("valid_for_camera") else "invalid"
     return {"source": "API", "health": health.get("status", UNKNOWN), "version": health.get("version"),
+            "commit": health.get("commit"),
             "lanes": len(state["lanes"]) if "lanes" in state else None,
             "cameras": [{"id": c["id"], "name": c["name"], "lane_ids": c["lane_ids"], "connected": c["connected"]}
                         for c in cameras] if cameras is not None else None,
@@ -149,7 +168,7 @@ def from_files(directory):
         except (OSError, ValueError, KeyError):
             pass
     calibrations = directory / "calibrations"
-    return {"source": "Datenverzeichnis", "health": None, "version": None, "lanes": lanes,
+    return {"source": "Datenverzeichnis", "health": None, "version": None, "commit": None, "lanes": lanes,
             "cameras": [{"id": c["id"], "name": c["name"], "lane_ids": c["lane_ids"], "connected": None}
                         for c in config.get("cameras", [])] if config is not None else None,
             "calibration": {int(path.stem.split("-")[1]): "file" for path in calibrations.glob("lane-*.json")}
@@ -190,19 +209,30 @@ def address_lines(host, port, info, addresses, row):
     return lines
 
 
-def exit_code(service, info):
-    if service not in (None, "not-found", "active") or info is None or info["source"] != "API":
+def exit_code(service, info, invalid=False):
+    if invalid:
+        return 2
+    if service == "failed":
         return 1
-    return 0 if info["health"] == "ok" else 2
+    if info is not None and info["source"] == "API":
+        return 0 if info["health"] == "ok" else 1
+    # Without an answering API only a deliberately stopped service is in order.
+    return 0 if service == "inactive" else 1
 
 
-def report(directory, host, port, source, service, info, addresses):
+def report(directory, host, port, source, service, info, addresses, invalid=False):
     """Human-readable lines; missing values are marked as unknown."""
     row = lambda label, value: f"  {label:<22} {value}"
     lines = ["Biathlon Target Vision – Betriebsstatus", ""]
     running = info.get("version") if info else None
+    running_commit = info.get("commit") if info else None
+    installed_commit = commit()
+    outdated = running and (running != __version__ or
+                            (running_commit and installed_commit and running_commit != installed_commit))
     lines.append(row("Version", f"installiert {__version__} · laufend {running or UNKNOWN}"
-                     + (" – Dienst neu starten?" if running and running != __version__ else "")))
+                     + (f" ({running_commit})" if running_commit else "")
+                     + (" – Dienst neu starten?" if outdated else "")))
+    lines.append(row("Build", describe()))
     states = {"active": "aktiv", "inactive": "gestoppt", "failed": "fehlgeschlagen", "activating": "startet",
               "not-found": "nicht installiert"}
     lines.append(row("Dienst", f"{states.get(service, service)} ({SERVICE})" if service else f"{UNKNOWN} (systemd nicht verfügbar)"))
@@ -212,13 +242,17 @@ def report(directory, host, port, source, service, info, addresses):
     lines.append(row("Server", f"{host or UNKNOWN}:{port} ({source})"))
     readable = Path(directory).is_dir() and os.access(directory, os.R_OK | os.X_OK)
     lines.append(row("Datenverzeichnis", f"{Path(directory).resolve()}" + ("" if readable else " (nicht lesbar)")))
+    if invalid:
+        lines.append(row("Konfiguration", f"ungültig: {Path(directory) / 'config.json'} – Betriebsparameter und "
+                                          "Kamerazuordnungen prüfen"))
     lines.append("")
     lines += address_lines(host, port, info, addresses, row)
     lines.append("")
 
     lines.append("Schießstand" + (f" (aus {info['source']})" if info else ""))
     if info is None:
-        lines.append("  Keine Angaben: API nicht erreichbar und Datenverzeichnis nicht lesbar (mit sudo aufrufen).")
+        lines.append("  Keine Angaben: API nicht erreichbar und " + ("Konfiguration ungültig." if invalid else
+                                                                 "Datenverzeichnis nicht lesbar (mit sudo aufrufen)."))
         return lines
     lines.append(row("Schießbahnen", info["lanes"] if info["lanes"] is not None else UNKNOWN))
     cameras = info["cameras"]
@@ -252,14 +286,15 @@ def report(directory, host, port, source, service, info, addresses):
 
 
 def status(directory, host=None, port=None):
-    host, port, source = server_address(directory, host, port)
+    invalid = config_invalid(directory)
+    host, port, source = server_address(directory, host, port, invalid)
     probe = "127.0.0.1" if host in (None, "0.0.0.0", "::") else host
     info = from_api(f"http://{url_host(probe)}:{port}") or from_files(directory)
     service = service_state()
-    code = exit_code(service, info)
-    lines = report(directory, host, port, source, service, info, lan_addresses())
-    lines += ["", {0: "Ergebnis: in Ordnung (Exitcode 0)",
-                   1: "Ergebnis: Dienst oder API nicht verfügbar (Exitcode 1)",
-                   2: "Ergebnis: API meldet eine Störung (Exitcode 2)"}[code]]
+    code = exit_code(service, info, invalid)
+    lines = report(directory, host, port, source, service, info, lan_addresses(), invalid)
+    lines += ["", {0: "Ergebnis: kein technischer Fehler (Exitcode 0)",
+                   1: "Ergebnis: technischer Fehler – Dienst fehlgeschlagen, API nicht erreichbar oder Störung gemeldet (Exitcode 1)",
+                   2: "Ergebnis: Konfiguration ungültig (Exitcode 2)"}[code]]
     print("\n".join(lines))
     return code
