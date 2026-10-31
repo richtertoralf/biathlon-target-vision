@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -52,7 +53,9 @@ class DeploymentTests(unittest.TestCase):
                 self.out, self.err = out.getvalue(), err.getvalue()
 
     def test_version_without_data_directory(self):
-        result = subprocess.run([sys.executable, '-m', 'biathlon_target_vision', '--version'], capture_output=True, text=True)
+        # A narrow terminal must not wrap the line (installed paths can be long).
+        result = subprocess.run([sys.executable, '-m', 'biathlon_target_vision', '--version'], capture_output=True, text=True,
+                                env={**os.environ, 'COLUMNS': '20'})
         self.assertEqual(result.returncode, 0)
         self.assertRegex(result.stdout.strip(), rf'^{__version__} · Commit [0-9a-f]{{7,}} · Start ohne Installation$')
 
