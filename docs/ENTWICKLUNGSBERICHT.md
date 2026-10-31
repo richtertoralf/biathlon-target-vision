@@ -1465,3 +1465,26 @@ Linienbreite und Nummernfelder richteten sich nach der Bildbreite (bei 4K etwa
 41 px. Umriss und Nummer richten sich jetzt nach der Scheibengröße; die Nummer
 steht über der Scheibe. Geprüft: Nachzeichnung derselben Maße auf dem Kamerabild,
 API-Tests; kein Browsertest auf dem Server möglich.
+
+## 2026-10-31 – Verwaltungsbefehle nach ADR-002
+
+Angleichung an [ADR-002](https://github.com/richtertoralf/richter-production-architecture/blob/main/docs/decisions/ADR-002-uniform-admin-commands.md)
+(einheitliche Verwaltungsbefehle). BTV bleibt releasebasiert: `--upgrade` lädt
+weiterhin nur Versionstags und vergleicht die Version.
+
+- *Dienstzustand:* Upgrade und erneutes `./install.sh` stoppen und starten nur einen
+  vorher laufenden Dienst; ein gestoppter Dienst bleibt gestoppt, auch beim Rückweg.
+  `systemctl enable` nur bei der Erstinstallation.
+- *Rückweg:* Nach einem Rollback wird die Erreichbarkeit der vorherigen Version
+  geprüft; ein Fehlschlag erscheint als `ROLLBACK FEHLGESCHLAGEN`. Ein unvollständig
+  aufgebautes Release-Verzeichnis wird entfernt; Releases und Sicherungen bleiben.
+- *Exitcodes von `--status`:* gestoppter Dienst jetzt `0` (vorher `1`), gemeldete
+  Störung `1` (vorher `2`), `2` nur noch für eine ungültige `config.json`.
+- *Buildinformation:* `--version` und `--status` zeigen Commit, Herkunft
+  (GitHub-Release oder lokaler Checkout mit Branch) und Installationszeit aus
+  `installation.json` im Release-Verzeichnis.
+- *README:* statisches Versionsbadge aus `__version__`, Releasebadge mit der
+  Beschriftung `release`; ein Test prüft Badge und Installationsbeispiel.
+
+Bestehende Installationen führen das Upgrade mit ihrem installierten Programmstand
+aus; die neuen Regeln gelten daher erst für Upgrades ab der Version, die sie enthält.

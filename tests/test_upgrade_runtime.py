@@ -56,11 +56,11 @@ class UpgradeRuntimeTests(unittest.TestCase):
                     request=Request(f'http://127.0.0.1:{port}/api/sessions/start',data=json.dumps({'session_id':'ba389980-936b-490a-a875-998128bd178a','expected_session_id':state()['session_id'],'name':'Upgrade-Test'}).encode(),headers={'Content-Type':'application/json'},method='POST')
                     with urlopen(request,timeout=2) as response:self.assertEqual(response.status,200)
                     before=state();self.assertEqual(before['session']['name'],'Upgrade-Test');files={path.relative_to(data):path.read_bytes() for path in data.rglob('*') if path.is_file()}
-                    with patch.object(deployment,'run',side_effect=service):deployment.activate(root,data,root/'new',__version__)
+                    with patch.object(deployment,'run',side_effect=service),patch.object(deployment,'service_state',return_value=('active','enabled')):deployment.activate(root,data,root/'new',__version__)
                     after=state();self.assertNotEqual(before.pop('instance_id'),after.pop('instance_id'));self.assertEqual(before,after)
                     self.assertEqual((root/'current').resolve(),root/'new')
                     original_sleep=time.sleep
-                    with patch.object(deployment,'run',side_effect=service),patch.object(deployment.time,'sleep',side_effect=lambda _:original_sleep(.05)):
+                    with patch.object(deployment,'run',side_effect=service),patch.object(deployment,'service_state',return_value=('active','enabled')),patch.object(deployment.time,'sleep',side_effect=lambda _:original_sleep(.05)):
                         with self.assertRaisesRegex(RuntimeError,'nicht erreichbar'):deployment.activate(root,data,root/'broken',__version__)
                     ready();restored=state();restored.pop('instance_id');self.assertEqual(restored,before)
                     self.assertEqual((root/'current').resolve(),root/'new')

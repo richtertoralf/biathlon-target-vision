@@ -173,15 +173,18 @@ sudo biathlon-target-vision --status
 sudo biathlon-target-vision --upgrade
 ```
 
-`--status` zeigt Version, Dienst- und API-Zustand, konfigurierte Serveradresse,
+`--version` nennt Version, Commit, Herkunft (GitHub-Release oder lokaler Checkout
+mit Branch) und Installationszeit. `--status` zeigt dieselben Angaben, Dienst- und API-Zustand, konfigurierte Serveradresse,
 die im Netzwerk verwendbaren URLs, Bahnen, Kameras mit Verbindungsstatus,
 kalibrierte Bahnen, die aktive Sitzung und das Datenverzeichnis. Ohne sudo ist die
 geschützte Konfiguration nicht lesbar; dann werden nur tatsächlich antwortende
-Adressen genannt. Exitcode `0`: in Ordnung, `1`: Dienst oder API nicht verfügbar,
-`2`: API meldet eine Störung.
+Adressen genannt. Exitcode `0`: kein technischer Fehler (auch bei bewusst
+gestopptem Dienst oder getrennter Kamera), `1`: Dienst fehlgeschlagen, API bei
+laufendem Dienst nicht erreichbar oder Störung gemeldet, `2`: `config.json` ungültig.
 
 Upgrades verwenden den neuesten veröffentlichten Versionstag und erhalten
-Konfiguration, Kalibrierungen und Ereignisse. Änderungen auf `main` können dem
+Konfiguration, Kalibrierungen und Ereignisse. Ein gestoppter Dienst bleibt gestoppt,
+die Autostart-Einstellung bleibt unverändert. Änderungen auf `main` können dem
 letzten Versionstag voraus sein; `--upgrade` lädt ausschließlich veröffentlichte
 Versionstags. Betrieb und Speicherorte beschreibt
 [ARCHITECTURE.md](ARCHITECTURE.md#installation-und-upgrades).
