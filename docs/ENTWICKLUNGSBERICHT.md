@@ -1468,8 +1468,8 @@ API-Tests; kein Browsertest auf dem Server möglich.
 
 ## 2026-10-31 – Verwaltungsbefehle nach ADR-002
 
-Angleichung an [ADR-002](https://github.com/richtertoralf/richter-production-architecture/blob/main/docs/decisions/ADR-002-uniform-admin-commands.md)
-(einheitliche Verwaltungsbefehle). BTV bleibt releasebasiert: `--upgrade` lädt
+Angleichung an ADR-002, die projektübergreifende Entscheidung von RICHTER.PROJECTS zu
+einheitlichen Verwaltungsbefehlen (`--version`, `--status`, `--upgrade`). BTV bleibt releasebasiert: `--upgrade` lädt
 weiterhin nur Versionstags und vergleicht die Version.
 
 - *Dienstzustand:* Upgrade und erneutes `./install.sh` stoppen und starten nur einen

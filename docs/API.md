@@ -574,9 +574,9 @@ BTV liefert tatsächliche Zielbeobachtungen und bestätigte Zuordnungen. Es ist
 keine KES-Quelle. KES-Telegramme, Einzel-Schuss-/Fehlschussereignisse, Schusszähler,
 Anschlag und Ergebnisse werden nicht erzeugt. Die ursprünglich geplante
 KES-TCP-Ausgabe ist verworfen. Die Original-KES-Dokumentation bleibt als Referenz
-für diese Abgrenzung erhalten. GFX integriert BTV später als eigene Quelle neben
-KES und HORA; [Integrationsauftrag #102](https://github.com/richtertoralf/gfx-engine/issues/102).
-In diesem Auftrag wurde dort ausschließlich das Issue angelegt, kein Code geändert.
+für diese Abgrenzung erhalten. Die GFX Engine von RICHTER.PROJECTS soll BTV später
+über diese Schnittstellen als eigene Quelle neben KES und HORA einbinden; das wird dort
+separat umgesetzt.
 
 ### Lesender Vertrag (API-Version 2)
 
