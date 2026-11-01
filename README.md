@@ -10,6 +10,11 @@
 > been validated under real competition conditions. Do not use it for official competitions
 > or safety-critical decisions. Interfaces and data formats may still change.
 
+**Status:** In Entwicklung – installierbar; Erfassung, Bedienablauf,
+Schnittstellen und Kameraerkennung sind in Labor- und Simulationstests geprüft.
+Ein erster technischer Feldtest im Schießtraining fand am 21.10.2026 am Arber
+statt; seine Auswertung steht aus ([Tests und Testergebnisse](docs/praxistests/README.md)).
+
 *English summary:* Biathlon Target Vision (BTV) records the state of mechanical biathlon
 targets on tablets – fully usable without cameras – and can optionally be supported by IP
 cameras. Judges' corrections always take priority. Lane data is provided to timing and
@@ -35,8 +40,8 @@ Zulassung durch einen Verband besteht nicht.
   Mehrere Tablets arbeiten synchronisiert; jedes betreut frei wählbare Bahnen.
 - **Optionale Kameraunterstützung:** Kalibrierte RTSP-IP-Kameras erfassen die
   Scheibenzustände automatisch. Eine Kamera kann mehrere Bahnen versorgen. Die
-  Kameraerkennung ist bisher nur mit synthetischen Bildern geprüft; der erste Praxistest
-  an einer realen Anlage läuft im Oktober 2026.
+  Kameraerkennung ist mit synthetischen Bildern geprüft; Ergebnisse von einer realen
+  Anlage liegen noch nicht ausgewertet vor.
 - **Mensch vor Automatik:** Jede Scheibe ist jederzeit durch Antippen korrigierbar. Die
   Korrektur hat Vorrang und gilt sofort auf allen Tablets und Ausgängen. Fällt eine
   Kamera aus, wird ohne Umschalten manuell weitererfasst.
@@ -72,6 +77,7 @@ Der Installer nutzt sudo, installiert die Pakete `python3`, `python3-venv`, `git
 dem Systembenutzer `btv` automatisch startet.
 
 ```bash
+biathlon-target-vision --version         # installierte Version, Commit und Herkunft
 sudo biathlon-target-vision --status     # Zustand, Adressen, Kameras, Sitzung
 sudo biathlon-target-vision --upgrade    # auf den neuesten Versionstag aktualisieren
 ```
@@ -133,9 +139,20 @@ betriebenen Mediaserver.
 - [Tests und Testergebnisse](docs/praxistests/README.md): chronologische Testübersicht mit Ergebnissen und Grenzen
 - [Entwicklungsbericht](docs/ENTWICKLUNGSBERICHT.md): Entscheidungen, Tests und Grenzen
 
-Mitarbeit auf Deutsch, Englisch oder Tschechisch ist willkommen:
-[Contributing Guide](CONTRIBUTING.md).
+## Mitmachen
+
+Mitarbeit auf Deutsch, Englisch oder Tschechisch ist willkommen: Fehler und Ideen als
+[Issue](https://github.com/richtertoralf/biathlon-target-vision/issues), Erfahrungen von
+Schießständen, Übersetzungen und Code nach dem [Contributing Guide](CONTRIBUTING.md).
 
 ## Lizenz
 
 Licensed under Apache-2.0 – siehe [LICENSE](LICENSE) und [NOTICE](NOTICE).
+
+## RICHTER.PROJECTS
+
+**Möglichkeiten schaffen.** BTV gehört zu RICHTER.PROJECTS. Schießstände mit
+mechanischen Klappscheiben können ihre Scheibenzustände damit digital erfassen und an
+Zeitnahme und Livegrafik weitergeben – mit handelsüblichen Tablets, einem Linux-Rechner
+und auf Wunsch IP-Kameras. Rückmeldungen von Kampfrichtern und Veranstaltern fließen
+direkt in die Weiterentwicklung ein.

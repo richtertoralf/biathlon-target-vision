@@ -342,8 +342,8 @@ sie nicht schrittweise auf Nachbarziele wandert. Kameraanbindung und laufende Au
 - Spätere Sensoradapter sollen denselben Beobachtungseingang nutzen.
 - Ein physisches Tastenfeld soll die vorhandene zentrale Bahnverwaltung bedienen.
 - Externe Anwendungen lesen REST und WebSockets. BTV emuliert kein KES und
-  erzeugt keine Schuss-/Fehlschussmeldungen. Die zukünftige GFX-Quelle BTV wird
-  separat umgesetzt; siehe [gfx-engine #102](https://github.com/richtertoralf/gfx-engine/issues/102).
+  erzeugt keine Schuss-/Fehlschussmeldungen. Die Anbindung als eigene Quelle in der
+  GFX Engine von RICHTER.PROJECTS wird dort separat umgesetzt.
 
 ## Installation und Upgrades
 
