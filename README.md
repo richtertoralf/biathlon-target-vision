@@ -86,6 +86,29 @@ Upgrades erhalten Konfiguration, Kalibrierungen, Ereignisse, den Dienstzustand u
 Autostart-Einstellung. Start ohne Installation
 für Entwicklung und Tests: [Bedienungsanleitung](docs/BEDIENUNG.md#ohne-installation-starten-entwicklung-und-tests).
 
+## Konfiguration
+
+Die Betriebskonfiguration steht in `/var/lib/biathlon-target-vision/config.json`
+(lokaler Start: `config.json` im Datenordner). Sie enthält Serveradresse, Port und
+die Kameras mit Bahnzuordnung.
+
+- **Kameras** werden unter `/admin` angelegt, geändert und entfernt; das wirkt sofort.
+  Kalibrierungen unter `/calibration?lane=N` ebenfalls.
+- **Adresse und Port** stehen nur in der Datei (Installation: `0.0.0.0:8091`); eine
+  Änderung wirkt nach `sudo systemctl restart biathlon-target-vision`.
+- **Bahnanzahl** (Standard 20) wird beim ersten Start gespeichert und ist danach je
+  Datenordner fest.
+- Die Datei kann RTSP-Zugangsdaten enthalten und ist nur für den Dienstbenutzer
+  lesbar (`0600`). Die Administration und `--status` zeigen Kameraadressen ohne
+  Zugangsdaten.
+- **Prüfen:** `sudo biathlon-target-vision --status` zeigt die verwendete Adresse und
+  ihre Herkunft, Kameras, Bahnen und Kalibrierung; Exitcode `2` bei ungültiger
+  `config.json`. Ein eigener Prüfbefehl ist noch nicht vorhanden
+  ([#60](https://github.com/richtertoralf/biathlon-target-vision/issues/60)).
+
+Alle Einstellungen, Standardwerte, Vorrang und Sonderfälle:
+[Konfiguration](docs/BEDIENUNG.md#konfiguration).
+
 ## Kurzanleitung
 
 1. **Öffnen:** Tablet-Bedienung unter `http://SERVER-IP:8091/`, Kontrollmonitor unter
@@ -115,8 +138,11 @@ sudo rm /usr/local/bin/biathlon-target-vision
 sudo rm -r /opt/biathlon-target-vision
 ```
 
-`/opt/biathlon-target-vision/backups/` enthält die Datensicherungen der Upgrades; vor dem
-Löschen bei Bedarf an einen anderen Ort verschieben.
+`/opt/biathlon-target-vision/backups/` enthält die Datensicherungen der Upgrades, jeweils
+eine vollständige Kopie des Datenordners einschließlich `config.json` mit
+Kamera-Zugangsdaten; vor dem Löschen bei Bedarf an einen anderen Ort verschieben.
+Eigene Befehle `--uninstall` und `--purge` sind noch nicht vorhanden
+([#60](https://github.com/richtertoralf/biathlon-target-vision/issues/60)).
 
 Optional zusätzlich alle Daten (Sitzungen, Journale, Konfiguration mit Kamera-Zugangsdaten,
 Kalibrierungen) und den Systembenutzer löschen – **nicht rückgängig zu machen**:
@@ -132,7 +158,7 @@ betriebenen Mediaserver.
 
 ## Dokumentation
 
-- [Bedienungsanleitung](docs/BEDIENUNG.md): Ablauf am Schießstand, Sitzungen, Kameras, Status, Simulator
+- [Bedienungsanleitung](docs/BEDIENUNG.md): Ablauf am Schießstand, Sitzungen, Konfiguration, Kameras, Status, Simulator
 - [API und Integration](docs/API.md): REST, WebSocket und Datenvertrag für Zeitnahme und Livegrafik
 - [Architektur und Betrieb](docs/ARCHITECTURE.md): Komponenten, Speicherung, Installation und Upgrades
 - [Produktkonzept](docs/PRODUKTKONZEPT.md) und [Roadmap](docs/ROADMAP.md): Nutzen, geplante Erweiterungen, Prioritäten
