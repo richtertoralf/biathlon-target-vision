@@ -84,6 +84,29 @@ Mitwirkende; Vertiefendes steht in `docs/`.
 - Natürliches, sachliches Deutsch ohne Werbe- und Füllformeln; vorhandene
   Bilder und Beispiele erhalten.
 
+## Gemeinsame Regeln
+
+Gemeinsam beschlossene Regeln der Produktfamilie. **Heute** beschreibt den
+vorhandenen Stand, **Ziel** eine beschlossene, noch offene Umsetzung mit
+Issue. Ein Ziel ist kein Auftrag, es nebenbei oder im Vorgriff umzusetzen.
+
+- Rolle: eigenständige Beobachtungsquelle mit eigener API; andere
+  Anwendungen lesen sie direkt. Keine KES-Emulation; die GitHub-Beschreibung
+  nennt noch eine KES-Ausgabe und ist zu korrigieren (#63).
+- Semantik: Ziel ist die Fachsemantik der IBU-Regeln; der Abgleich der API
+  steht aus (#63). Nicht sicher Ableitbares bleibt unbekannt; aus
+  Scheibenzuständen keine Einzelschüsse oder Schusszeiten ableiten.
+- Verwaltung heute: `--version | --status | --upgrade`, releasebasiert.
+  Ziel: `--check` und `--uninstall [--purge]` (#60). Bei einem beauftragten
+  Release Tag `vX.Y.Z` mit GitHub Release.
+- Oberflächen: Tablet-Ergonomie und helle Fläche im Freien gehen vor. Ziel:
+  gemeinsame Token-Datei, Statusfarben (Testbetrieb violett) und Umschalter
+  (#61).
+- Zugang heute: keine Anmeldung. Ziel: Anmeldung für Tablet-, Admin- und
+  Bedienoberflächen; die lesende API bleibt ohne Anmeldung und ohne
+  Geheimnisse.
+  Die Einzelheiten sind noch nicht entschieden; nicht im Vorgriff umsetzen.
+
 ## Änderungen und Qualität
 
 - Vor Änderungen den vorhandenen Code verstehen.
