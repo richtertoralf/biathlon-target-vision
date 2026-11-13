@@ -134,6 +134,128 @@ Für Praxistests gibt es unter `/admin#sessions` zusätzlich Feldprotokoll (PDF)
 Testdiagnose und automatisches Testprotokoll; Ablauf und Grenzen beschreibt
 [ARBER-TESTPROTOKOLL.md](ARBER-TESTPROTOKOLL.md).
 
+## Konfiguration
+
+### Überblick
+
+BTV braucht wenig Konfiguration: Serveradresse und Port, optional Kameras mit
+Bahnzuordnung und je Bahn eine Kalibrierung. Die Bahnanzahl legt der erste Start
+eines Datenordners fest. Weitere Einstellungen gibt es nicht; insbesondere keine
+Umgebungsvariablen für den Betrieb.
+
+### Speicherorte
+
+Bei der systemd-Installation ist der Datenordner `/var/lib/biathlon-target-vision`,
+beim lokalen Start der mit `--data-dir` angegebene Ordner (Standard: `data`).
+
+| Pfad | Inhalt | Schreibt |
+|---|---|---|
+| `<Datenordner>/config.json` | `host`, `port`, `cameras` | Installer (Erstanlage mit `host` und `port`), Administration (Kameras), Betreiber |
+| `<Datenordner>/calibrations/lane-N.json` | Kalibrierung je Bahn, gebunden an Kamerakennung und Adresse | Kalibrierungsseite |
+| `<Datenordner>/sessions.json`, `sessions/SITZUNGS-ID/` | aktive und archivierte Sitzungen; die erste Journalzeile enthält die Bahnanzahl | BTV |
+| `/etc/systemd/system/biathlon-target-vision.service` | Dienst; startet mit `--data-dir /var/lib/biathlon-target-vision` | Installer |
+| `/etc/systemd/system/biathlon-target-vision.service.d/` | optionale Ergänzungen, etwa `--lanes` | Betreiber (`systemctl edit`) |
+| `/opt/biathlon-target-vision/backups/` | Sicherung des Datenordners bei jedem Upgrade | Upgrade |
+
+Administrative Quellensperren stehen im Ereignisjournal und bleiben über Neustarts
+und Sitzungswechsel erhalten.
+
+### Einstellungen
+
+| Name | Ort | Bedeutung | Zulässige Werte | Standard |
+|---|---|---|---|---|
+| `host` | `config.json` | Adresse, an die der Server bindet | Adresse; `0.0.0.0` = im lokalen Netz erreichbar | `127.0.0.1`; die Installation schreibt `0.0.0.0` |
+| `port` | `config.json` | HTTP-Port | Ganzzahl 1–65535 | 8091 |
+| `cameras[].id` | `config.json` | feste Kennung; Kalibrierungen sind daran gebunden | 1–64 Zeichen `a-z A-Z 0-9 _ -`, eindeutig, nach dem Anlegen nicht änderbar | – |
+| `cameras[].name` | `config.json` | Anzeigename | 1–128 Zeichen | – |
+| `cameras[].url` | `config.json` | vollständige RTSP-Adresse, ggf. mit Zugangsdaten | `rtsp://` oder `rtsps://` mit Host, ohne Leerzeichen | – |
+| `cameras[].lane_ids` | `config.json` | Bahnen dieser Kamera | eindeutige Bahnnummern ≥ 1, höchstens die Bahnanzahl; jede Bahn höchstens einer Kamera | leer |
+| `--host`, `--port` | Startoption | überschreiben `host` und `port` | wie oben | – |
+| `--lanes` | Startoption | Bahnanzahl eines neuen Datenordners | Ganzzahl ≥ 1 | 20 |
+| `--data-dir` | Startoption | Datenordner | Pfad | `data`; Dienst: `/var/lib/biathlon-target-vision` |
+| `--simulation` | Startoption | gekennzeichneter Simulationsbetrieb mit Übungsdialogen und der Quelle `simulator` | Schalter | aus |
+
+Unbekannte Einträge in `config.json` werden abgelehnt.
+
+### Prioritäten
+
+- Adresse und Port: Startoption vor `config.json` vor Standard (`127.0.0.1:8091`).
+  Der Dienst setzt keine dieser Optionen; fehlt `config.json`, bindet er nur lokal.
+- Bahnanzahl: Die im Journal gespeicherte Zahl gilt. `--lanes` wirkt nur beim ersten
+  Start eines Datenordners; eine abweichende Angabe bei vorhandenem Journal verhindert
+  den Start. Neue Sitzungen übernehmen die bisherige Bahnanzahl.
+
+### Einrichtung und Änderung
+
+- **Kameras und Bahnzuordnung:** in der Administration, siehe
+  [Kameras einrichten](#kameras-einrichten). Die Administration schreibt `config.json`
+  vollständig neu.
+- **Adresse und Port:** Dienst stoppen, `config.json` mit `sudoedit` bearbeiten,
+  Dienst starten. Eigentümer `btv:btv` und Rechte `0600` müssen erhalten bleiben. Bei
+  laufendem Dienst nicht von Hand ändern: Er liest die Datei nur beim Start, und die
+  nächste Kameraänderung in der Administration überschreibt die Datei mit seinem Stand.
+- **Bahnanzahl des Dienstes:** am besten vor dem ersten Start festlegen. Mit
+  `sudo systemctl edit biathlon-target-vision` die Startzeile ergänzen:
+
+  ```ini
+  [Service]
+  ExecStart=
+  ExecStart=/opt/biathlon-target-vision/current/.venv/bin/python -m biathlon_target_vision --data-dir /var/lib/biathlon-target-vision --lanes 24
+  ```
+
+  Gibt es schon Sitzungen, startet der Dienst mit einer anderen Zahl nicht. Dann den
+  Datenordner vollständig sichern und `sessions.json` sowie `sessions/` entfernen;
+  `config.json` und `calibrations/` können bleiben. Kameras dürfen keine Bahn über der
+  neuen Anzahl zugeordnet haben. Die Ergänzung bleibt bei Upgrades erhalten.
+- **Neue Veranstaltung:** Sitzungswechsel unter `/admin`; Kameras, Bahnzuordnungen,
+  Kalibrierungen und Quellensperren bleiben ([Aufzeichnungssitzungen](#aufzeichnungssitzungen)).
+
+### Wirksamkeit
+
+| Änderung | Wirkung |
+|---|---|
+| Kamera anlegen, ändern, entfernen (Administration) | sofort |
+| Kalibrierung | sofort |
+| `host`, `port`, Kameras von Hand in `config.json` | nach Neustart |
+| `--lanes`, `--simulation`, `--host`, `--port` | nach Neustart; `--lanes` nur für einen neuen Datenordner |
+
+### Geheimnisse und Berechtigungen
+
+`cameras[].url` kann Benutzername und Passwort der Kamera enthalten. `config.json` hat
+die Rechte `0600` (Eigentümer `btv`), der Datenordner `0750`; der Dienst legt neue
+Dateien nur für sich lesbar an. Administration, Testprotokoll und `--status` zeigen
+Kameraadressen höchstens ohne Zugangsdaten und Abfrageparameter; Fehlermeldungen
+enthalten keine Adresse, Decoderlogs sind abgeschaltet. Die Sicherungen unter
+`/opt/biathlon-target-vision/backups/` enthalten `config.json` mit den Zugangsdaten
+und werden nicht automatisch gelöscht; eine Begrenzung ist geplant
+([#58](https://github.com/richtertoralf/biathlon-target-vision/issues/58)).
+
+Bekannte Grenze: Administration und Kamera-Schnittstellen haben noch keine Anmeldung;
+BTV setzt ein vertrauenswürdiges lokales Netz voraus. Ein Zugriffsschutz ist noch
+nicht vorhanden ([#24](https://github.com/richtertoralf/biathlon-target-vision/issues/24)).
+
+### Installation, Aktualisierung, Entfernen
+
+| Vorgang | Wirkung auf die Konfiguration |
+|---|---|
+| Erstinstallation (`./install.sh`) | legt `config.json` mit `host: 0.0.0.0` und `port: 8091` an |
+| erneutes `./install.sh` | `config.json` bleibt; Rechte werden auf `0600`/`btv` gesetzt; Ergänzungen unter `.service.d/` bleiben |
+| `--upgrade` | sichert vor dem Umschalten den gesamten Datenordner; Konfiguration, Kalibrierungen und Sitzungen bleiben. `config.json` wird vorher nicht mit der neuen Version geprüft: Startet ein zuvor laufender Dienst mit der neuen Version deshalb nicht, läuft wieder der vorherige Programmstand |
+| Entfernen | nur von Hand nach [README](../README.md#deinstallation); eigene Befehle `--uninstall`/`--purge` und ein Prüfbefehl sind noch nicht vorhanden ([#60](https://github.com/richtertoralf/biathlon-target-vision/issues/60)) |
+
+### Prüfung und Fehlerdiagnose
+
+- `sudo biathlon-target-vision --status` zeigt Serveradresse mit Herkunft (aus
+  `config.json` oder Aufrufparametern), Datenverzeichnis, Bahnen, Kameras mit
+  Verbindungsstatus, Kalibrierung und Sitzung ([Status und Upgrade](#status-und-upgrade-der-systemd-installation)).
+  Exitcode `2`: `config.json` lesbar, aber ungültig. Ohne sudo ist die Datei nicht
+  lesbar; das ist nur ein Hinweis.
+- Ungültige `config.json`: Der Dienst startet nicht; das Journal
+  (`journalctl -u biathlon-target-vision`) meldet allgemein „Ungültige config.json“
+  ohne Kameraadresse. Dann Felder und eindeutige Bahnzuordnung prüfen.
+- Ob der Simulationsbetrieb aktiv ist, zeigt `/api/state` (`simulation`); `--status`
+  zeigt es nicht.
+
 ## Kameras einrichten
 
 `http://SERVER-IP:8091/admin` öffnen. Die Administration hat drei Bereiche:
