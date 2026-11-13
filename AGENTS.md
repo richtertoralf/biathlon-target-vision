@@ -84,6 +84,23 @@ Mitwirkende; Vertiefendes steht in `docs/`.
 - Natürliches, sachliches Deutsch ohne Werbe- und Füllformeln; vorhandene
   Bilder und Beispiele erhalten.
 
+## Gemeinsame Regeln
+
+- BTV ist eine eigenständige Beobachtungsquelle mit eigener API; andere
+  Anwendungen lesen sie direkt. Keine KES-Emulation.
+- Fachliche Semantik nach den IBU-Regeln. Nicht sicher ableitbare Angaben
+  bleiben unbekannt; aus Scheibenzuständen keine Einzelschüsse oder
+  Schusszeiten ableiten (#63).
+- Verwaltung: `--help`, `--version`, `--status`, `--upgrade`, `--check`,
+  `--uninstall`, `--purge [--yes]`; Rückgabecodes 0/1/2. Releasebasiert:
+  Tag `vX.Y.Z` mit GitHub Release.
+- Oberflächen: Tablet-Ergonomie und helle Fläche im Freien gehen vor;
+  Statusfarben (Testbetrieb violett) und Fußzeile nach dem gemeinsamen
+  Standard.
+- Zugang: Tablet-, Admin- und Bedienoberflächen mit Anmeldung; lesende API
+  ohne Anmeldung und ohne Geheimnisse.
+- Neue technische Bezeichner englisch.
+
 ## Änderungen und Qualität
 
 - Vor Änderungen den vorhandenen Code verstehen.
