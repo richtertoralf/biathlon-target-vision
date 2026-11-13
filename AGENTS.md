@@ -86,20 +86,26 @@ Mitwirkende; Vertiefendes steht in `docs/`.
 
 ## Gemeinsame Regeln
 
-- BTV ist eine eigenständige Beobachtungsquelle mit eigener API; andere
-  Anwendungen lesen sie direkt. Keine KES-Emulation.
-- Fachliche Semantik nach den IBU-Regeln. Nicht sicher ableitbare Angaben
-  bleiben unbekannt; aus Scheibenzuständen keine Einzelschüsse oder
-  Schusszeiten ableiten (#63).
-- Verwaltung: `--help`, `--version`, `--status`, `--upgrade`, `--check`,
-  `--uninstall`, `--purge [--yes]`; Rückgabecodes 0/1/2. Releasebasiert:
-  Tag `vX.Y.Z` mit GitHub Release.
-- Oberflächen: Tablet-Ergonomie und helle Fläche im Freien gehen vor;
-  Statusfarben (Testbetrieb violett) und Fußzeile nach dem gemeinsamen
-  Standard.
-- Zugang: Tablet-, Admin- und Bedienoberflächen mit Anmeldung; lesende API
-  ohne Anmeldung und ohne Geheimnisse.
-- Neue technische Bezeichner englisch.
+Gemeinsam beschlossene Regeln der Produktfamilie. **Heute** beschreibt den
+vorhandenen Stand, **Ziel** eine beschlossene, noch offene Umsetzung mit
+Issue. Ein Ziel ist kein Auftrag, es nebenbei oder im Vorgriff umzusetzen.
+
+- Rolle: eigenständige Beobachtungsquelle mit eigener API; andere
+  Anwendungen lesen sie direkt. Keine KES-Emulation; die GitHub-Beschreibung
+  nennt noch eine KES-Ausgabe und ist zu korrigieren (#63).
+- Semantik: Ziel ist die Fachsemantik der IBU-Regeln; der Abgleich der API
+  steht aus (#63). Nicht sicher Ableitbares bleibt unbekannt; aus
+  Scheibenzuständen keine Einzelschüsse oder Schusszeiten ableiten.
+- Verwaltung heute: `--version | --status | --upgrade`, releasebasiert.
+  Ziel: `--check` und `--uninstall [--purge]` (#60). Bei einem beauftragten
+  Release Tag `vX.Y.Z` mit GitHub Release.
+- Oberflächen: Tablet-Ergonomie und helle Fläche im Freien gehen vor. Ziel:
+  gemeinsame Token-Datei, Statusfarben (Testbetrieb violett) und Umschalter
+  (#61).
+- Zugang heute: keine Anmeldung. Ziel: Anmeldung für Tablet-, Admin- und
+  Bedienoberflächen; die lesende API bleibt ohne Anmeldung und ohne
+  Geheimnisse.
+  Die Einzelheiten sind noch nicht entschieden; nicht im Vorgriff umsetzen.
 
 ## Änderungen und Qualität
 
