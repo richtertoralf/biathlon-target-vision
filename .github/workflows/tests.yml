@@ -1,5 +1,9 @@
 name: Tests
-on: [push, pull_request]
+# Ein Lauf je PR-Stand; Pushes auf PR-Branches lösen keinen zweiten Lauf aus.
+# Python 3.12 als unterstützte Version (Ubuntu 24.04).
+on:
+  pull_request:
+  workflow_dispatch:
 jobs:
   python:
     runs-on: ubuntu-latest
@@ -9,7 +13,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m unittest discover -s tests -v
   browser:
@@ -18,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
