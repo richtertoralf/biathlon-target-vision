@@ -117,13 +117,16 @@ Issue. Ein Ziel ist kein Auftrag, es nebenbei oder im Vorgriff umzusetzen.
   Erweiterung früh und produktübergreifend klären: fachliches Ziel,
   wiederverwendbare Mechanismen, einfachere Lösung, unvermeidbare
   Komplexität, was dadurch entfallen kann.
-- Prüfen: Vorhandene Simulatoren und Datenbestände aktiv nutzen, für Module,
-  Adapter, automatische und zeitliche Abläufe, Zustandswechsel und
-  Zusammenspiel. Weitere Wettkampfdaten erst anfordern, wenn eine konkrete
-  Prüfsituation nicht abgedeckt ist; nicht auf einen Feldtest warten, wo
-  Simulation reicht. Keine neuen Simulatoren und keine neue
-  Testinfrastruktur. Eine Simulation belegt Verhalten, kein Quellformat:
-  Was keine Quelle belegt liefert, bleibt unbekannt.
+- Prüfen: Vorhandene Simulatoren, Originaldaten und Testinfrastrukturen
+  sind aktiv und vorrangig zu nutzen, für Module, Adapter, automatische und
+  zeitliche Abläufe, Zustandswechsel und Zusammenspiel. Weitere
+  Wettkampfdaten erst anfordern, wenn eine konkrete Prüfsituation nicht
+  abgedeckt ist; nicht auf einen Feldtest warten, wo Simulation reicht.
+  Erweiterungen vorhandener Simulatoren aufgrund konkret nachgewiesener
+  Testlücken sind zulässig. Neue eigenständige Simulatoren oder parallele
+  Testinfrastrukturen benötigen einen konkret begründeten Bedarf. Eine
+  Simulation belegt Verhalten, kein Quellformat: Was keine Quelle belegt
+  liefert, bleibt unbekannt.
 - Python: Unterstützt werden Ubuntu 24.04 LTS mit Python 3.12 und Ubuntu 26.04
   LTS mit Python 3.14; andere Versionen werden nicht eigens unterstützt oder
   getestet. Nichts verwenden, was erst nach 3.12 eingeführt wurde, außer
