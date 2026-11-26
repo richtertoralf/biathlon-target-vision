@@ -9,7 +9,6 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 
 ## Programmierung
 
-- **KISS:** Immer die einfachste funktionierende und wartbare Lösung wählen.
 - Vorhandene Funktionen, Bibliotheken und Betriebssystemmittel nutzen, statt eigene Lösungen zu erfinden.
 - Keine vorsorglichen Abstraktionen, Frameworks, Dienste oder Konfigurationsmöglichkeiten.
 - Kleine, verständliche Funktionen mit eindeutigen Namen und klaren Zuständigkeiten.
@@ -40,13 +39,18 @@ Die [KES-Protokolldokumentation vom 17.10.2001](KES%20-Protocol%20description17.
 
 ## Zuständigkeiten der Dokumentation
 
+Dokumentation ist Teil jeder Änderung und beschreibt den Stand des Branches, auf dem sie liegt.
+
+- Jede verbindliche Aussage hat einen Ort; andere Stellen verweisen darauf. Einen Inhalt erst durch einen Verweis ersetzen, wenn er am Zielort vollständig dokumentiert ist. Überholte Aussagen ersetzen oder entfernen; gültige Informationen nicht ohne fachlichen Grund entfernen.
+- **Vor jedem Commit:** betroffene Dokumentation im selben Commit nachführen. Ist keine betroffen, entsteht keine künstliche Änderung.
+- **Vor jedem Merge:** Umsetzung gegen die betroffene Dokumentation und die geltenden Regeln prüfen; Folgen für andere Repositories und gemeinsame Schnittstellen nennen; Roadmap (`docs/PRIORITAETEN.md`, `docs/ROADMAP.md`) und Aufgabenstatus auf den tatsächlichen Stand bringen.
+- **Vor jedem Release:** Installation, Konfiguration, Schnittstellen, Bedienung und bekannte Einschränkungen gegen den Release-Stand abgleichen. Nichts Erledigtes steht als offen, nichts Ungeprüftes als abgenommen. Der Release-PR nennt, was fachlich hinzukam, und den Umfang seit dem letzten Release (`git diff --shortstat <letzter Tag>..HEAD`).
 - `README.md`: kurze öffentliche Produktbeschreibung, Installation, grundlegende Bedienung und Deinstallation. Nicht mit jedem Entwicklungsschritt erweitern; Details in `docs/` verlinken.
 - `docs/`: technische Dokumentation, Schnittstellen, Architektur, Entwicklung, Tests und ausführliche Anleitungen (`docs/BEDIENUNG.md`).
 - `docs/praxistests/`: Ergebnisse und Berichte realer Tests, je Test ein Ordner; keine Videos, Zugangsdaten oder `config.json`.
 - `docs/ARCHITECTURE.md`: aktuelle Architektur und grundlegende technische Entscheidungen.
 - `docs/API.md`: Schnittstellen und Integrationshinweise.
 - `docs/ENTWICKLUNGSBERICHT.md`: Entwicklungsverlauf, Entscheidungen, Tests und Einschränkungen; überholte Entscheidungen kennzeichnen.
-- Informationen nicht unnötig mehrfach dokumentieren. Bei Änderungen gezielt aktualisieren, statt pauschal Abschnitte anzuhängen.
 - Zusätzliche Dokumentationsdateien nur bei konkretem Bedarf anlegen.
 
 ## README
@@ -73,12 +77,8 @@ Mitwirkende; Vertiefendes steht in `docs/`.
   sind; keine vermuteten Risiken, vorsorglichen Warnhinweise oder künstlich
   offenen Fragen. Lieber kürzer und sachlich richtig als ausführlich mit
   Annahmen.
-- Bei Änderungen an Funktionen, Installation, Bedienung, Verwaltungsbefehlen
-  oder Entwicklungsstand auch die README auf nötige Anpassungen prüfen.
 - Alles Notwendige steht in diesem Repository. Nicht auf nicht öffentliche
   Repositories als notwendige Quelle verweisen.
-- Bestehende Informationen nicht ohne fachlichen Grund entfernen, sondern bei
-  Bedarf nach `docs/` verschieben.
 - Der Leitgedanke von RICHTER.PROJECTS, „Möglichkeiten schaffen.“, ist
   erkennbar, in eigenen Worten passend zum Produkt.
 - Natürliches, sachliches Deutsch ohne Werbe- und Füllformeln; vorhandene
@@ -105,7 +105,25 @@ Issue. Ein Ziel ist kein Auftrag, es nebenbei oder im Vorgriff umzusetzen.
 - Zugang heute: keine Anmeldung. Ziel: Anmeldung für Tablet-, Admin- und
   Bedienoberflächen; die lesende API bleibt ohne Anmeldung und ohne
   Geheimnisse.
-  Die Einzelheiten sind noch nicht entschieden; nicht im Vorgriff umsetzen.
+  Konten nach dem Standard „Lokale Benutzerkonten“; keine Sitzungs-, Rollen-
+  oder Kopplungsverfahren auf Vorrat.
+- Ausgabe, Ziel: Unveränderte Eingangsdaten und wiederholte Zustandsmeldungen
+  unterbrechen keine laufende Grafik oder Anzeige und bauen sie nicht neu
+  auf. Vorgesehene Wechsel, Zeitsteuerungen und die Wiederherstellung nach
+  einer Unterbrechung bleiben zulässig; ein Regressionstest sichert das.
+- Einfachheit: die kleinste robuste Lösung, nichts auf Vorrat. Keine zweite
+  Implementierung derselben Funktion und kein Sonderweg je Sportart, Marke
+  oder Quelle, wo ein allgemeiner Mechanismus reicht. Vor einer größeren
+  Erweiterung früh und produktübergreifend klären: fachliches Ziel,
+  wiederverwendbare Mechanismen, einfachere Lösung, unvermeidbare
+  Komplexität, was dadurch entfallen kann.
+- Prüfen: Vorhandene Simulatoren und Datenbestände aktiv nutzen, für Module,
+  Adapter, automatische und zeitliche Abläufe, Zustandswechsel und
+  Zusammenspiel. Weitere Wettkampfdaten erst anfordern, wenn eine konkrete
+  Prüfsituation nicht abgedeckt ist; nicht auf einen Feldtest warten, wo
+  Simulation reicht. Keine neuen Simulatoren und keine neue
+  Testinfrastruktur. Eine Simulation belegt Verhalten, kein Quellformat:
+  Was keine Quelle belegt liefert, bleibt unbekannt.
 - Python: Unterstützt werden Ubuntu 24.04 LTS mit Python 3.12 und Ubuntu 26.04
   LTS mit Python 3.14; andere Versionen werden nicht eigens unterstützt oder
   getestet. Nichts verwenden, was erst nach 3.12 eingeführt wurde, außer
